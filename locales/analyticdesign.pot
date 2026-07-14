@@ -1,0 +1,184 @@
+# Analytic Design by Pellissari — translation template.
+# Copyright (C) 2026 Pellissari
+# This file is distributed under the same license as the analyticdesign plugin.
+#
+# Gerado à mão como ponto de partida; regenerar com as ferramentas de extração
+# de locales do GLPI (tools/extract_locales.php ou equivalente) conforme o
+# código evoluir, para manter referências de arquivo/linha em dia.
+msgid ""
+msgstr ""
+"Project-Id-Version: analyticdesign 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-14 00:00+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: \n"
+
+#: src/Menu.php
+msgid "Análise de Dados"
+msgstr ""
+
+#: hook.php
+msgid "Análise de Dados: fontes e dashboards"
+msgstr ""
+
+#: src/Dashboard.php
+msgid "Analytic Design (BI externo)"
+msgstr ""
+
+#: src/Dashboard.php
+msgid "Analytic Design"
+msgstr ""
+
+#: src/Dashboard.php
+msgid "Card sem item associado."
+msgstr ""
+
+#: src/Dashboard.php
+msgid "Dashboard não encontrado."
+msgstr ""
+
+#: src/Dashboard.php
+msgid "Fonte de dados indisponível."
+msgstr ""
+
+#: src/Dashboard.php
+msgid "Falha ao renderizar o dashboard."
+msgstr ""
+
+#: src/Connection.php
+msgid "Fonte de dados"
+msgid_plural "Fontes de dados"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Connection.php
+msgid "Ferramenta"
+msgstr ""
+
+#: src/Connection.php
+msgid "URL base"
+msgstr ""
+
+#: src/Connection.php src/Source/GrafanaSource.php
+msgid "Ex.: https://grafana.suaempresa.com"
+msgstr ""
+
+#: src/Connection.php
+msgid "Modo de embed"
+msgstr ""
+
+#: src/Connection.php
+msgid "Última atualização"
+msgstr ""
+
+#: src/Connection.php
+msgid "Data de criação"
+msgstr ""
+
+#: src/Connection.php
+msgid "Iframe direto (Grafana)"
+msgstr ""
+
+#: src/Connection.php
+msgid "Publish to web — URL pública (Power BI)"
+msgstr ""
+
+#: src/Connection.php
+msgid "Embed seguro — Entra ID / Premium (Power BI)"
+msgstr ""
+
+#: src/Connection.php
+msgid "Deixe os campos de credenciais em branco para manter os valores já salvos."
+msgstr ""
+
+#: src/Connection.php
+msgid ""
+"Atenção: \"Publish to web\" deixa o conteúdo acessível a qualquer pessoa "
+"com o link, sem autenticação. Não use para dados confidenciais."
+msgstr ""
+
+#: src/Connection.php
+msgid "Testar conexão"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Dashboard exposto"
+msgid_plural "Dashboards expostos"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/DashboardItem.php src/Connection.php
+msgid "ID externo"
+msgstr ""
+
+#: src/DashboardItem.php src/Connection.php
+msgid "Categoria"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "URL de embed"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Não foi possível listar dashboards da fonte. Verifique a conexão."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Dashboards importados"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Nenhum dashboard importado ainda."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Dashboards disponíveis na fonte"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid ""
+"Nada novo para importar — todos os dashboards já foram importados, ou a "
+"fonte não retornou nenhum."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Importar selecionados"
+msgstr ""
+
+#: ajax/testconnection.php
+msgid "Acesso negado."
+msgstr ""
+
+#: ajax/testconnection.php
+msgid "Fonte de dados não encontrada."
+msgstr ""
+
+#: ajax/testconnection.php
+msgid "Conexão bem-sucedida."
+msgstr ""
+
+#: ajax/testconnection.php
+msgid "Não foi possível conectar. Verifique URL e credenciais."
+msgstr ""
+
+#: ajax/testconnection.php
+msgid "Erro ao testar a conexão."
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "Embed seguro do Power BI pendente de implementação (Fase 2)."
+msgstr ""
+
+#: src/Source/GrafanaSource.php
+msgid "URL do Grafana"
+msgstr ""
+
+#: src/Source/GrafanaSource.php
+msgid "API Token / Service account token"
+msgstr ""
+
+#: src/Source/GrafanaSource.php
+msgid "Token com permissão de leitura de dashboards."
+msgstr ""

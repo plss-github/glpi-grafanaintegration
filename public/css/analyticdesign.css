@@ -1,0 +1,25 @@
+/**
+ * Analytic Design by Pellissari
+ * -----------------------------------------------------------------------------
+ * Estilos mínimos do formulário de administração. O embed em si (iframe/card)
+ * usa estilo inline (ver AbstractDashboardSource::buildIframe) para garantir
+ * dimensionamento correto dentro do widget do dashboard nativo.
+ */
+
+.analyticdesign-fields-for-type > td {
+    padding-top: .5rem;
+}
+
+.analyticdesign-publish-warning {
+    padding: .5rem .75rem;
+    border-radius: 4px;
+}
+
+.analyticdesign-test-result {
+    font-weight: 600;
+}
+
+.analyticdesign-error {
+    border: 1px dashed #c0392b;
+    border-radius: 4px;
+}
