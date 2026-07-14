@@ -148,11 +148,7 @@ msgid "Importar selecionados"
 msgstr ""
 
 #: ajax/testconnection.php
-msgid "Acesso negado."
-msgstr ""
-
-#: ajax/testconnection.php
-msgid "Fonte de dados não encontrada."
+msgid "Fonte de dados não encontrada ou acesso negado."
 msgstr ""
 
 #: ajax/testconnection.php
@@ -181,4 +177,8 @@ msgstr ""
 
 #: src/Source/GrafanaSource.php
 msgid "Token com permissão de leitura de dashboards."
+msgstr ""
+
+#: src/Source/AbstractDashboardSource.php
+msgid "URL de embed inválida (esperado http/https)."
 msgstr ""

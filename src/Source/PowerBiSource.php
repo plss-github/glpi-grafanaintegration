@@ -3,16 +3,26 @@
 /**
  * Analytic Design by Pellissari
  * -----------------------------------------------------------------------------
- * FONTE POWER BI — STUB DA FASE 2.
+ * FONTE POWER BI — STUB DAS FASES 2 e 3.
  *
  * Este arquivo NÃO está funcional ainda. Ele existe para demonstrar que a
  * abstração DashboardSourceInterface comporta o Power BI sem tocar em nenhum
  * outro arquivo do plugin: basta completar os métodos abaixo e registrar a
  * classe na SourceFactory.
  *
- * Suporta (por design) DOIS modos de embed, escolhidos via connection.embed_mode:
- *   - 'publish_to_web' : URL pública, iframe simples. ⚠️ SEM AUTENTICAÇÃO.
- *   - 'secure'         : Entra ID + service principal + embed token + powerbi-client.
+ * Suporta (por design) DOIS modos de embed, escolhidos via connection.embed_mode,
+ * cada um planejado como uma fase separada por terem custo/risco bem diferentes:
+ *
+ *   - 'secure' (Fase 2)         : Entra ID + service principal + embed token +
+ *     powerbi-client. Requer capacity/licença Premium. ~8-10 dias.
+ *   - 'publish_to_web' (Fase 3) : URL pública, iframe simples — reaproveita
+ *     AbstractDashboardSource::buildIframe(), o mesmo usado pelo Grafana.
+ *     ⚠️ SEM AUTENTICAÇÃO: qualquer pessoa com o link acessa. Exige aviso
+ *     obrigatório e não descartável na UI sempre que este modo é selecionado
+ *     (ver Connection::showForm(), classe `.analyticdesign-publish-warning`).
+ *     Não usar para dados confidenciais. ~2-3 dias — mais simples que a Fase 2
+ *     por não precisar de OAuth/backend, por isso planejada como fase própria
+ *     e independente (pode até ser entregue antes da Fase 2, se priorizado).
  */
 
 namespace GlpiPlugin\Analyticdesign\Source;
@@ -33,19 +43,19 @@ class PowerBiSource extends AbstractDashboardSource
 
     public function testConnection(): bool
     {
-        // TODO (Fase 2):
-        //  - modo publish_to_web: nada a autenticar (retorna true).
-        //  - modo secure: obter token OAuth2 (client_credentials) no Entra ID
-        //    e chamar GET /v1.0/myorg/groups como sanity check.
+        // TODO (Fase 3 — publish_to_web): nada a autenticar, pode retornar
+        //   true direto (não há API a chamar nesse modo).
+        // TODO (Fase 2 — secure): obter token OAuth2 (client_credentials) no
+        //   Entra ID e chamar GET /v1.0/myorg/groups como sanity check.
         return false;
     }
 
     public function listDashboards(): array
     {
-        // TODO (Fase 2):
-        //  - modo secure: GET /v1.0/myorg/groups/{workspace}/reports
-        //  - modo publish_to_web: a listagem automática não é possível;
-        //    o admin cola manualmente a URL pública por dashboard.
+        // TODO (Fase 2 — secure): GET /v1.0/myorg/groups/{workspace}/reports
+        // Fase 3 — publish_to_web: por design NÃO há listagem automática (a
+        //   API do Power BI não expõe os links de "publish to web"); o admin
+        //   cola manualmente a URL pública ao criar/editar o DashboardItem.
         return [];
     }
 
@@ -54,12 +64,13 @@ class PowerBiSource extends AbstractDashboardSource
         $mode = $this->connection->fields['embed_mode'] ?? 'secure';
 
         if ($mode === 'publish_to_web') {
-            // Reaproveita exatamente o mesmo padrão de iframe do Grafana.
+            // Fase 3: reaproveita exatamente o mesmo padrão de iframe do
+            // Grafana (inclusive a validação de esquema http/https).
             return $this->buildIframe($item->fields['embed_url'] ?? '', $context);
         }
 
-        // Modo secure: gerar embed token no servidor e devolver um container
-        // que o powerbi-client (JS) hidrata no front.
+        // Fase 2 (secure): gerar embed token no servidor e devolver um
+        // container que o powerbi-client (JS) hidrata no front.
         // TODO (Fase 2): implementar geração de embed token e bootstrap JS.
         return '<div class="analyticdesign-powerbi-secure" '
              . 'data-report-id="' . htmlspecialchars((string)$item->fields['external_id'], ENT_QUOTES) . '">'
@@ -69,9 +80,10 @@ class PowerBiSource extends AbstractDashboardSource
 
     public static function getConfigFields(): array
     {
-        // TODO (Fase 2): campos condicionais ao embed_mode.
-        //  publish_to_web: apenas URLs públicas por dashboard.
-        //  secure: tenant_id, client_id, client_secret, workspace_id.
+        // TODO: campos condicionais ao embed_mode.
+        //  Fase 3 (publish_to_web): nenhum campo de credencial aqui — a URL
+        //    pública é preenchida por DashboardItem, não pela Connection.
+        //  Fase 2 (secure): tenant_id, client_id, client_secret, workspace_id.
         return [];
     }
 }

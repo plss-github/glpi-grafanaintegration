@@ -247,19 +247,28 @@ class Connection extends CommonDBTM
 
     /**
      * Coleta campos sensíveis vindos do form (ex.: api_token, client_secret),
-     * criptografa em `credentials` e remove-os do input plano.
+     * mescla com as credenciais já salvas e criptografa em `credentials`,
+     * removendo os campos sensíveis do input plano.
+     *
+     * A mesclagem com `getDecryptedCredentials()` é essencial: a UI permite
+     * deixar um campo em branco para "manter o valor salvo" (ver
+     * showForm()/analyticdesign.js). Sem mesclar, atualizar só um campo (ex.:
+     * `client_secret` de uma fonte Power BI) apagaria silenciosamente os
+     * demais (`client_id`, `tenant_id`) já armazenados.
      */
     private function handleCredentialInput($input)
     {
         $sensitive = ['api_token', 'client_id', 'client_secret', 'tenant_id'];
-        $creds = [];
+        $creds = $this->getDecryptedCredentials();
+        $touched = false;
         foreach ($sensitive as $key) {
             if (isset($input[$key]) && $input[$key] !== '') {
                 $creds[$key] = $input[$key];
+                $touched = true;
             }
             unset($input[$key]);
         }
-        if (!empty($creds)) {
+        if ($touched) {
             $json = json_encode($creds, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $input['credentials'] = (new GLPIKey())->encrypt($json);
         }

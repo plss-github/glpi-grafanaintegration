@@ -27,9 +27,20 @@ abstract class AbstractDashboardSource implements DashboardSourceInterface
     /**
      * Monta um iframe padronizado (usado por Grafana e pelo modo
      * publish-to-web do Power BI). Centraliza atributos de sandbox/tamanho.
+     *
+     * Só embeda URLs http(s): mesmo sendo um campo preenchido apenas por um
+     * admin do plugin, um valor `javascript:`/`data:` em `src` ainda executa
+     * no contexto da página do GLPI — barrado aqui como defesa em profundidade.
      */
     protected function buildIframe(string $url, array $context = []): string
     {
+        $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return '<div class="analyticdesign-error" style="padding:1rem;color:#b00;">'
+                . htmlspecialchars(__('URL de embed inválida (esperado http/https).', 'analyticdesign'), ENT_QUOTES)
+                . '</div>';
+        }
+
         $width  = htmlspecialchars((string)($context['width']  ?? '100%'), ENT_QUOTES);
         $height = htmlspecialchars((string)($context['height'] ?? '100%'), ENT_QUOTES);
         $src    = htmlspecialchars($url, ENT_QUOTES);

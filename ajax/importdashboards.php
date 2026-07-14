@@ -15,13 +15,14 @@ use GlpiPlugin\Analyticdesign\Connection;
 use GlpiPlugin\Analyticdesign\DashboardItem;
 
 Session::checkCSRF($_POST);
-Session::checkRight(Connection::$rightname, UPDATE);
 
 $connectionsId = (int)($_POST['connections_id'] ?? 0);
 $connection = new Connection();
 
-if ($connectionsId <= 0 || !$connection->getFromDB($connectionsId)) {
-    Html::displayNotFoundError();
+// can() (em vez de checkRight() global + getFromDB() cru) garante que a
+// Connection pertence a uma entidade onde o usuário tem direito de UPDATE.
+if ($connectionsId <= 0 || !$connection->can($connectionsId, UPDATE)) {
+    Html::displayRightError();
 }
 
 $selection = [];
