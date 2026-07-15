@@ -41,20 +41,27 @@ administra as fontes, ou um perfil que só deve visualizar):
 
 ## 3. Cadastrar uma fonte Grafana
 
+O cadastro é em dois passos: primeiro o básico (nome/ferramenta/ativo), depois
+as específicações da ferramenta escolhida numa aba própria — a URL e as
+credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
+é um Grafana.
+
 1. **Administração > Análise de Dados > Fontes de dados > Adicionar novo
    item**.
-2. Preencher:
+2. Preencher só:
    - **Nome**: um nome livre para identificar a fonte (ex.: "Grafana
      Produção").
    - **Ferramenta**: `Grafana`.
+   - **Ativo**: `Sim` ou `Não`.
+3. Salvar — a tela recarrega já na fonte criada, agora com abas.
+4. Abrir a aba **"Características"** e preencher:
    - **URL base**: a URL da instância, ex. `https://grafana.suaempresa.com`
      (sem barra no final).
    - **API Token / Service account token**: um *service account token* do
      Grafana com permissão de leitura de dashboards (Grafana > Administration
      > Service accounts).
-3. Marcar **Ativo** e salvar.
-4. Na própria tela, clicar em **Testar conexão** — deve responder "Conexão
-   bem-sucedida.". Se falhar, confirmar:
+5. Salvar (botão **Salvar** da própria aba) e clicar em **Testar conexão**,
+   ao lado — deve responder "Conexão bem-sucedida.". Se falhar, confirmar:
    - que o Grafana tem `allow_embedding: true` na seção `[security]` do
      `grafana.ini` (necessário para o iframe funcionar depois, mesmo que o
      teste de conexão em si não dependa disso);
@@ -92,12 +99,15 @@ workspace do Power BI).
 2. Anotar: **Tenant ID**, **Client ID**, **Client secret**, e o **Workspace
    ID** (GUID do workspace/group — está na URL do workspace no Power BI).
 3. **Administração > Análise de Dados > Fontes de dados > Adicionar**:
-   - **Ferramenta**: `Power BI`.
-   - **Modo de embed**: `Embed seguro — Entra ID / Premium (Power BI)`.
+   preencher só **Nome**, **Ferramenta** (`Power BI`) e **Ativo**, e salvar
+   (o modo de embed já nasce como "Embed seguro" por padrão para uma fonte
+   Power BI nova — ajustável na aba seguinte).
+4. Na fonte recém-criada, abrir a aba **"Características"**:
+   - **Modo de embed**: confirmar `Embed seguro — Entra ID / Premium (Power BI)`.
    - Preencher Tenant ID, Client ID, Client secret e Workspace ID.
-4. Salvar e clicar em **Testar conexão** (autentica no Entra ID e verifica
+5. Salvar e clicar em **Testar conexão** (autentica no Entra ID e verifica
    acesso ao workspace).
-5. Aba **"Dashboards"**: os relatórios do workspace aparecem em "Dashboards
+6. Aba **"Dashboards"**: os relatórios do workspace aparecem em "Dashboards
    disponíveis na fonte" — importar normalmente.
 
 > O embed token é gerado a cada carregamento do card (validade ~1h, nunca
@@ -114,11 +124,11 @@ escondê-lo.
 
 1. No Power BI (Desktop ou serviço): **Arquivo > Publicar na Web**, copiar a
    URL pública gerada para o relatório desejado.
-2. **Administração > Análise de Dados > Fontes de dados > Adicionar** (ou
-   editar uma fonte Power BI já existente):
-   - **Modo de embed**: `Publish to web — URL pública (Power BI)`.
-   - Este modo não usa nenhuma credencial (Tenant/Client/Workspace ficam
-     ocultos).
+2. Numa fonte Power BI (nova ou já existente), abrir a aba
+   **"Características"** e trocar **Modo de embed** para `Publish to web —
+   URL pública (Power BI)` — o aviso vermelho aparece imediatamente, antes
+   mesmo de salvar. Este modo não usa nenhuma credencial (os campos de
+   Tenant/Client/Workspace somem).
 3. Salvar. Como a API do Power BI **não expõe** as URLs de publish-to-web,
    não há listagem automática — usar a aba **"Dashboards" > "Adicionar
    manualmente"**:

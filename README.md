@@ -29,10 +29,12 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 - Factory de fontes (`SourceFactory`).
 - Entidades de dados (`Connection`, `DashboardItem`) com credenciais
   criptografadas (`GLPIKey`), `rawSearchOptions()` e abas (`defineTabs`).
-- CRUD completo de `Connection` via `front/connection.php` +
-  `front/connection.form.php`, com campos de credenciais dinâmicos por tipo
-  **e** modo de embed (secure vs publish_to_web) e botão "Testar conexão"
-  (AJAX, sem recarregar a página).
+- CRUD de `Connection` via `front/connection.php` + `front/connection.form.php`
+  em dois passos: criar pede só Nome/Ferramenta/Ativo (Sim/Não); URL base,
+  modo de embed e credenciais de cada tipo ficam na aba própria
+  **"Características"** (`ConnectionCharacteristics`), que só existe depois
+  que a fonte já está salva. Botão "Testar conexão" via AJAX, sem recarregar
+  a página.
 - Aba **"Dashboards"** no formulário da `Connection`: lista os dashboards já
   importados (edição inline de categoria/ativo), os disponíveis na fonte
   (importação seletiva via `listDashboards()`, quando a fonte suporta listagem)
@@ -198,11 +200,12 @@ automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
 
 1. Ter um Grafana acessível com `allow_embedding: true` (seção `[security]` do
    `grafana.ini`) e um **service account token** com permissão de leitura.
-2. Administração > Análise de Dados > Fontes de dados > adicionar:
-   - Ferramenta: Grafana; URL base: `https://seu-grafana`; token no campo
-     "API Token / Service account token".
-3. Salvar e, na própria tela, clicar em **"Testar conexão"** — deve responder
-   "Conexão bem-sucedida." (chama `GET /api/health`).
+2. Administração > Análise de Dados > Fontes de dados > adicionar: Nome,
+   Ferramenta = Grafana, Ativo = Sim, salvar.
+3. Na fonte recém-criada, aba **"Características"**: URL base
+   `https://seu-grafana`, token no campo "API Token / Service account token",
+   salvar e clicar em **"Testar conexão"** — deve responder "Conexão
+   bem-sucedida." (chama `GET /api/health`).
 4. Abrir a aba **"Dashboards"** do registro salvo: a lista "Dashboards
    disponíveis na fonte" deve trazer os dashboards do Grafana
    (`GET /api/search?type=dash-db`). Marcar um ou mais e clicar em
@@ -224,11 +227,14 @@ automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
    do workspace, ou via as configurações de "Service principals can use
    Fabric APIs" no admin portal do Power BI). Anotar `tenant_id`, `client_id`,
    `client_secret` e o `workspace_id` (GUID do workspace/group).
-2. Administração > Análise de Dados > Fontes de dados > adicionar:
-   - Ferramenta: Power BI; Modo de embed: **Embed seguro**; preencher Tenant
-     ID, Client ID, Client secret e Workspace ID.
-3. Salvar e clicar em **"Testar conexão"** — deve responder "Conexão
-   bem-sucedida." (autentica no Entra ID e chama `GET /v1.0/myorg/groups`).
+2. Administração > Análise de Dados > Fontes de dados > adicionar: Nome,
+   Ferramenta = Power BI, Ativo = Sim, salvar (o modo de embed já nasce
+   `secure` por padrão numa fonte Power BI nova).
+3. Na fonte recém-criada, aba **"Características"**: confirmar Modo de embed
+   = **Embed seguro**, preencher Tenant ID, Client ID, Client secret e
+   Workspace ID, salvar e clicar em **"Testar conexão"** — deve responder
+   "Conexão bem-sucedida." (autentica no Entra ID e chama
+   `GET /v1.0/myorg/groups`).
 4. Aba **"Dashboards"**: "Dashboards disponíveis na fonte" deve listar os
    relatórios do workspace (`GET /v1.0/myorg/groups/{id}/reports`). Importar
    um ou mais.
@@ -246,8 +252,9 @@ automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
 
 1. No Power BI Desktop/serviço: Arquivo > Publicar na Web, copiar a URL
    pública gerada para um relatório.
-2. Numa `Connection` Power BI, mudar o Modo de embed para **Publish to web**
-   — o aviso vermelho deve aparecer imediatamente (antes mesmo de salvar).
+2. Numa `Connection` Power BI, aba **"Características"**, mudar o Modo de
+   embed para **Publish to web** — o aviso vermelho deve aparecer
+   imediatamente (antes mesmo de salvar).
 3. Na aba "Dashboards", usar **"Adicionar manualmente"** (a listagem
    automática não se aplica a este modo) colando a URL pública — o mesmo
    aviso de segurança deve aparecer nesta seção quando a Connection está
@@ -300,7 +307,8 @@ analyticdesign/
 │   ├── addmanualdashboard.php    # cria DashboardItem a partir de URL colada manualmente
 │   └── updatedashboarditems.php  # salva edição em lote (categoria/ativo)
 ├── src/
-│   ├── Connection.php        # CommonDBTM: fontes cadastradas + showForm()
+│   ├── Connection.php        # CommonDBTM: fontes cadastradas + showForm() (Nome/Ferramenta/Ativo)
+│   ├── ConnectionCharacteristics.php # aba "Características" (URL/embed_mode/credenciais)
 │   ├── DashboardItem.php     # CommonDBTM: dashboards expostos + aba na Connection
 │   ├── Dashboard.php         # hooks getTypes/getCards + provider + render do widget
 │   ├── Menu.php              # entrada em Administração

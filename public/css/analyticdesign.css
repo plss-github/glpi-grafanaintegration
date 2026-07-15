@@ -6,7 +6,7 @@
  * dimensionamento correto dentro do widget do dashboard nativo.
  */
 
-.analyticdesign-fields-for-type > td {
+.analyticdesign-embed-mode-field > td {
     padding-top: .5rem;
 }
 

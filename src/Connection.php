@@ -15,13 +15,10 @@ use GLPIKey;
 use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
 use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
-use GlpiPlugin\Analyticdesign\Traits\HasCheckboxField;
 use Html;
 
 class Connection extends CommonDBTM
 {
-    use HasCheckboxField;
-
     /**
      * Único direito do plugin, compartilhado por Connection e DashboardItem
      * (DashboardItem é sempre filho de uma Connection — não faz sentido um
@@ -46,13 +43,18 @@ class Connection extends CommonDBTM
     }
 
     /**
-     * Aba "Dashboards" (DashboardItem) exibida no formulário da conexão,
-     * onde o admin marca quais dashboards expor. Ver DashboardItem::getTabNameForItem().
+     * Abas "Características" (URL/credenciais específicas do tipo já
+     * escolhido) e "Dashboards" (DashboardItem), exibidas no formulário da
+     * conexão. Só aparecem para uma Connection já salva — CommonGLPI só
+     * chama addStandardTab() para itens não-novos (ver
+     * CommonGLPI::defineAllTabs()), então nenhuma lógica extra é necessária
+     * aqui para escondê-las na tela de criação.
      */
     public function defineTabs($options = [])
     {
         $tabs = [];
         $this->addDefaultFormTab($tabs);
+        $this->addStandardTab(ConnectionCharacteristics::class, $tabs, $options);
         $this->addStandardTab(DashboardItem::class, $tabs, $options);
         $this->addStandardTab('Log', $tabs, $options);
         return $tabs;
@@ -147,12 +149,12 @@ class Connection extends CommonDBTM
     }
 
     /**
-     * Formulário de cadastro/edição da fonte. Renderizado em PHP/HTML puro
-     * (showFormHeader/showFormButtons) em vez de templates Twig: sem uma
-     * instância GLPI 11 real para validar os macros de `fields_macros.html.twig`,
-     * essa é a via de menor risco. Os campos de credenciais de cada tipo ficam
-     * todos no DOM e são mostrados/escondidos por JS conforme o tipo escolhido
-     * (ver public/js/analyticdesign.js), sem chamada AJAX extra.
+     * Formulário de cadastro/edição da fonte. Só o essencial para criar o
+     * registro (Nome, Ferramenta, Ativo) — URL base, modo de embed e
+     * credenciais específicas do tipo ficam na aba "Características"
+     * (ConnectionCharacteristics), que só existe depois que a Connection já
+     * tem um tipo salvo. Renderizado em PHP/HTML puro
+     * (showFormHeader/showFormButtons), mesma decisão de sempre neste plugin.
      */
     public function showForm($ID, array $options = [])
     {
@@ -160,11 +162,7 @@ class Connection extends CommonDBTM
         $this->showFormHeader($options);
 
         $this->showNameAndToolFields();
-        $this->showBaseUrlField();
-        $this->showEmbedModeField();
-        $this->showCredentialFields();
         $this->showActiveField();
-        $this->showTestConnectionButton();
 
         $this->showFormButtons($options);
 
@@ -182,107 +180,25 @@ class Connection extends CommonDBTM
         echo "</td></tr>";
     }
 
-    private function showBaseUrlField(): void
-    {
-        echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('URL base', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>"
-            . Html::input('base_url', ['value' => $this->fields['base_url'], 'size' => 60])
-            . "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>"
-            . "</td></tr>";
-    }
-
     /**
-     * Modo de embed: só relevante para Power BI. Aparece antes dos campos de
-     * credenciais porque decide QUAIS campos de credencial do Power BI fazem
-     * sentido (publish_to_web não usa nenhum — a URL pública é colada por
-     * dashboard, na aba "Dashboards").
+     * "Ativo" como lista suspensa Sim/Não (Dropdown::showYesNo()) em vez de
+     * checkbox — mais explícito para quem está preenchendo o formulário pela
+     * primeira vez.
      */
-    private function showEmbedModeField(): void
-    {
-        $embedModes = [
-            DashboardSourceInterface::EMBED_MODE_IFRAME         => __('Iframe direto (Grafana)', 'analyticdesign'),
-            DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB => __('Publish to web — URL pública (Power BI)', 'analyticdesign'),
-            DashboardSourceInterface::EMBED_MODE_SECURE         => __('Embed seguro — Entra ID / Premium (Power BI)', 'analyticdesign'),
-        ];
-
-        echo "<tr class='tab_bg_2 analyticdesign-fields-for-type' data-source-type='"
-            . htmlspecialchars(PowerBiSource::getType(), ENT_QUOTES) . "'>";
-        echo "<td>" . __('Modo de embed', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>";
-        Dropdown::showFromArray('embed_mode', $embedModes, ['value' => $this->fields['embed_mode']]);
-        echo "<div class='analyticdesign-publish-warning alert alert-important alert-danger' style='display:none;margin-top:.5rem;'>"
-            . "<i class='ti ti-alert-triangle'></i> "
-            . __('Atenção: "Publish to web" deixa o conteúdo acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
-            . "</div>";
-        echo "</td></tr>";
-    }
-
-    /**
-     * Campos de credencial de todos os tipos ficam no DOM e são
-     * mostrados/escondidos por JS conforme o tipo/modo escolhido (ver
-     * public/js/analyticdesign.js), sem chamada AJAX extra.
-     */
-    private function showCredentialFields(): void
-    {
-        $types        = SourceFactory::getAvailableTypes();
-        $configFields = SourceFactory::getAllConfigFields();
-
-        foreach ($configFields as $type => $fieldsForType) {
-            if (empty($fieldsForType)) {
-                continue;
-            }
-            echo "<tr class='tab_bg_2 analyticdesign-fields-for-type' data-source-type='" . htmlspecialchars($type, ENT_QUOTES) . "'>";
-            echo "<td colspan='4'><strong>" . htmlspecialchars($types[$type] ?? $type, ENT_QUOTES) . "</strong></td>";
-            echo "</tr>";
-            foreach ($fieldsForType as $field) {
-                $this->showCredentialFieldRow($type, $field);
-            }
-        }
-
-        echo "<tr class='tab_bg_1'><td colspan='4'><em>"
-            . __('Deixe os campos de credenciais em branco para manter os valores já salvos.', 'analyticdesign')
-            . "</em></td></tr>";
-    }
-
-    private function showCredentialFieldRow(string $type, array $field): void
-    {
-        $inputType = $field['type'] === 'password' ? 'password' : 'text';
-        $embedModeAttr = isset($field['embed_mode'])
-            ? " data-embed-mode='" . htmlspecialchars($field['embed_mode'], ENT_QUOTES) . "'"
-            : '';
-
-        echo "<tr class='tab_bg_1 analyticdesign-fields-for-type' data-source-type='"
-            . htmlspecialchars($type, ENT_QUOTES) . "'{$embedModeAttr}>";
-        echo "<td>" . htmlspecialchars($field['label'], ENT_QUOTES) . "</td>";
-        echo "<td colspan='3'>"
-            . Html::input($field['name'], ['type' => $inputType, 'value' => '', 'size' => 60]);
-        if (!empty($field['help'])) {
-            echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
-        }
-        echo "</td></tr>";
-    }
-
     private function showActiveField(): void
     {
+        // getEmpty()/initForm() zeram is_active para um item novo (não
+        // respeitam o DEFAULT 1 da coluna) — força "Sim" como valor inicial
+        // do dropdown num item novo, já que é o que se espera ao cadastrar
+        // uma fonte (ninguém cria uma fonte para começar inativa).
+        $isActive = (int)$this->fields['id'] > 0 ? (int)($this->fields['is_active'] ?? 1) : 1;
+
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Ativo') . "</td>";
-        echo "<td>" . self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1) . "</td>";
+        echo "<td>";
+        Dropdown::showYesNo('is_active', $isActive);
+        echo "</td>";
         echo "<td colspan='2'></td></tr>";
-    }
-
-    private function showTestConnectionButton(): void
-    {
-        if ((int)$this->fields['id'] <= 0) {
-            return;
-        }
-
-        echo "<tr class='tab_bg_1'><td colspan='4'>";
-        echo "<button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' data-id='"
-            . (int)$this->fields['id'] . "'>"
-            . "<i class='ti ti-plug'></i> " . __('Testar conexão', 'analyticdesign')
-            . "</button> <span class='analyticdesign-test-result ms-2'></span>";
-        echo "</td></tr>";
     }
 
     /**
@@ -316,6 +232,13 @@ class Connection extends CommonDBTM
 
     public function prepareInputForAdd($input)
     {
+        // O formulário de criação não pergunta o modo de embed (só a aba
+        // "Características", depois de salvo) — sem isso, uma Connection
+        // Power BI nasceria com o DEFAULT genérico da coluna ('iframe'),
+        // que não é uma opção válida no dropdown de embed_mode do Power BI.
+        if (($input['type'] ?? '') === PowerBiSource::getType() && empty($input['embed_mode'])) {
+            $input['embed_mode'] = DashboardSourceInterface::EMBED_MODE_SECURE;
+        }
         return $this->handleCredentialInput($input);
     }
 
@@ -331,7 +254,7 @@ class Connection extends CommonDBTM
      *
      * A mesclagem com `getDecryptedCredentials()` é essencial: a UI permite
      * deixar um campo em branco para "manter o valor salvo" (ver
-     * showForm()/analyticdesign.js). Sem mesclar, atualizar só um campo (ex.:
+     * ConnectionCharacteristics). Sem mesclar, atualizar só um campo (ex.:
      * `client_secret` de uma fonte Power BI) apagaria silenciosamente os
      * demais (`client_id`, `tenant_id`) já armazenados.
      */

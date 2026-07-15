@@ -57,15 +57,15 @@ msgstr[1] ""
 msgid "Ferramenta"
 msgstr ""
 
-#: src/Connection.php
+#: src/Connection.php src/ConnectionCharacteristics.php
 msgid "URL base"
 msgstr ""
 
-#: src/Connection.php src/Source/GrafanaSource.php
+#: src/ConnectionCharacteristics.php src/Source/GrafanaSource.php
 msgid "Ex.: https://grafana.suaempresa.com"
 msgstr ""
 
-#: src/Connection.php
+#: src/Connection.php src/ConnectionCharacteristics.php
 msgid "Modo de embed"
 msgstr ""
 
@@ -77,29 +77,29 @@ msgstr ""
 msgid "Data de criação"
 msgstr ""
 
-#: src/Connection.php
-msgid "Iframe direto (Grafana)"
-msgstr ""
-
-#: src/Connection.php
+#: src/ConnectionCharacteristics.php
 msgid "Publish to web — URL pública (Power BI)"
 msgstr ""
 
-#: src/Connection.php
+#: src/ConnectionCharacteristics.php
 msgid "Embed seguro — Entra ID / Premium (Power BI)"
 msgstr ""
 
-#: src/Connection.php
+#: src/ConnectionCharacteristics.php
 msgid "Deixe os campos de credenciais em branco para manter os valores já salvos."
 msgstr ""
 
-#: src/Connection.php
+#: src/ConnectionCharacteristics.php
 msgid ""
 "Atenção: \"Publish to web\" deixa o conteúdo acessível a qualquer pessoa "
 "com o link, sem autenticação. Não use para dados confidenciais."
 msgstr ""
 
-#: src/Connection.php
+#: src/ConnectionCharacteristics.php
+msgid "Características"
+msgstr ""
+
+#: src/ConnectionCharacteristics.php
 msgid "Testar conexão"
 msgstr ""
 

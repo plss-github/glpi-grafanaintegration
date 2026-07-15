@@ -39,9 +39,16 @@ class Menu extends CommonGLPI
         $menu['page']  = '/plugins/analyticdesign/front/connection.php';
         $menu['icon']  = self::getIcon();
 
+        // 'icon' aqui também alimenta o breadcrumb (ver
+        // templates/layout/parts/breadcrumbs.html.twig do core:
+        // menu[sector]['content'][item]['icon']) — sem essa chave, o último
+        // item do breadcrumb ("Fontes de dados") ficava sem ícone, deixando
+        // a trilha visualmente desalinhada com os itens anteriores
+        // (Home/Administração/Análise de Dados), que sempre têm ícone.
         $menu['options']['connection'] = [
             'title' => Connection::getTypeName(2),
             'page'  => '/plugins/analyticdesign/front/connection.php',
+            'icon'  => Connection::getIcon(),
             'links' => [
                 'search' => '/plugins/analyticdesign/front/connection.php',
                 'add'    => '/plugins/analyticdesign/front/connection.form.php',
@@ -50,6 +57,7 @@ class Menu extends CommonGLPI
         $menu['options']['item'] = [
             'title' => DashboardItem::getTypeName(2),
             'page'  => '/plugins/analyticdesign/front/dashboarditem.php',
+            'icon'  => DashboardItem::getIcon(),
             'links' => [
                 'search' => '/plugins/analyticdesign/front/dashboarditem.php',
             ],
