@@ -44,6 +44,10 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 - Ponte com o dashboard do GLPI (`Dashboard` — hooks `getTypes`/`getCards`,
   contrato confirmado contra o código-fonte real do GLPI 11.0.8).
 - Entrada de menu em Administração (`Menu`).
+- Aba própria **"Análise de Dados"** em Administração > Perfis (`ProfileRights`,
+  via `Plugin::registerClass(..., ['addtabon' => Profile::class])`) com a
+  matriz de direitos do plugin (Ler/Atualizar/Criar/Apagar). Na instalação, o
+  direito já é concedido automaticamente ao(s) perfil(is) Super-Admin.
 - Assets estáticos (`public/js`, `public/css`) e `locales/analyticdesign.pot`.
 - Licença **GPL-3.0-or-later** (acompanhando o GLPI core — ver seção Licença).
 
@@ -51,7 +55,7 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 > imagem oficial `glpi/glpi`, ver `docker-compose.yml`): instalação/ativação
 > via `bin/console`, CRUD completo de `Connection`/`DashboardItem`, e o card
 > renderizando de fato num dashboard do GLPI (`ajax/dashboard.php`, ações
-> `get_card`/`get_cards`). Três bugs reais só visíveis rodando contra o core
+> `get_card`/`get_cards`). Quatro bugs reais só visíveis rodando contra o core
 > de verdade foram encontrados e corrigidos nesse processo — ver "Notas de
 > arquitetura e riscos".
 
@@ -78,6 +82,14 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
   falhando 100% silenciosamente. E `Plugin::doHookFunction(DASHBOARD_CARDS)`
   chama `getCards()` passando `null` (não omite o argumento), então o
   parâmetro não podia ser um `array` não-anulável. Ambos corrigidos.
+- **Direitos do plugin na tela de Perfis:** `Profile::getRightsForForm()` (a
+  matriz "nativa" de direitos exibida nas abas Ativos/Administração/etc. de
+  um perfil) é uma estrutura grande, cacheada e **sem nenhum ponto de
+  extensão para plugins** — confirmado lendo o código-fonte. Por isso o
+  plugin usa `Plugin::registerClass(ProfileRights::class, ['addtabon' =>
+  Profile::class])` para adicionar sua própria aba "Análise de Dados" ao
+  perfil (mesmo mecanismo — `CommonGLPI::registerStandardTab()` — usado
+  internamente pelo core para diversas outras extensões).
 - **Resiliência a atualizações do GLPI:** `plugin_analyticdesign_check_config()`
   e `plugin_analyticdesign_check_prerequisites()` (`setup.php`) verificam em
   runtime, antes da ativação, que as dependências do plugin (GLPIKey,
@@ -177,11 +189,10 @@ docker compose exec glpi php bin/console glpi:plugin:activate analyticdesign
 Acessar `http://localhost:8080` (login padrão pós-instalação: `glpi` / `glpi`
 — trocar a senha antes de qualquer uso além do teste local).
 
-⚠️ **Passo que falta e é fácil de esquecer:** instalar/ativar o plugin **não**
-concede o direito dele a nenhum perfil, nem ao Super-Admin — sem isso, a aba
-some do menu e as telas do plugin retornam "Acesso negado". Ver
-[docs/CONFIGURACAO.md](docs/CONFIGURACAO.md#2-conceder-o-direito-do-plugin-a-um-perfil-obrigatório)
-para o passo a passo completo.
+A instalação já concede acesso completo ao(s) perfil(is) Super-Admin
+automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
+**"Análise de Dados"** dentro de Administração > Perfis — ver
+[docs/CONFIGURACAO.md](docs/CONFIGURACAO.md#2-conceder-o-direito-do-plugin-a-outros-perfis-se-necessário).
 
 ## Como testar o fluxo completo (Fase 1 — Grafana)
 
@@ -293,6 +304,7 @@ analyticdesign/
 │   ├── DashboardItem.php     # CommonDBTM: dashboards expostos + aba na Connection
 │   ├── Dashboard.php         # hooks getTypes/getCards + provider + render do widget
 │   ├── Menu.php              # entrada em Administração
+│   ├── ProfileRights.php     # aba "Análise de Dados" em Administração > Perfis
 │   ├── Client/
 │   │   ├── GrafanaClient.php  # client da API REST do Grafana
 │   │   └── PowerBiClient.php  # OAuth2 Entra ID + API REST do Power BI

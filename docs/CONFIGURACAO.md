@@ -19,19 +19,22 @@ php bin/console glpi:plugin:install --username=glpi analyticdesign
 php bin/console glpi:plugin:activate analyticdesign
 ```
 
-## 2. Conceder o direito do plugin a um perfil (obrigatório)
+## 2. Conceder o direito do plugin a outros perfis (se necessário)
 
-**Este passo é fácil de esquecer e o plugin não aparece em lugar nenhum sem
-ele** — instalar/ativar não dá direito de uso automático a nenhum perfil,
-nem mesmo ao Super-Admin. Sem isso, a aba some do menu e as telas do plugin
-retornam "Acesso negado".
+Na instalação, o plugin já **concede acesso completo automaticamente ao(s)
+perfil(is) Super-Admin** — quem instala já consegue usar sem passo extra.
+Para liberar o plugin a outros perfis (ex.: uma equipe específica que só
+administra as fontes, ou um perfil que só deve visualizar):
 
-1. **Administração > Perfis**.
-2. Abrir o perfil que vai usar o plugin (ex.: `Super-Admin`, ou o perfil dos
-   administradores que vão cadastrar as fontes).
-3. Encontrar a aba/seção **"Análise de Dados: fontes e dashboards"** (o nome
-   do direito registrado por este plugin) e marcar as permissões desejadas
-   (tipicamente leitura + escrita completas para quem administra as fontes).
+1. **Administração > Perfis**, abrir o perfil desejado.
+2. Uma aba própria **"Análise de Dados"** aparece no formulário do perfil
+   (junto com Ativos, Assistência, Administração etc.) — não é preciso
+   procurar dentro de outra seção genérica.
+3. Marcar as permissões desejadas na linha "Análise de Dados: fontes e
+   dashboards": **Ler** (só visualizar/testar), **Atualizar**, **Criar**,
+   **Apagar** — marcar só "Ler" equivale a um perfil "somente leitura"; marcar
+   tudo equivale a "gerenciamento completo". A coluna "Marcar/Desmarcar
+   todos" facilita liberar tudo de uma vez.
 4. Salvar.
 5. Se o usuário já estava logado, ele precisa **sair e entrar de novo** (ou
    esperar a atualização de direitos da sessão) para a mudança valer.
@@ -151,7 +154,7 @@ plugin.
 
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
-| Menu/telas do plugin não aparecem, ou "Acesso negado" | Direito não concedido ao perfil | Ver passo 2 acima; sair e entrar de novo depois de salvar o perfil |
+| Menu/telas do plugin não aparecem, ou "Acesso negado" | Direito não concedido ao perfil (perfis diferentes do Super-Admin não recebem acesso automático) | Ver passo 2 acima (aba "Análise de Dados" dentro do perfil); sair e entrar de novo depois de salvar |
 | "Testar conexão" falha | URL/token errados, ou Grafana/Power BI inacessível a partir do **servidor** do GLPI | Confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
 | Card aparece vazio/quebrado no dashboard | Política de CSP da instância GLPI, ou `X-Frame-Options`/CSP do Grafana/Power BI bloqueando ser enquadrado por outra origem | Verificar `allow_embedding` no Grafana; checar CSP da instância GLPI (fora do controle do plugin) |
 | Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |

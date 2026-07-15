@@ -13,6 +13,7 @@
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Analyticdesign\Dashboard;
 use GlpiPlugin\Analyticdesign\Menu;
+use GlpiPlugin\Analyticdesign\ProfileRights;
 
 define('PLUGIN_ANALYTICDESIGN_VERSION', '0.2.0');
 // Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
@@ -46,6 +47,10 @@ function plugin_init_analyticdesign(): void
     $PLUGIN_HOOKS['menu_toadd']['analyticdesign'] = [
         'admin' => Menu::class,
     ];
+
+    // Aba própria "Análise de Dados" dentro de Administração > Perfis, para
+    // liberar o direito do plugin por perfil (ver docblock de ProfileRights).
+    \Plugin::registerClass(ProfileRights::class, ['addtabon' => \Profile::class]);
 
     // --- Integração com o sistema de dashboards (ver docblock acima) ---
     // IMPORTANTE: `Plugin::doHookFunction()` chama o valor registrado
@@ -143,6 +148,9 @@ function plugin_analyticdesign_check_config($verbose = false): bool
         '\\Dropdown::showFromArray()' => method_exists(\Dropdown::class, 'showFromArray'),
         '\\Session::checkCSRF()' => method_exists(\Session::class, 'checkCSRF'),
         '\\Glpi\\Plugin\\Hooks (constantes de hook)' => class_exists(\Glpi\Plugin\Hooks::class),
+        '\\Plugin::registerClass()' => method_exists(\Plugin::class, 'registerClass'),
+        '\\ProfileRight::addProfileRights()' => class_exists(\ProfileRight::class) && method_exists(\ProfileRight::class, 'addProfileRights'),
+        '\\Profile::displayRightsChoiceMatrix()' => method_exists(\Profile::class, 'displayRightsChoiceMatrix'),
     ];
 
     $missing = array_keys(array_filter($checks, static fn ($ok) => !$ok));

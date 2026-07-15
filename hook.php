@@ -21,16 +21,31 @@ function plugin_analyticdesign_install(): bool
 
     $migration->executeMigration();
 
+    // ProfileRight::addProfileRights() cria a linha do direito (rights=0, ou
+    // seja, "sem acesso") para TODOS os perfis existentes — sem isso, a
+    // matriz de direitos mostraria o valor como ausente/indefinido em vez de
+    // "sem acesso" explicitamente. Em seguida, concede acesso completo já
+    // ao(s) perfil(is) Super-Admin: sem isso, nem quem instalou o plugin
+    // consegue usá-lo até entrar manualmente em Administração > Perfis e
+    // marcar as permissões (confirmado como uma armadilha real testando
+    // contra uma instância viva — ver docs/CONFIGURACAO.md).
+    \ProfileRight::addProfileRights([Connection::RIGHTNAME]);
+    foreach (\Profile::getSuperAdminProfilesId() as $profilesId) {
+        \ProfileRight::updateProfileRights($profilesId, [Connection::RIGHTNAME => ALLSTANDARDRIGHT]);
+    }
+
     return true;
 }
 
 /**
- * Desinstalação: remove tabelas.
+ * Desinstalação: remove tabelas e direitos.
  */
 function plugin_analyticdesign_uninstall(): bool
 {
     Connection::uninstall();
     DashboardItem::uninstall();
+
+    \ProfileRight::deleteProfileRights([Connection::RIGHTNAME]);
 
     return true;
 }
