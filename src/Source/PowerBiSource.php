@@ -3,30 +3,25 @@
 /**
  * Analytic Design by Pellissari
  * -----------------------------------------------------------------------------
- * FONTE POWER BI — STUB DAS FASES 2 e 3.
+ * FONTE POWER BI.
  *
- * Este arquivo NÃO está funcional ainda. Ele existe para demonstrar que a
- * abstração DashboardSourceInterface comporta o Power BI sem tocar em nenhum
- * outro arquivo do plugin: basta completar os métodos abaixo e registrar a
- * classe na SourceFactory.
+ * Suporta (por design) DOIS modos de embed, escolhidos via connection.embed_mode:
  *
- * Suporta (por design) DOIS modos de embed, escolhidos via connection.embed_mode,
- * cada um planejado como uma fase separada por terem custo/risco bem diferentes:
- *
- *   - 'secure' (Fase 2)         : Entra ID + service principal + embed token +
- *     powerbi-client. Requer capacity/licença Premium. ~8-10 dias.
- *   - 'publish_to_web' (Fase 3) : URL pública, iframe simples — reaproveita
- *     AbstractDashboardSource::buildIframe(), o mesmo usado pelo Grafana.
- *     ⚠️ SEM AUTENTICAÇÃO: qualquer pessoa com o link acessa. Exige aviso
- *     obrigatório e não descartável na UI sempre que este modo é selecionado
- *     (ver Connection::showForm(), classe `.analyticdesign-publish-warning`).
- *     Não usar para dados confidenciais. ~2-3 dias — mais simples que a Fase 2
- *     por não precisar de OAuth/backend, por isso planejada como fase própria
- *     e independente (pode até ser entregue antes da Fase 2, se priorizado).
+ *   - 'secure' (Fase 2) — IMPLEMENTADO: Entra ID (service principal) + embed
+ *     token gerado no servidor a cada render + powerbi-client no front.
+ *     Requer capacity/licença Premium no workspace do Power BI.
+ *   - 'publish_to_web' (Fase 3) — IMPLEMENTADO: reaproveita
+ *     AbstractDashboardSource::buildIframe(), o mesmo usado pelo Grafana. Sem
+ *     listagem automática (a API do Power BI não expõe URLs de publish-to-web);
+ *     o admin cola a URL manualmente por dashboard.
+ *     ⚠️ SEM AUTENTICAÇÃO: qualquer pessoa com o link acessa. Aviso obrigatório
+ *     e não descartável na UI sempre que este modo é selecionado (ver
+ *     Connection::showForm(), classe `.analyticdesign-publish-warning`).
  */
 
 namespace GlpiPlugin\Analyticdesign\Source;
 
+use GlpiPlugin\Analyticdesign\Client\PowerBiClient;
 use GlpiPlugin\Analyticdesign\DashboardItem;
 
 class PowerBiSource extends AbstractDashboardSource
@@ -41,49 +36,119 @@ class PowerBiSource extends AbstractDashboardSource
         return 'Power BI';
     }
 
+    private function embedMode(): string
+    {
+        return $this->connection->fields['embed_mode'] ?? 'secure';
+    }
+
+    private function client(): PowerBiClient
+    {
+        return new PowerBiClient(
+            $this->credentials['tenant_id'] ?? '',
+            $this->credentials['client_id'] ?? '',
+            $this->credentials['client_secret'] ?? '',
+            $this->credentials['workspace_id'] ?? ''
+        );
+    }
+
     public function testConnection(): bool
     {
-        // TODO (Fase 3 — publish_to_web): nada a autenticar, pode retornar
-        //   true direto (não há API a chamar nesse modo).
-        // TODO (Fase 2 — secure): obter token OAuth2 (client_credentials) no
-        //   Entra ID e chamar GET /v1.0/myorg/groups como sanity check.
-        return false;
+        if ($this->embedMode() === 'publish_to_web') {
+            // Nada a autenticar nesse modo — não há API a chamar.
+            return true;
+        }
+        try {
+            return $this->client()->ping();
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     public function listDashboards(): array
     {
-        // TODO (Fase 2 — secure): GET /v1.0/myorg/groups/{workspace}/reports
-        // Fase 3 — publish_to_web: por design NÃO há listagem automática (a
-        //   API do Power BI não expõe os links de "publish to web"); o admin
-        //   cola manualmente a URL pública ao criar/editar o DashboardItem.
-        return [];
+        if ($this->embedMode() === 'publish_to_web') {
+            // Por design: a API do Power BI não expõe links de "publish to
+            // web"; o admin adiciona manualmente (ver
+            // DashboardItem::showForConnection() -> formulário de adição manual).
+            return [];
+        }
+        try {
+            return $this->client()->listReports();
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     public function renderEmbed(DashboardItem $item, array $context = []): string
     {
-        $mode = $this->connection->fields['embed_mode'] ?? 'secure';
-
-        if ($mode === 'publish_to_web') {
+        if ($this->embedMode() === 'publish_to_web') {
             // Fase 3: reaproveita exatamente o mesmo padrão de iframe do
             // Grafana (inclusive a validação de esquema http/https).
             return $this->buildIframe($item->fields['embed_url'] ?? '', $context);
         }
 
-        // Fase 2 (secure): gerar embed token no servidor e devolver um
-        // container que o powerbi-client (JS) hidrata no front.
-        // TODO (Fase 2): implementar geração de embed token e bootstrap JS.
-        return '<div class="analyticdesign-powerbi-secure" '
-             . 'data-report-id="' . htmlspecialchars((string)$item->fields['external_id'], ENT_QUOTES) . '">'
-             . __('Embed seguro do Power BI pendente de implementação (Fase 2).', 'analyticdesign')
-             . '</div>';
+        // Fase 2 (secure): gera um embed token novo a cada render (validade
+        // curta, ~1h por padrão da API) e devolve um container que o
+        // powerbi-client (JS) hidrata no front — ver
+        // public/js/analyticdesign-powerbi.js. Nenhum token fica persistido.
+        try {
+            $tokenData = $this->client()->generateEmbedToken((string)$item->fields['external_id']);
+        } catch (\Throwable $e) {
+            return '<div class="analyticdesign-error" style="padding:1rem;color:#b00;">'
+                . htmlspecialchars(__('Falha ao gerar o embed token do Power BI.', 'analyticdesign'), ENT_QUOTES)
+                . '</div>';
+        }
+
+        $width  = htmlspecialchars((string)($context['width']  ?? '100%'), ENT_QUOTES);
+        $height = htmlspecialchars((string)($context['height'] ?? '100%'), ENT_QUOTES);
+
+        return sprintf(
+            '<div class="analyticdesign-powerbi-secure" style="width:%s;height:%s;" '
+            . 'data-report-id="%s" data-embed-url="%s" data-embed-token="%s"></div>',
+            $width,
+            $height,
+            htmlspecialchars((string)$item->fields['external_id'], ENT_QUOTES),
+            htmlspecialchars($item->fields['embed_url'] ?? '', ENT_QUOTES),
+            htmlspecialchars($tokenData['token'], ENT_QUOTES)
+        );
     }
 
     public static function getConfigFields(): array
     {
-        // TODO: campos condicionais ao embed_mode.
-        //  Fase 3 (publish_to_web): nenhum campo de credencial aqui — a URL
-        //    pública é preenchida por DashboardItem, não pela Connection.
-        //  Fase 2 (secure): tenant_id, client_id, client_secret, workspace_id.
-        return [];
+        // 'embed_mode' marca campos que só se aplicam a um modo específico —
+        // Connection::showForm() e analyticdesign.js usam essa chave para
+        // mostrar/esconder o campo junto com o dropdown de embed_mode.
+        // publish_to_web não tem campos aqui: a URL pública é colada por
+        // DashboardItem (aba "Dashboards"), não pela Connection.
+        return [
+            [
+                'name'       => 'tenant_id',
+                'label'      => __('Tenant ID (Entra ID)', 'analyticdesign'),
+                'type'       => 'text',
+                'help'       => __('GUID do tenant do Azure AD / Entra ID.', 'analyticdesign'),
+                'embed_mode' => 'secure',
+            ],
+            [
+                'name'       => 'client_id',
+                'label'      => __('Client ID (aplicativo registrado)', 'analyticdesign'),
+                'type'       => 'text',
+                'help'       => __('ID do aplicativo (service principal) registrado no Entra ID.', 'analyticdesign'),
+                'embed_mode' => 'secure',
+            ],
+            [
+                'name'       => 'client_secret',
+                'label'      => __('Client secret', 'analyticdesign'),
+                'type'       => 'password',
+                'help'       => __('Segredo do aplicativo registrado no Entra ID.', 'analyticdesign'),
+                'embed_mode' => 'secure',
+            ],
+            [
+                'name'       => 'workspace_id',
+                'label'      => __('Workspace ID (group)', 'analyticdesign'),
+                'type'       => 'text',
+                'help'       => __('GUID do workspace do Power BI onde os relatórios estão publicados.', 'analyticdesign'),
+                'embed_mode' => 'secure',
+            ],
+        ];
     }
 }

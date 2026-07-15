@@ -249,6 +249,37 @@ class DashboardItem extends CommonDBTM
             Html::closeForm();
         }
         echo "</div>";
+
+        // Adição manual: única forma de cadastrar um dashboard no modo
+        // publish_to_web (a API do Power BI não expõe essas URLs — ver
+        // PowerBiSource::listDashboards()); também serve de válvula de escape
+        // caso a listagem automática de outra fonte falhe ou fique incompleta.
+        echo "<div class='analyticdesign-manual-add mt-4'>";
+        echo "<h3>" . __('Adicionar manualmente', 'analyticdesign') . "</h3>";
+        echo "<p class='text-muted'>" . __('Use esta opção quando a fonte não permite listar dashboards automaticamente (ex.: Power BI em modo "publish to web") — cole a URL pública/de embed diretamente.', 'analyticdesign') . "</p>";
+        if ($connection->fields['type'] === 'powerbi' && ($connection->fields['embed_mode'] ?? '') === 'publish_to_web') {
+            echo "<p class='alert alert-important alert-danger'>"
+                . "<i class='ti ti-alert-triangle'></i> "
+                . __('Atenção: a URL colada abaixo fica acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
+                . "</p>";
+        }
+        echo "<form name='analyticdesign_add_manual' method='post' action='"
+            . htmlspecialchars($ajaxRoot . '/addmanualdashboard.php', ENT_QUOTES) . "'>";
+        echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
+        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
+        echo "<td>" . __('Nome') . "</td>";
+        echo "<td>" . Html::input('name', ['value' => '']) . "</td>";
+        echo "<td>" . __('Categoria', 'analyticdesign') . "</td>";
+        echo "<td>" . Html::input('category', ['value' => '']) . "</td>";
+        echo "</tr><tr class='tab_bg_1'>";
+        echo "<td>" . __('URL de embed', 'analyticdesign') . "</td>";
+        echo "<td colspan='3'>" . Html::input('embed_url', ['value' => '', 'size' => 60]) . "</td>";
+        echo "</tr></table>";
+        echo "<div class='mt-2'>";
+        echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Adicionar', 'analyticdesign') . "</button>";
+        echo "</div>";
+        Html::closeForm();
+        echo "</div>";
     }
 
     /**

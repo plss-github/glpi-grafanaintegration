@@ -7,9 +7,9 @@
 # código evoluir, para manter referências de arquivo/linha em dia.
 msgid ""
 msgstr ""
-"Project-Id-Version: analyticdesign 0.1.0\n"
+"Project-Id-Version: analyticdesign 0.2.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-14 00:00+0000\n"
+"POT-Creation-Date: 2026-07-15 00:00+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -147,6 +147,23 @@ msgstr ""
 msgid "Importar selecionados"
 msgstr ""
 
+#: src/DashboardItem.php
+msgid "Adicionar manualmente"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid ""
+"Use esta opção quando a fonte não permite listar dashboards "
+"automaticamente (ex.: Power BI em modo \"publish to web\") — cole a URL "
+"pública/de embed diretamente."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid ""
+"Atenção: a URL colada abaixo fica acessível a qualquer pessoa com o link, "
+"sem autenticação. Não use para dados confidenciais."
+msgstr ""
+
 #: ajax/testconnection.php
 msgid "Fonte de dados não encontrada ou acesso negado."
 msgstr ""
@@ -163,8 +180,44 @@ msgstr ""
 msgid "Erro ao testar a conexão."
 msgstr ""
 
+#: src/Source/AbstractDashboardSource.php
+msgid "URL de embed inválida (esperado http/https)."
+msgstr ""
+
 #: src/Source/PowerBiSource.php
-msgid "Embed seguro do Power BI pendente de implementação (Fase 2)."
+msgid "Falha ao gerar o embed token do Power BI."
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "Tenant ID (Entra ID)"
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "GUID do tenant do Azure AD / Entra ID."
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "Client ID (aplicativo registrado)"
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "ID do aplicativo (service principal) registrado no Entra ID."
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "Client secret"
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "Segredo do aplicativo registrado no Entra ID."
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "Workspace ID (group)"
+msgstr ""
+
+#: src/Source/PowerBiSource.php
+msgid "GUID do workspace do Power BI onde os relatórios estão publicados."
 msgstr ""
 
 #: src/Source/GrafanaSource.php
@@ -177,8 +230,4 @@ msgstr ""
 
 #: src/Source/GrafanaSource.php
 msgid "Token com permissão de leitura de dashboards."
-msgstr ""
-
-#: src/Source/AbstractDashboardSource.php
-msgid "URL de embed inválida (esperado http/https)."
 msgstr ""

@@ -2,7 +2,8 @@
  * Analytic Design by Pellissari
  * -----------------------------------------------------------------------------
  * Comportamento do formulário de Connection:
- *  - mostra apenas os campos de credenciais do tipo de fonte selecionado;
+ *  - mostra apenas os campos de credenciais do tipo de fonte selecionado e,
+ *    para Power BI, também do embed_mode selecionado (secure vs publish_to_web);
  *  - alerta quando o modo de embed "publish to web" é escolhido (Power BI);
  *  - botão "Testar conexão" via fetch, sem recarregar a página.
  *
@@ -22,9 +23,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!typeSelect) {
             return;
         }
-        var selected = typeSelect.value;
+        var selectedType = typeSelect.value;
+        var selectedEmbedMode = embedModeSelect ? embedModeSelect.value : null;
         document.querySelectorAll('.analyticdesign-fields-for-type').forEach(function (row) {
-            row.style.display = (row.dataset.sourceType === selected) ? '' : 'none';
+            var typeMatches = row.dataset.sourceType === selectedType;
+            // Campos sem data-embed-mode valem para qualquer modo do tipo
+            // (ex.: o próprio seletor de embed_mode); campos com
+            // data-embed-mode (ex.: tenant_id do modo 'secure') só aparecem
+            // quando o modo selecionado bate.
+            var embedModeMatches = !row.dataset.embedMode || row.dataset.embedMode === selectedEmbedMode;
+            row.style.display = (typeMatches && embedModeMatches) ? '' : 'none';
         });
     }
 
@@ -46,7 +54,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (embedModeSelect) {
-        embedModeSelect.addEventListener('change', togglePublishWarning);
+        embedModeSelect.addEventListener('change', function () {
+            togglePublishWarning();
+            toggleFieldsForType();
+        });
         togglePublishWarning();
     }
 

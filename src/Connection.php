@@ -11,7 +11,7 @@ namespace GlpiPlugin\Analyticdesign;
 
 use CommonDBTM;
 use Dropdown;
-use Glpi\Security\GLPIKey;
+use GLPIKey;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
 use Html;
 
@@ -152,6 +152,20 @@ class Connection extends CommonDBTM
             . "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>"
             . "</td></tr>";
 
+        // Modo de embed: só relevante para Power BI. Escolhido antes dos
+        // campos de credenciais porque decide QUAIS campos de credencial do
+        // Power BI fazem sentido (publish_to_web não usa nenhum — a URL
+        // pública é colada por dashboard, na aba "Dashboards").
+        echo "<tr class='tab_bg_2 analyticdesign-fields-for-type' data-source-type='powerbi'>";
+        echo "<td>" . __('Modo de embed', 'analyticdesign') . "</td>";
+        echo "<td colspan='3'>";
+        Dropdown::showFromArray('embed_mode', $embedModes, ['value' => $this->fields['embed_mode']]);
+        echo "<div class='analyticdesign-publish-warning alert alert-important alert-danger' style='display:none;margin-top:.5rem;'>"
+            . "<i class='ti ti-alert-triangle'></i> "
+            . __('Atenção: "Publish to web" deixa o conteúdo acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
+            . "</div>";
+        echo "</td></tr>";
+
         foreach ($configFields as $type => $fieldsForType) {
             if (empty($fieldsForType)) {
                 continue;
@@ -161,7 +175,11 @@ class Connection extends CommonDBTM
             echo "</tr>";
             foreach ($fieldsForType as $field) {
                 $inputType = $field['type'] === 'password' ? 'password' : 'text';
-                echo "<tr class='tab_bg_1 analyticdesign-fields-for-type' data-source-type='" . htmlspecialchars($type, ENT_QUOTES) . "'>";
+                $embedModeAttr = isset($field['embed_mode'])
+                    ? " data-embed-mode='" . htmlspecialchars($field['embed_mode'], ENT_QUOTES) . "'"
+                    : '';
+                echo "<tr class='tab_bg_1 analyticdesign-fields-for-type' data-source-type='"
+                    . htmlspecialchars($type, ENT_QUOTES) . "'{$embedModeAttr}>";
                 echo "<td>" . htmlspecialchars($field['label'], ENT_QUOTES) . "</td>";
                 echo "<td colspan='3'>"
                     . Html::input($field['name'], ['type' => $inputType, 'value' => '', 'size' => 60]);
@@ -174,16 +192,6 @@ class Connection extends CommonDBTM
         echo "<tr class='tab_bg_1'><td colspan='4'><em>"
             . __('Deixe os campos de credenciais em branco para manter os valores já salvos.', 'analyticdesign')
             . "</em></td></tr>";
-
-        echo "<tr class='tab_bg_2 analyticdesign-fields-for-type' data-source-type='powerbi'>";
-        echo "<td>" . __('Modo de embed', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>";
-        Dropdown::showFromArray('embed_mode', $embedModes, ['value' => $this->fields['embed_mode']]);
-        echo "<div class='analyticdesign-publish-warning alert alert-important alert-danger' style='display:none;margin-top:.5rem;'>"
-            . "<i class='ti ti-alert-triangle'></i> "
-            . __('Atenção: "Publish to web" deixa o conteúdo acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
-            . "</div>";
-        echo "</td></tr>";
 
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Ativo') . "</td>";
@@ -258,7 +266,10 @@ class Connection extends CommonDBTM
      */
     private function handleCredentialInput($input)
     {
-        $sensitive = ['api_token', 'client_id', 'client_secret', 'tenant_id'];
+        // workspace_id não é secreto por natureza, mas fica no mesmo blob
+        // criptografado por simplicidade (evita migração para uma coluna nova
+        // só para esse campo específico do Power BI).
+        $sensitive = ['api_token', 'client_id', 'client_secret', 'tenant_id', 'workspace_id'];
         $creds = $this->getDecryptedCredentials();
         $touched = false;
         foreach ($sensitive as $key) {

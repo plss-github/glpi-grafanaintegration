@@ -6,15 +6,20 @@
  * Plugin GLPI 11.0.x — integração de dashboards de BI externos (Grafana / Power BI)
  * ao sistema nativo de dashboards do GLPI.
  *
- * Licença: GPL-2.0
+ * Licença: GPL-3.0-or-later (GLPI passou de GPL-2.0 para GPL-3.0 a partir da
+ * versão 10.0.1; plugins devem acompanhar a licença do core — ver LICENSE).
  */
 
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Analyticdesign\Dashboard;
 use GlpiPlugin\Analyticdesign\Menu;
 
-define('PLUGIN_ANALYTICDESIGN_VERSION', '0.1.0');
-define('PLUGIN_ANALYTICDESIGN_MIN_GLPI', '11.0.0');
+define('PLUGIN_ANALYTICDESIGN_VERSION', '0.2.0');
+// Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
+// desta revisão). CommonDBTM::can()/check() nesta versão tipam `int $right`
+// e `?array &$input` — sem impacto no uso feito por este plugin, mas registrado
+// aqui pois é a versão contra a qual as assinaturas foram conferidas.
+define('PLUGIN_ANALYTICDESIGN_MIN_GLPI', '11.0.8');
 define('PLUGIN_ANALYTICDESIGN_MAX_GLPI', '11.9.99');
 
 /**
@@ -42,9 +47,15 @@ function plugin_init_analyticdesign(): void
         Dashboard::class => 'getCards',
     ];
 
-    // Assets do plugin: toggle de campos por tipo de fonte + botão "Testar conexão".
+    // Assets do plugin: toggle de campos por tipo/modo de fonte, botão "Testar
+    // conexão" e o bootstrap do embed seguro do Power BI (Fase 2) — a lib
+    // powerbi-client vem antes do bootstrap que a usa.
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['analyticdesign'] = 'public/css/analyticdesign.css';
-    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['analyticdesign'] = 'public/js/analyticdesign.js';
+    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['analyticdesign'] = [
+        'public/js/analyticdesign.js',
+        'public/js/vendor/powerbi-client.min.js',
+        'public/js/analyticdesign-powerbi.js',
+    ];
 }
 
 /**
@@ -56,7 +67,7 @@ function plugin_version_analyticdesign(): array
         'name'           => 'Analytic Design by Pellissari',
         'version'        => PLUGIN_ANALYTICDESIGN_VERSION,
         'author'         => 'Pellissari',
-        'license'        => 'GPL-2.0',
+        'license'        => 'GPL-3.0-or-later',
         'homepage'       => '',
         'requirements'   => [
             'glpi' => [

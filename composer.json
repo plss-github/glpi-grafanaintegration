@@ -2,7 +2,7 @@
     "name": "pellissari/analyticdesign",
     "description": "Analytic Design by Pellissari - integra dashboards de BI externos (Grafana/Power BI) ao GLPI 11",
     "type": "glpi-plugin",
-    "license": "GPL-2.0-or-later",
+    "license": "GPL-3.0-or-later",
     "require": {
         "php": ">=8.2"
     },
