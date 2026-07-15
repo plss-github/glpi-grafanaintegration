@@ -128,8 +128,15 @@ class DashboardItem extends CommonDBTM
 
     /**
      * Aba "Dashboards" no formulário da Connection (ver Connection::defineTabs()).
+     *
+     * NÃO static: CommonGLPI::getTabNameForItem() é um método de instância na
+     * base (confirmado em src/CommonGLPI.php do GLPI 11.0.8 — o dispatcher de
+     * abas em CommonGLPI::getTabNameForItem() chama `$obj->getTabNameForItem(...)`
+     * numa instância, não `Class::getTabNameForItem(...)`); declarar como
+     * `static` aqui é um erro fatal de compilação em PHP (não dá para tornar
+     * static um método não-static ao sobrescrever).
      */
-    public static function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
+    public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
         if ($item instanceof Connection && $item->fields['id'] > 0) {
             $count = count(self::getForConnection((int)$item->fields['id']));

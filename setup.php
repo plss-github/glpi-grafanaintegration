@@ -48,15 +48,20 @@ function plugin_init_analyticdesign(): void
     ];
 
     // --- Integração com o sistema de dashboards (ver docblock acima) ---
+    // IMPORTANTE: `Plugin::doHookFunction()` chama o valor registrado
+    // diretamente via `call_user_func($function, ...)` — precisa ser um
+    // callable PHP de verdade. `[Dashboard::class => 'getTypes']` é um array
+    // ASSOCIATIVO (chave => valor), não o array indexado `[classe, método]`
+    // que PHP reconhece como callable (`is_callable(['C' => 'm'])` é sempre
+    // `false`; confirmado testando contra uma instância GLPI 11.0.8 real —
+    // sem essa correção, os cards do plugin nunca apareciam no catálogo do
+    // dashboard, falhando silenciosamente para um array vazio). A string
+    // "Classe::metodo" é a forma mais clara de declarar isso.
     if (defined(Hooks::class . '::DASHBOARD_TYPES') && defined(Hooks::class . '::DASHBOARD_CARDS')) {
         // Novo tipo de widget (embed de BI externo).
-        $PLUGIN_HOOKS[Hooks::DASHBOARD_TYPES]['analyticdesign'] = [
-            Dashboard::class => 'getTypes',
-        ];
+        $PLUGIN_HOOKS[Hooks::DASHBOARD_TYPES]['analyticdesign'] = Dashboard::class . '::getTypes';
         // Novos cards (um por dashboard exposto).
-        $PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['analyticdesign'] = [
-            Dashboard::class => 'getCards',
-        ];
+        $PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['analyticdesign'] = Dashboard::class . '::getCards';
     }
 
     // Assets do plugin: toggle de campos por tipo/modo de fonte, botão "Testar

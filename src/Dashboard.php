@@ -52,14 +52,23 @@ class Dashboard
      * Cards disponíveis no catálogo — um por dashboard exposto, agrupado por categoria.
      * Hook: Glpi\Plugin\Hooks::DASHBOARD_CARDS
      *
-     * NOTA OPERACIONAL: o GLPI cacheia a lista combinada de todos os cards
-     * (core + plugins) — ver Grid::getAllDasboardCards(). Após importar novos
-     * dashboards (DashboardItem novos), pode ser necessário limpar o cache do
-     * GLPI (Configurar > Geral > Manutenção, ou `bin/console cache:clear`)
-     * para o novo card aparecer no catálogo de widgets.
+     * Sem cache a se preocupar aqui: `Grid::getAllDasboardCards()` cacheia só
+     * os cards nativos do GLPI; o merge com os hooks de plugin
+     * (`Plugin::doHookFunction(Hooks::DASHBOARD_CARDS)`) roda de novo a cada
+     * chamada — confirmado lendo o código-fonte do GLPI 11.0.8. Um dashboard
+     * novo aparece no catálogo assim que ativo, sem precisar limpar cache.
+     *
+     * `?array $cards = null` (em vez de `array $cards = []`): confirmado
+     * contra uma instância real que `Plugin::doHookFunction()` chama este
+     * método passando `null` explicitamente (não omite o argumento) quando
+     * nenhum outro plugin/hook anterior definiu um valor — um parâmetro
+     * `array` não-anulável rejeita `null` mesmo tendo valor default,
+     * causando `TypeError` fatal (silencioso na tela: card some do catálogo).
      */
-    public static function getCards(array $cards = []): array
+    public static function getCards(?array $cards = null): array
     {
+        $cards ??= [];
+
         foreach (DashboardItem::getActiveItems() as $item) {
             $id       = (int)$item->fields['id'];
             $category = $item->fields['category'] !== ''

@@ -12,7 +12,8 @@ include('../../../inc/includes.php');
 use GlpiPlugin\Analyticdesign\Connection;
 use GlpiPlugin\Analyticdesign\DashboardItem;
 
-Session::checkCSRF($_POST);
+// Sem Session::checkCSRF() explícito — ver comentário em front/connection.form.php
+// (o kernel do GLPI 11 já valida e consome o token antes deste script rodar).
 // Checagem grosseira do direito antes de iterar; o escopo por entidade é
 // verificado abaixo, item a item, via a Connection dona de cada um —
 // DashboardItem não tem entities_id próprio (ver DashboardItem::install()),

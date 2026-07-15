@@ -13,8 +13,10 @@ use GlpiPlugin\Analyticdesign\Connection;
 
 header('Content-Type: application/json; charset=UTF-8');
 
-Session::checkCSRF($_POST);
-
+// Sem Session::checkCSRF() explícito — ver comentário em front/connection.form.php
+// (o kernel do GLPI 11 já valida e consome o token antes deste script rodar;
+// nosso JS já envia _glpi_csrf_token no corpo do fetch para satisfazer essa
+// checagem automática).
 // loadAuthorized() verifica o direito READ *e* o escopo de entidade do item —
 // ao contrário de Session::haveRight() (global) + getFromDB() cru, isso evita
 // que um usuário com direito de leitura numa entidade teste conexões de

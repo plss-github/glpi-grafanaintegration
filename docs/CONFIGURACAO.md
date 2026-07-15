@@ -1,0 +1,158 @@
+# Analytic Design by Pellissari — Guia de Configuração
+
+Tutorial passo a passo para instalar, ativar e configurar o plugin depois que
+ele já está copiado em `glpi/plugins/analyticdesign` (ou montado via
+`docker-compose.yml` — ver README). Testado ponta a ponta contra GLPI 11.0.8.
+
+## 1. Instalar e ativar o plugin
+
+Pela interface web:
+
+1. **Setup > Plugins**.
+2. Localizar "Analytic Design by Pellissari" e clicar em **Instalar**.
+3. Depois de instalado, clicar em **Ativar**.
+
+Ou via linha de comando (dentro do container/servidor, na raiz do GLPI):
+
+```
+php bin/console glpi:plugin:install --username=glpi analyticdesign
+php bin/console glpi:plugin:activate analyticdesign
+```
+
+## 2. Conceder o direito do plugin a um perfil (obrigatório)
+
+**Este passo é fácil de esquecer e o plugin não aparece em lugar nenhum sem
+ele** — instalar/ativar não dá direito de uso automático a nenhum perfil,
+nem mesmo ao Super-Admin. Sem isso, a aba some do menu e as telas do plugin
+retornam "Acesso negado".
+
+1. **Administração > Perfis**.
+2. Abrir o perfil que vai usar o plugin (ex.: `Super-Admin`, ou o perfil dos
+   administradores que vão cadastrar as fontes).
+3. Encontrar a aba/seção **"Análise de Dados: fontes e dashboards"** (o nome
+   do direito registrado por este plugin) e marcar as permissões desejadas
+   (tipicamente leitura + escrita completas para quem administra as fontes).
+4. Salvar.
+5. Se o usuário já estava logado, ele precisa **sair e entrar de novo** (ou
+   esperar a atualização de direitos da sessão) para a mudança valer.
+
+## 3. Cadastrar uma fonte Grafana
+
+1. **Administração > Análise de Dados > Fontes de dados > Adicionar novo
+   item**.
+2. Preencher:
+   - **Nome**: um nome livre para identificar a fonte (ex.: "Grafana
+     Produção").
+   - **Ferramenta**: `Grafana`.
+   - **URL base**: a URL da instância, ex. `https://grafana.suaempresa.com`
+     (sem barra no final).
+   - **API Token / Service account token**: um *service account token* do
+     Grafana com permissão de leitura de dashboards (Grafana > Administration
+     > Service accounts).
+3. Marcar **Ativo** e salvar.
+4. Na própria tela, clicar em **Testar conexão** — deve responder "Conexão
+   bem-sucedida.". Se falhar, confirmar:
+   - que o Grafana tem `allow_embedding: true` na seção `[security]` do
+     `grafana.ini` (necessário para o iframe funcionar depois, mesmo que o
+     teste de conexão em si não dependa disso);
+   - que a URL base está correta e acessível a partir do servidor do GLPI
+     (não do seu navegador — a chamada é feita pelo backend);
+   - que o token tem permissão de leitura.
+
+## 4. Importar dashboards do Grafana
+
+Na aba **"Dashboards"** do registro salvo (aparece assim que a Connection é
+criada):
+
+1. A seção **"Dashboards disponíveis na fonte"** lista automaticamente os
+   dashboards encontrados via API do Grafana.
+2. Marcar os que devem virar cards, opcionalmente preencher uma **Categoria**
+   por linha (ex.: "Ativos", "Indicadores gerais" — vira o agrupamento do
+   card no catálogo de widgets do dashboard nativo).
+3. Clicar em **Importar selecionados**.
+4. Os itens aparecem em **"Dashboards importados"**, onde dá para ajustar
+   categoria/ativo depois e salvar.
+
+Se a listagem falhar (fonte fora do ar, token errado), a tela mostra um aviso
+e cai automaticamente na seção **"Adicionar manualmente"** abaixo — dá para
+colar a URL de embed de um dashboard específico à mão.
+
+## 5. Cadastrar uma fonte Power BI — modo "Embed seguro"
+
+Uso recomendado para dados sensíveis (requer licença/capacity **Premium** no
+workspace do Power BI).
+
+1. No **Entra ID** (Azure AD): registrar um aplicativo, gerar um **client
+   secret**, e no **admin portal do Power BI**, garantir que o service
+   principal tem acesso ao workspace (como membro, ou habilitando "Service
+   principals can use Fabric APIs").
+2. Anotar: **Tenant ID**, **Client ID**, **Client secret**, e o **Workspace
+   ID** (GUID do workspace/group — está na URL do workspace no Power BI).
+3. **Administração > Análise de Dados > Fontes de dados > Adicionar**:
+   - **Ferramenta**: `Power BI`.
+   - **Modo de embed**: `Embed seguro — Entra ID / Premium (Power BI)`.
+   - Preencher Tenant ID, Client ID, Client secret e Workspace ID.
+4. Salvar e clicar em **Testar conexão** (autentica no Entra ID e verifica
+   acesso ao workspace).
+5. Aba **"Dashboards"**: os relatórios do workspace aparecem em "Dashboards
+   disponíveis na fonte" — importar normalmente.
+
+> O embed token é gerado a cada carregamento do card (validade ~1h, nunca
+> fica salvo). Se o dashboard ficar aberto na tela por mais de uma hora sem
+> recarregar, é esperado que o card pare de atualizar — recarregar a página
+> resolve.
+
+## 6. Cadastrar uma fonte Power BI — modo "Publish to web"
+
+⚠️ **Este modo deixa o conteúdo acessível a qualquer pessoa com o link, sem
+login nenhum.** Só usar para dados que já seriam aceitáveis de tornar
+públicos. O plugin exibe um aviso vermelho fixo nesse modo — não é possível
+escondê-lo.
+
+1. No Power BI (Desktop ou serviço): **Arquivo > Publicar na Web**, copiar a
+   URL pública gerada para o relatório desejado.
+2. **Administração > Análise de Dados > Fontes de dados > Adicionar** (ou
+   editar uma fonte Power BI já existente):
+   - **Modo de embed**: `Publish to web — URL pública (Power BI)`.
+   - Este modo não usa nenhuma credencial (Tenant/Client/Workspace ficam
+     ocultos).
+3. Salvar. Como a API do Power BI **não expõe** as URLs de publish-to-web,
+   não há listagem automática — usar a aba **"Dashboards" > "Adicionar
+   manualmente"**:
+   - **Nome**: nome livre para o card.
+   - **Categoria**: opcional, define o agrupamento no catálogo de widgets.
+   - **URL de embed**: a URL pública copiada do Power BI.
+4. Salvar — o aviso de segurança aparece de novo nesta tela, como lembrete.
+
+## 7. Posicionar os cards num dashboard do GLPI
+
+Isso usa o sistema **nativo** de dashboards do GLPI — nenhuma tela extra do
+plugin.
+
+1. Ir a qualquer dashboard do GLPI (ex.: **Central**, ou os de Ativos/
+   Assistência).
+2. Entrar no modo de edição do dashboard (ícone de lápis/engrenagem, conforme
+   a versão).
+3. Abrir o catálogo de widgets e localizar os cards do plugin — aparecem
+   agrupados pela **Categoria** definida na importação (ou em "Analytic
+   Design", se a categoria ficou em branco).
+4. Arrastar o card para a grade, posicionar/redimensionar como qualquer outro
+   widget do GLPI.
+5. Sair do modo de edição — o card deve renderizar o iframe do dashboard
+   externo.
+
+> **Cache:** dashboards novos aparecem no catálogo de widgets assim que
+> importados, sem precisar limpar cache (os cards de plugins não são
+> cacheados pelo GLPI — só os widgets nativos são). Se mesmo assim um card
+> não aparecer, `php bin/console cache:clear` resolve na grande maioria dos
+> casos.
+
+## Solução de problemas
+
+| Sintoma | Causa provável | O que fazer |
+|---|---|---|
+| Menu/telas do plugin não aparecem, ou "Acesso negado" | Direito não concedido ao perfil | Ver passo 2 acima; sair e entrar de novo depois de salvar o perfil |
+| "Testar conexão" falha | URL/token errados, ou Grafana/Power BI inacessível a partir do **servidor** do GLPI | Confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
+| Card aparece vazio/quebrado no dashboard | Política de CSP da instância GLPI, ou `X-Frame-Options`/CSP do Grafana/Power BI bloqueando ser enquadrado por outra origem | Verificar `allow_embedding` no Grafana; checar CSP da instância GLPI (fora do controle do plugin) |
+| Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |
+| "Publish to web" com aviso vermelho | Comportamento esperado, não é erro | Não usar esse modo para dados confidenciais |

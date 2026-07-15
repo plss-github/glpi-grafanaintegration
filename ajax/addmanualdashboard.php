@@ -13,8 +13,8 @@ include('../../../inc/includes.php');
 use GlpiPlugin\Analyticdesign\Connection;
 use GlpiPlugin\Analyticdesign\DashboardItem;
 
-Session::checkCSRF($_POST);
-
+// Sem Session::checkCSRF() explícito — ver comentário em front/connection.form.php
+// (o kernel do GLPI 11 já valida e consome o token antes deste script rodar).
 $connectionsId = (int)($_POST['connections_id'] ?? 0);
 
 // loadAuthorized() garante direito de UPDATE *e* escopo de entidade (ver

@@ -14,13 +14,14 @@ use GlpiPlugin\Analyticdesign\Menu;
 
 $item = new DashboardItem();
 
+// Sem Session::checkCSRF() explícito — ver comentário equivalente em
+// front/connection.form.php (o kernel do GLPI 11 já valida e consome o
+// token antes deste script rodar).
 if (isset($_POST['update'])) {
-    Session::checkCSRF($_POST);
     $item->check($_POST['id'], UPDATE);
     $item->update($_POST);
     Html::back();
 } elseif (isset($_POST['purge'])) {
-    Session::checkCSRF($_POST);
     $item->check($_POST['id'], PURGE);
     $item->delete($_POST);
     $item->redirectToList();

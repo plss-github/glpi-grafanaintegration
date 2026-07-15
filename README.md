@@ -8,6 +8,8 @@ Adiciona uma aba **"Análise de Dados"** em **Administração** onde se cadastra
 fontes; cada dashboard exposto vira um **card** que o admin posiciona em qualquer
 grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 
+📘 **Guia de configuração passo a passo:** [docs/CONFIGURACAO.md](docs/CONFIGURACAO.md).
+
 ## Status
 
 **Fases 1, 2 e 3 implementadas.** O que já está estruturado:
@@ -45,11 +47,13 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 - Assets estáticos (`public/js`, `public/css`) e `locales/analyticdesign.pot`.
 - Licença **GPL-3.0-or-later** (acompanhando o GLPI core — ver seção Licença).
 
-> ⚠️ Este código foi escrito e revisado com base no código-fonte real do GLPI
-> 11.0.8 (ver "Notas de arquitetura e riscos"), mas **não foi executado contra
-> uma instância GLPI viva** nesta sessão de desenvolvimento — não havia uma
-> instalação disponível para rodar/clicar através do fluxo. Testar
-> ponta a ponta (ver "Como testar") antes de ir para produção.
+> ✅ **Testado ponta a ponta contra uma instância GLPI 11.0.8 real** (Docker,
+> imagem oficial `glpi/glpi`, ver `docker-compose.yml`): instalação/ativação
+> via `bin/console`, CRUD completo de `Connection`/`DashboardItem`, e o card
+> renderizando de fato num dashboard do GLPI (`ajax/dashboard.php`, ações
+> `get_card`/`get_cards`). Três bugs reais só visíveis rodando contra o core
+> de verdade foram encontrados e corrigidos nesse processo — ver "Notas de
+> arquitetura e riscos".
 
 ## Notas de arquitetura e riscos
 
@@ -65,7 +69,15 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 - **Contrato do hook de dashboard** (`getCards()`/`provider`/`args`, ver
   docblock de `src/Dashboard.php`) é o ponto de integração mais específico e
   menos estável usado por este plugin — o mais provável de mudar numa versão
-  futura do GLPI.
+  futura do GLPI. Dois bugs reais nele só apareceram testando contra uma
+  instância viva (nunca deram erro de sintaxe/lint): `[Dashboard::class =>
+  'getTypes']` **não é um callable PHP válido** (é um array associativo;
+  `Plugin::doHookFunction()` chama o valor via `call_user_func()`, então
+  precisa ser `Dashboard::class . '::getTypes'` ou `[Dashboard::class,
+  'getTypes']`) — sem isso, os cards do plugin nunca apareciam no catálogo,
+  falhando 100% silenciosamente. E `Plugin::doHookFunction(DASHBOARD_CARDS)`
+  chama `getCards()` passando `null` (não omite o argumento), então o
+  parâmetro não podia ser um `array` não-anulável. Ambos corrigidos.
 - **Resiliência a atualizações do GLPI:** `plugin_analyticdesign_check_config()`
   e `plugin_analyticdesign_check_prerequisites()` (`setup.php`) verificam em
   runtime, antes da ativação, que as dependências do plugin (GLPIKey,
@@ -75,14 +87,25 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
   quebrar em produção. O registro dos hooks de dashboard também é condicional
   (`defined(...)`): se esse contrato mudar de novo, só a integração com o
   dashboard nativo para, sem afetar o CRUD/menu/assets do resto do plugin.
-- **Ainda não testado numa instância GLPI viva** — revisado contra o
-  código-fonte do GLPI 11.0.8, não executado. Ver "Como testar" antes de
-  produção.
+- **Testado ponta a ponta** contra GLPI 11.0.8 real via Docker (ver "Como
+  testar"): instalação, ativação, CRUD, e o card renderizando de fato num
+  dashboard. `getTabNameForItem()` de `DashboardItem` também estava
+  declarado `static` incorretamente (a base `CommonGLPI` o declara como
+  método de instância — erro fatal de compilação ao sobrescrever); corrigido.
 
 ## Segurança
 
-- **CSRF:** plugin `CSRF_COMPLIANT`; todo endpoint que muda estado chama
-  `Session::checkCSRF($_POST)` (`front/*.form.php`, todos os `ajax/*.php`).
+- **CSRF:** plugin `CSRF_COMPLIANT`. A validação em si **não** é feita chamando
+  `Session::checkCSRF()` no código do plugin — no GLPI 11, o kernel
+  (`Glpi\Kernel\Listener\ControllerListener\CheckCsrfListener`) já valida e
+  **consome** o token `_glpi_csrf_token` automaticamente para toda requisição
+  não-GET, antes do script rodar. Confirmado testando ponta a ponta contra
+  uma instância real: uma segunda chamada explícita a `Session::checkCSRF()`
+  no nosso código falhava sempre (token de uso único já consumido pelo
+  kernel) — removida de todos os `front/*.form.php` e `ajax/*.php`, seguindo
+  o mesmo padrão do core do GLPI 11 (nenhum `front/*.php` do core chama
+  `Session::checkCSRF()`). O JS continua enviando `_glpi_csrf_token` no corpo
+  do `fetch()` para satisfazer essa checagem automática.
 - **Credenciais:** criptografadas em repouso via `GLPIKey`, nunca em texto
   plano; nunca retornam ao navegador (campos de senha sempre em branco no
   formulário); update parcial faz merge com as credenciais já salvas, em vez
@@ -136,6 +159,29 @@ ferramenta = nova implementação da interface + 1 linha na `SourceFactory`.
 1. Copiar a pasta `analyticdesign/` para `glpi/plugins/`.
 2. Setup > Plugins > instalar e ativar "Analytic Design by Pellissari".
 3. Administração > Análise de Dados > adicionar uma fonte Grafana.
+
+### Ambiente local via Docker
+
+Este repositório inclui um `docker-compose.yml` que sobe GLPI 11.0.8 (imagem
+oficial `glpi/glpi`) + MariaDB, com esta pasta montada como o plugin — só
+para instalar e testar localmente (não é config de produção):
+
+```
+cp .env.example .env
+docker compose up -d
+# aguardar a instalação automática do GLPI (alguns minutos na 1ª vez)
+docker compose exec glpi php bin/console glpi:plugin:install -u glpi analyticdesign
+docker compose exec glpi php bin/console glpi:plugin:activate analyticdesign
+```
+
+Acessar `http://localhost:8080` (login padrão pós-instalação: `glpi` / `glpi`
+— trocar a senha antes de qualquer uso além do teste local).
+
+⚠️ **Passo que falta e é fácil de esquecer:** instalar/ativar o plugin **não**
+concede o direito dele a nenhum perfil, nem ao Super-Admin — sem isso, a aba
+some do menu e as telas do plugin retornam "Acesso negado". Ver
+[docs/CONFIGURACAO.md](docs/CONFIGURACAO.md#2-conceder-o-direito-do-plugin-a-um-perfil-obrigatório)
+para o passo a passo completo.
 
 ## Como testar o fluxo completo (Fase 1 — Grafana)
 
