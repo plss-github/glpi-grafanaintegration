@@ -221,10 +221,6 @@ msgid "GUID do workspace do Power BI onde os relatórios estão publicados."
 msgstr ""
 
 #: src/Source/GrafanaSource.php
-msgid "URL do Grafana"
-msgstr ""
-
-#: src/Source/GrafanaSource.php
 msgid "API Token / Service account token"
 msgstr ""
 

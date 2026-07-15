@@ -84,13 +84,11 @@ class GrafanaSource extends AbstractDashboardSource
 
     public static function getConfigFields(): array
     {
+        // 'base_url' não entra aqui: Connection::showForm() já renderiza um
+        // campo fixo "URL base" para todos os tipos de fonte (é uma coluna
+        // própria da Connection, não uma credencial). Incluí-lo aqui geraria
+        // um segundo <input name="base_url"> no formulário.
         return [
-            [
-                'name'  => 'base_url',
-                'label' => __('URL do Grafana', 'analyticdesign'),
-                'type'  => 'text',
-                'help'  => __('Ex.: https://grafana.suaempresa.com', 'analyticdesign'),
-            ],
             [
                 'name'  => 'api_token',
                 'label' => __('API Token / Service account token', 'analyticdesign'),

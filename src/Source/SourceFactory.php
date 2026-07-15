@@ -16,7 +16,7 @@ class SourceFactory
     /** @var array<string, class-string<DashboardSourceInterface>> */
     private const SOURCES = [
         'grafana' => GrafanaSource::class,
-        'powerbi' => PowerBiSource::class, // Fase 2 — stub por enquanto
+        'powerbi' => PowerBiSource::class,
     ];
 
     public static function make(Connection $connection): DashboardSourceInterface

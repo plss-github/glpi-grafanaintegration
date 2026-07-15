@@ -16,14 +16,14 @@ use GlpiPlugin\Analyticdesign\DashboardItem;
 Session::checkCSRF($_POST);
 
 $connectionsId = (int)($_POST['connections_id'] ?? 0);
-$connection = new Connection();
 
-// can() garante direito de UPDATE *e* escopo de entidade (ver notas de
-// segurança no README) antes de aceitar a criação. Html::displayRightError()
-// está deprecated no 11.0.8 mas ainda funcional — ver comentário equivalente
-// em ajax/importdashboards.php sobre por que não trocamos pela exceção crua
-// num front/ajax clássico.
-if ($connectionsId <= 0 || !$connection->can($connectionsId, UPDATE)) {
+// loadAuthorized() garante direito de UPDATE *e* escopo de entidade (ver
+// notas de segurança no README) antes de aceitar a criação.
+// Html::displayRightError() está deprecated no 11.0.8 mas ainda funcional —
+// ver comentário equivalente em ajax/importdashboards.php sobre por que não
+// trocamos pela exceção crua num front/ajax clássico.
+$connection = Connection::loadAuthorized($connectionsId, UPDATE);
+if ($connection === null) {
     Html::displayRightError();
 }
 

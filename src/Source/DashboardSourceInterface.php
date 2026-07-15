@@ -18,6 +18,16 @@ use GlpiPlugin\Analyticdesign\DashboardItem;
 interface DashboardSourceInterface
 {
     /**
+     * Valores possíveis de `connections_id.embed_mode`, centralizados aqui
+     * (em vez de string literais espalhadas por Connection/DashboardItem/
+     * PowerBiSource) para evitar erros de digitação e ter um único lugar a
+     * atualizar se um modo for renomeado.
+     */
+    public const EMBED_MODE_IFRAME = 'iframe';
+    public const EMBED_MODE_PUBLISH_TO_WEB = 'publish_to_web';
+    public const EMBED_MODE_SECURE = 'secure';
+
+    /**
      * Tipo interno da fonte (ex.: 'grafana', 'powerbi').
      * Deve casar com o valor gravado em glpi_plugin_analyticdesign_connections.type
      */

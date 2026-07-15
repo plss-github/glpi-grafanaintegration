@@ -38,7 +38,7 @@ class PowerBiSource extends AbstractDashboardSource
 
     private function embedMode(): string
     {
-        return $this->connection->fields['embed_mode'] ?? 'secure';
+        return $this->connection->fields['embed_mode'] ?? self::EMBED_MODE_SECURE;
     }
 
     private function client(): PowerBiClient
@@ -53,7 +53,7 @@ class PowerBiSource extends AbstractDashboardSource
 
     public function testConnection(): bool
     {
-        if ($this->embedMode() === 'publish_to_web') {
+        if ($this->embedMode() === self::EMBED_MODE_PUBLISH_TO_WEB) {
             // Nada a autenticar nesse modo — não há API a chamar.
             return true;
         }
@@ -66,7 +66,7 @@ class PowerBiSource extends AbstractDashboardSource
 
     public function listDashboards(): array
     {
-        if ($this->embedMode() === 'publish_to_web') {
+        if ($this->embedMode() === self::EMBED_MODE_PUBLISH_TO_WEB) {
             // Por design: a API do Power BI não expõe links de "publish to
             // web"; o admin adiciona manualmente (ver
             // DashboardItem::showForConnection() -> formulário de adição manual).
@@ -81,7 +81,7 @@ class PowerBiSource extends AbstractDashboardSource
 
     public function renderEmbed(DashboardItem $item, array $context = []): string
     {
-        if ($this->embedMode() === 'publish_to_web') {
+        if ($this->embedMode() === self::EMBED_MODE_PUBLISH_TO_WEB) {
             // Fase 3: reaproveita exatamente o mesmo padrão de iframe do
             // Grafana (inclusive a validação de esquema http/https).
             return $this->buildIframe($item->fields['embed_url'] ?? '', $context);
@@ -126,28 +126,28 @@ class PowerBiSource extends AbstractDashboardSource
                 'label'      => __('Tenant ID (Entra ID)', 'analyticdesign'),
                 'type'       => 'text',
                 'help'       => __('GUID do tenant do Azure AD / Entra ID.', 'analyticdesign'),
-                'embed_mode' => 'secure',
+                'embed_mode' => self::EMBED_MODE_SECURE,
             ],
             [
                 'name'       => 'client_id',
                 'label'      => __('Client ID (aplicativo registrado)', 'analyticdesign'),
                 'type'       => 'text',
                 'help'       => __('ID do aplicativo (service principal) registrado no Entra ID.', 'analyticdesign'),
-                'embed_mode' => 'secure',
+                'embed_mode' => self::EMBED_MODE_SECURE,
             ],
             [
                 'name'       => 'client_secret',
                 'label'      => __('Client secret', 'analyticdesign'),
                 'type'       => 'password',
                 'help'       => __('Segredo do aplicativo registrado no Entra ID.', 'analyticdesign'),
-                'embed_mode' => 'secure',
+                'embed_mode' => self::EMBED_MODE_SECURE,
             ],
             [
                 'name'       => 'workspace_id',
                 'label'      => __('Workspace ID (group)', 'analyticdesign'),
                 'type'       => 'text',
                 'help'       => __('GUID do workspace do Power BI onde os relatórios estão publicados.', 'analyticdesign'),
-                'embed_mode' => 'secure',
+                'embed_mode' => self::EMBED_MODE_SECURE,
             ],
         ];
     }

@@ -51,233 +51,72 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 > instalação disponível para rodar/clicar através do fluxo. Testar
 > ponta a ponta (ver "Como testar") antes de ir para produção.
 
-## Notas de arquitetura e riscos (ler antes de instalar)
+## Notas de arquitetura e riscos
 
-Parte da incerteza original deste plugin foi resolvida nesta revisão
-consultando diretamente o código-fonte real do GLPI na tag `11.0.8`
-(`github.com/glpi-project/glpi`) — o que foi confirmado e o que ainda é uma
-decisão deliberada de design está detalhado abaixo.
-
-**Confirmado contra o GLPI 11.0.8 (não é mais "a validar"):**
-
-1. **Contrato de `DASHBOARD_TYPES`/`DASHBOARD_CARDS`** — a modelagem original
-   deste plugin estava **errada** e foi corrigida: `getCards()` não aceita uma
-   chave `card_options` (isso não existe nesse hook). O jeito correto de
-   associar dados fixos (o `item_id` de cada `DashboardItem`) a um card é via
-   `'provider' => "Classe::metodo"` (sempre uma **string**, nunca uma closure
-   — o array de cards inteiro é serializado em cache por
-   `Grid::getAllDasboardCards()`) + `'args'` (dados fixos, passados
-   posicionalmente ao provider via `array_values()`). Ver o docblock de
-   `src/Dashboard.php` para o detalhe exato do fluxo
-   (`getCards()` → `provideItem()` → `renderEmbedWidget()`).
-   **Nota operacional:** como essa lista é cacheada pelo GLPI, pode ser
-   necessário limpar o cache da instância após importar novos dashboards para
-   o card novo aparecer no catálogo de widgets.
-2. `Html::input()`, `Dropdown::showFromArray()`, `Html::closeForm()`,
-   `showFormHeader()/showFormButtons()`, `CommonDBTM::can()/check()`,
-   `initForm()` — todos confirmados existentes em `src/CommonDBTM.php` /
-   `src/Html.php` / `src/Dropdown.php` com as assinaturas usadas aqui.
-   `Html::submit()` não é mais usado no código (trocado por `<button>` simples
-   antes desta confirmação, sem necessidade de reverter).
-3. **`GLPIKey` estava com o namespace errado** — o código assumia
-   `Glpi\Security\GLPIKey`; a classe real é `\GLPIKey` (namespace global,
-   `src/GLPIKey.php`). Corrigido em `Connection.php`.
-4. **Licença**: GLPI é `GPL-3.0-or-later` desde a versão 10.0.1 (era
-   `GPL-2.0-or-later` antes disso) — ver seção Licença.
-5. PHP mínimo do GLPI 11.0.x é `8.2` — já era o que este plugin assumia.
-6. `Html::displayRightError()` está **deprecated desde o GLPI 11.0.0**
-   (por baixo dos panos hoje só lança
-   `Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException`) mas
-   **continua funcional** em 11.0.8. Mantido deliberadamente neste código:
-   lançar a exceção diretamente é pensado para o pipeline do HttpKernel
-   (rotas/Controllers), e não há confirmação de que produz um erro amigável
-   quando não tratada num front/ajax clássico (fora desse pipeline) — ver
-   comentário em `ajax/importdashboards.php`.
-
-**Decisão deliberada, não uma lacuna de pesquisa:**
-
-A especificação original pede o padrão **Controller** (roteamento moderno por
-atributos) em vez de arquivos soltos em `front/`/`ajax/`. Esta implementação
-**usa o padrão clássico `front/` + `ajax/`**: é o único garantidamente
-funcional para todo o CRUD sem uma reescrita completa do roteamento, e a
-pesquisa desta revisão focou em confirmar o contrato do hook de dashboard
-(o ponto mais arriscado/específico do plugin) em vez de investigar o sistema
-de Controllers do GLPI 11 — migrar para Controllers continua sendo o alvo
-recomendado a médio prazo (seção 3 da especificação original), mas não é um
-bloqueador: o padrão clássico é estável e plenamente suportado em 11.0.8.
-Pelo mesmo racional de foco, os formulários continuam em **PHP/HTML puro**
-(`showFormHeader()`/`showFormButtons()` + tabelas `tab_cadre_fixe`) em vez de
-templates Twig com `components/form/fields_macros.html.twig`.
-
-**Resiliência a futuras versões do GLPI.** Nenhum plugin de terceiros pode
-garantir 100% de compatibilidade com versões futuras de um core que não
-controla — o objetivo aqui é que, quando o GLPI mudar algo, o plugin **falhe
-de forma previsível e localizada** (uma funcionalidade específica indisponível,
-com aviso claro) em vez de um fatal error que derruba tudo. Mecanismos:
-
-- **`plugin_analyticdesign_check_config()`** (`setup.php`) não retorna mais
-  `true` incondicionalmente: verifica, antes de permitir a ativação, que as
-  classes/métodos dos quais o plugin depende diretamente ainda existem
-  (`\GLPIKey`, `CommonDBTM::can()/check()`, `Html::input()`,
-  `Dropdown::showFromArray()`, `Session::checkCSRF()`,
-  `Glpi\Plugin\Hooks`). Se uma atualização futura do GLPI remover/renomear
-  algum desses, a ativação falha aqui com uma mensagem, em vez do plugin
-  ativar e quebrar de forma imprevisível em produção.
-- **`plugin_analyticdesign_check_prerequisites()`** verifica dependências de
-  ambiente (`GuzzleHttp\Client`, extensão `sodium`) antes mesmo de listar o
-  plugin como instalável.
-- **Registro do hook de dashboard blindado**: `DASHBOARD_TYPES`/
-  `DASHBOARD_CARDS` são o subsistema mais específico/menos estável usado
-  aqui (foi o único ponto onde a modelagem inicial estava errada — ver item 1
-  acima) — `plugin_init_analyticdesign()` só registra esses dois hooks se as
-  constantes existirem (`defined(...)`). Se o GLPI mudar esse contrato de
-  novo no futuro, a integração com o dashboard nativo para de funcionar, mas
-  o CRUD de `Connection`/`DashboardItem`, o menu e os assets continuam.
-- **Ordem de fragilidade** (do mais para o menos exposto a mudanças internas
-  do GLPI, para orientar onde olhar primeiro numa atualização futura):
-  1. Contrato de dashboard (`getCards`/`provider`/`args`) — subsistema
-     interno, não uma API pública estável.
-  2. Renderização de formulário em PHP puro (`showFormHeader`/
-     `showFormButtons`/`Html::input`/`Dropdown::showFromArray`) — API mais
-     madura e amplamente usada em todo o GLPI, historicamente estável.
-  3. `CommonDBTM::can()/check()`, `Session::checkCSRF()` — fundação do
-     framework, extremamente estável.
-  4. Padrão `front/`+`ajax/` em si — legado mas garantidamente suportado.
-
-**Ainda pendente de teste real** (ver "Como testar" abaixo): rodar o fluxo
-ponta a ponta numa instância GLPI 11.0.8 viva — o código foi revisado contra
-o código-fonte, não executado.
+- **`front/` + `ajax/` clássico, não Controllers.** A especificação original
+  pede o padrão Controller (roteamento por atributos) do GLPI 11; este plugin
+  usa o padrão clássico porque é o único garantidamente funcional em qualquer
+  11.0.8+ sem reescrever todo o roteamento. Migrar para Controllers continua
+  sendo o alvo recomendado a médio prazo (seção 3 da especificação original),
+  não um bloqueador atual.
+- **Formulários em PHP/HTML puro**, não Twig — mesma decisão de foco acima;
+  `showFormHeader()`/`showFormButtons()` + tabelas `tab_cadre_fixe` são API
+  madura e estável em todo o GLPI.
+- **Contrato do hook de dashboard** (`getCards()`/`provider`/`args`, ver
+  docblock de `src/Dashboard.php`) é o ponto de integração mais específico e
+  menos estável usado por este plugin — o mais provável de mudar numa versão
+  futura do GLPI.
+- **Resiliência a atualizações do GLPI:** `plugin_analyticdesign_check_config()`
+  e `plugin_analyticdesign_check_prerequisites()` (`setup.php`) verificam em
+  runtime, antes da ativação, que as dependências do plugin (GLPIKey,
+  `CommonDBTM::can()/check()`, `Html`/`Dropdown`, Guzzle, `sodium`,
+  `Glpi\Plugin\Hooks`) ainda existem — se algo for removido/renomeado numa
+  atualização futura, a ativação falha com mensagem clara em vez do plugin
+  quebrar em produção. O registro dos hooks de dashboard também é condicional
+  (`defined(...)`): se esse contrato mudar de novo, só a integração com o
+  dashboard nativo para, sem afetar o CRUD/menu/assets do resto do plugin.
+- **Ainda não testado numa instância GLPI viva** — revisado contra o
+  código-fonte do GLPI 11.0.8, não executado. Ver "Como testar" antes de
+  produção.
 
 ## Segurança
 
-Revisão do que já está implementado, o que foi corrigido nesta revisão e o
-que continua sendo um risco aceito/pendente de validação.
-
-**CSRF.** O plugin se declara `CSRF_COMPLIANT` (`setup.php`) e todo endpoint
-que muda estado chama `Session::checkCSRF($_POST)` explicitamente:
-`front/connection.form.php` (add/update/purge), `front/dashboarditem.form.php`
-(update/purge) e os quatro arquivos em `ajax/`.
-
-**Credenciais.** `Connection::credentials` é gravado como JSON criptografado
-via `GLPIKey` (nunca em texto plano), e os campos sensíveis (`api_token`,
-`client_id`, `client_secret`, `tenant_id`) são removidos do `$input` antes de
-chegar perto de qualquer log/log de auditoria do GLPI — só o blob
-criptografado é persistido.
-- **Corrigido nesta revisão:** `Connection::handleCredentialInput()` sobrescrevia
-  *todas* as credenciais a cada update, mesmo quando só um campo era
-  preenchido — a UI permite deixar campos em branco para "manter o valor
-  salvo", mas o código antigo descartava silenciosamente os campos não
-  reenviados (ex.: atualizar só o `client_secret` do Power BI apagaria
-  `client_id`/`tenant_id` já salvos). Agora `handleCredentialInput()` parte de
-  `getDecryptedCredentials()` (valores atuais) e só sobrescreve as chaves
-  efetivamente reenviadas não-vazias.
-- **Corrigido nesta revisão:** `front/connection.form.php` repassa o `$_POST`
-  inteiro para `update()`/`add()` (padrão comum em plugins GLPI) — isso
-  significava que um `credentials` enviado diretamente no POST (fora dos
-  campos do formulário, ex.: via requisição forjada) ia direto para a coluna,
-  sem passar pela criptografia. `handleCredentialInput()` agora começa
-  descartando (`unset`) qualquer `credentials` vindo do input bruto, antes de
-  qualquer outra coisa — o único caminho para popular esse campo passa a ser
-  o bloco de criptografia logo abaixo.
-- **Corrigido nesta revisão:** `PowerBiClient` valida que `tenant_id`,
-  `client_id`, `workspace_id` e o `report_id`/`external_id` usado em
-  `generateEmbedToken()` têm formato de GUID antes de compor qualquer URL ou
-  chamar a API — evita erros genéricos de HTTP 400 em configurações com
-  erro de digitação e é uma camada extra de defesa contra valores inesperados
-  acabarem interpolados em requisições HTTP de servidor.
-
-**Autorização / IDOR (entidades).** O modelo de direitos usa um único
-`$rightname` (`plugin_analyticdesign_connection`) para `Connection` e
-`DashboardItem`, com `Connection` respeitando entidade (`entities_id` +
-`is_recursive`, herdados de `CommonDBTM`).
-- **Corrigido nesta revisão:** três dos quatro endpoints em `ajax/` (todos
-  menos `addmanualdashboard.php`, escrito depois já com a correção) faziam
-  `Session::haveRight()`/`checkRight()` (checagem **global**, sem entidade)
-  seguido de `getFromDB($id)` **sem** checar se aquele registro específico
-  pertencia a uma entidade onde o usuário tem o direito — ou seja, um usuário
-  com direito de leitura/edição na *sua* entidade podia testar conexão,
-  importar dashboards ou editar itens de **qualquer outra entidade**, só
-  adivinhando o ID (IDOR clássico). Agora os quatro usam
-  `$connection->can($id, RIGHT)` (que verifica direito *e* escopo de entidade
-  do registro), com mensagem genérica quando falha — não distinguir
-  "não existe" de "sem permissão" evita confirmar a existência de registros de
-  outras entidades. `DashboardItem` não tem `entities_id` próprio (é sempre
-  filho de uma `Connection`), então `ajax/updatedashboarditems.php` resolve a
-  `Connection` de cada item (`getConnection()`) e verifica `can()` nela antes
-  de aplicar a alteração.
-- Os formulários clássicos (`front/connection.form.php`,
-  `front/dashboarditem.form.php`) já usavam `$item->check($id, $right)`, o
-  idiom correto do CommonDBTM — não precisaram de correção.
-
-**XSS.** Toda saída de dados do usuário/DB passa por `htmlspecialchars(...,
-ENT_QUOTES)` antes de ir para o HTML (nomes, categorias, mensagens de erro).
-- **Corrigido nesta revisão:** `AbstractDashboardSource::buildIframe()`
-  escapava a URL para o atributo `src`, mas não validava o **esquema** —
-  um `embed_url` como `javascript:...` ainda executaria no contexto da
-  página do GLPI ao ser colocado num `src` de iframe em alguns navegadores.
-  Mesmo sendo um campo preenchido só por um admin do plugin (privilégio já
-  elevado), agora `buildIframe()` só renderiza URLs `http`/`https`; qualquer
-  outro esquema vira uma mensagem de erro em vez do iframe. Isso vale tanto
-  para o Grafana (Fase 1) quanto para o `publish_to_web` do Power BI (Fase 3).
-- O iframe também já usa `sandbox` (`allow-same-origin allow-scripts
-  allow-popups allow-forms`, sem `allow-top-navigation`) e
+- **CSRF:** plugin `CSRF_COMPLIANT`; todo endpoint que muda estado chama
+  `Session::checkCSRF($_POST)` (`front/*.form.php`, todos os `ajax/*.php`).
+- **Credenciais:** criptografadas em repouso via `GLPIKey`, nunca em texto
+  plano; nunca retornam ao navegador (campos de senha sempre em branco no
+  formulário); update parcial faz merge com as credenciais já salvas, em vez
+  de sobrescrever tudo; o campo `credentials` vindo direto do `$_POST` bruto
+  é sempre descartado — só o bloco de criptografia pode populá-lo.
+- **Autorização (IDOR/entidades):** todo endpoint usa `$connection->can($id,
+  RIGHT)` (direito **e** escopo de entidade), não apenas checagem global de
+  direito — evita que um usuário atue sobre registros de outra entidade só
+  adivinhando o ID. `DashboardItem` (sem entidade própria) é autorizado
+  através da `Connection` pai.
+- **XSS:** toda saída passa por `htmlspecialchars(..., ENT_QUOTES)`;
+  `buildIframe()` só renderiza URLs `http`/`https` (bloqueia `javascript:`/
+  `data:` em `embed_url`); iframe usa `sandbox` e
   `referrerpolicy="no-referrer"`.
-
-**CSP / política de framing (risco em aberto, fora do controle do plugin).**
-O embed depende de o navegador permitir enquadrar (`<iframe>`) uma origem
-externa (Grafana/Power BI) — se a instância GLPI tiver um `Content-Security-Policy`
-restritivo (`frame-src`) ou se o **Grafana/Power BI** enviar
-`X-Frame-Options`/`frame-ancestors` bloqueando ser enquadrado por outra
-origem, o card aparece vazio/bloqueado. Isto não é algo que o plugin possa
-corrigir sozinho no lado do GLPI (mudar CSP é uma decisão de política da
-instância, não algo que um plugin deva alterar por conta própria) nem do
-lado do Grafana/Power BI (configuração externa) — ver seção "Riscos" da
-especificação original. Documentado aqui como um pré-requisito operacional a
-validar durante a instalação (ver "Como testar"), não uma falha de segurança.
-
-**"Publish to web" (Power BI, Fase 3) — aviso obrigatório.** Este modo expõe o
-conteúdo a qualquer pessoa com o link, sem nenhuma autenticação — não é uma
-falha do plugin, é a natureza do recurso do Power BI, mas o plugin precisa
-deixar isso óbvio para quem administra. O aviso vermelho e fixo aparece em
-dois pontos: no formulário da `Connection` quando `embed_mode =
-publish_to_web` é escolhido (`analyticdesign-publish-warning`, alternado por
-JS), e no formulário de **adição manual** de `DashboardItem`
-(`DashboardItem::showForConnection()`) quando a `Connection` já é Power BI
-nesse modo — é ali que a URL pública de cada dashboard é efetivamente colada.
-
-**Embed token do Power BI (Fase 2, modo `secure`).** `PowerBiClient::generateEmbedToken()`
-gera um token de curta duração (padrão da API, ~1h) a cada render — nunca
-persistido em banco nem em sessão, sempre gerado sob demanda em
-`PowerBiSource::renderEmbed()`. `accessLevel: 'View'` restringe o token a
-leitura. As credenciais do service principal (`tenant_id`/`client_id`/
-`client_secret`/`workspace_id`) seguem o mesmo tratamento de criptografia em
-repouso e merge-on-update do restante da `Connection`.
-
-**Biblioteca de terceiros vendorizada (`powerbi-client.min.js`, Fase 2).** O
-plugin embute a lib oficial da Microsoft (`powerbi-client` 2.23.10, MIT) em
-`public/js/vendor/`, baixada uma vez do jsDelivr e fixada nessa versão (ver
-`public/js/vendor/NOTICE.md`) em vez de referenciada via `<script>` de CDN em
-tempo de execução — evita depender da disponibilidade do jsDelivr em produção
-e torna o conteúdo servido auditável (o arquivo está no repositório). Ao
-atualizar a versão, baixar o novo `dist/powerbi.min.js` do pacote e substituir
-o arquivo — sem pipeline de build/npm neste plugin.
-
-**SSRF (risco aceito).** `testConnection()`/`listDashboards()` do Grafana
-fazem requisições HTTP de servidor para a `base_url` configurada pelo admin —
-como só quem já tem o direito administrativo do plugin configura essa URL,
-isto é um risco *inerente* ao recurso (equivalente a qualquer integração
-"adicione uma URL externa" administrada por um papel confiável), não uma
-vulnerabilidade a corrigir no código; vale considerar segmentação de rede
-entre o servidor GLPI e redes internas sensíveis em ambientes onde esse
-direito não for restrito a administradores totalmente confiáveis. O Power BI
-(modo `secure`) **não** tem essa exposição adicional: os endpoints chamados
-(`login.microsoftonline.com`, `api.powerbi.com`) são fixos no código, não
-configuráveis pelo admin.
-
-**SQL.** Toda leitura/escrita usa o query builder do GLPI (`$DB->request()`,
-`CommonDBTM::add()/update()/getFromDB()`) — nenhuma concatenação de input do
-usuário em SQL cru. As únicas strings SQL literais são os `CREATE TABLE`/
-`DROP TABLE` de instalação, sem interpolação de dados externos.
+- **Power BI (embed seguro):** embed token de curta duração (~1h), gerado a
+  cada render e nunca persistido; `accessLevel: 'View'` (somente leitura);
+  `tenant_id`/`client_id`/`workspace_id`/`report_id` validados como GUID
+  antes de compor URLs ou chamar a API.
+- **"Publish to web":** aviso obrigatório, fixo e em destaque na UI nos dois
+  pontos onde a URL pública é definida (modo da `Connection` e adição manual
+  do `DashboardItem`) — esse conteúdo fica acessível a qualquer pessoa com o
+  link, sem autenticação, por natureza do recurso do Power BI.
+- **Biblioteca de terceiros:** `powerbi-client` (Microsoft, MIT) vendorizada
+  e fixada em versão (`public/js/vendor/`, ver `NOTICE.md`), não carregada de
+  um CDN em tempo de execução.
+- **SQL:** só via query builder do GLPI (`$DB->request()`,
+  `CommonDBTM::add()/update()/getFromDB()`) — nenhuma concatenação de input
+  em SQL cru.
+- **Riscos aceitos / fora do controle do plugin:** SSRF via `base_url`
+  configurada pelo admin do Grafana (inerente ao recurso — mitigado por
+  exigir o direito administrativo do plugin; o Power BI não tem essa
+  exposição, seus endpoints são fixos no código); política de CSP/framing da
+  instância e do Grafana/Power BI (se restritiva, bloqueia o iframe —
+  configuração externa, fora do escopo do plugin).
 
 ## Arquitetura
 
@@ -411,12 +250,14 @@ analyticdesign/
 │   ├── Client/
 │   │   ├── GrafanaClient.php  # client da API REST do Grafana
 │   │   └── PowerBiClient.php  # OAuth2 Entra ID + API REST do Power BI
-│   └── Source/
-│       ├── DashboardSourceInterface.php  # o contrato comum
-│       ├── AbstractDashboardSource.php   # helpers (iframe, credenciais)
-│       ├── GrafanaSource.php             # implementação Grafana (Fase 1)
-│       ├── PowerBiSource.php             # implementação Power BI (Fases 2 e 3)
-│       └── SourceFactory.php             # resolve type -> implementação
+│   ├── Source/
+│   │   ├── DashboardSourceInterface.php  # o contrato comum + constantes de embed_mode
+│   │   ├── AbstractDashboardSource.php   # helpers (iframe, credenciais)
+│   │   ├── GrafanaSource.php             # implementação Grafana (Fase 1)
+│   │   ├── PowerBiSource.php             # implementação Power BI (Fases 2 e 3)
+│   │   └── SourceFactory.php             # resolve type -> implementação
+│   └── Traits/
+│       └── HasCheckboxField.php          # helper HTML compartilhado (formulários em PHP puro)
 ├── locales/
 │   └── analyticdesign.pot    # template de tradução (gettext)
 └── public/

@@ -17,18 +17,19 @@ use GlpiPlugin\Analyticdesign\DashboardItem;
 Session::checkCSRF($_POST);
 
 $connectionsId = (int)($_POST['connections_id'] ?? 0);
-$connection = new Connection();
 
-// can() (em vez de checkRight() global + getFromDB() cru) garante que a
-// Connection pertence a uma entidade onde o usuário tem direito de UPDATE.
-// Html::displayRightError() está deprecated desde o GLPI 11.0.0 — por baixo
-// dos panos ela só lança Symfony\...\AccessDeniedHttpException, mas essa
-// exceção é pensada para o pipeline do HttpKernel (rotas/Controllers); como
-// este arquivo é um front/ajax clássico (fora desse pipeline) e não há como
-// validar aqui se a exceção não tratada renderiza um erro razoável nesse
-// contexto, mantemos o wrapper deprecated (ainda funcional em 11.0.8) em vez
-// de trocar por um comportamento não verificado.
-if ($connectionsId <= 0 || !$connection->can($connectionsId, UPDATE)) {
+// loadAuthorized() (em vez de checkRight() global + getFromDB() cru) garante
+// que a Connection pertence a uma entidade onde o usuário tem direito de
+// UPDATE. Html::displayRightError() está deprecated desde o GLPI 11.0.0 —
+// por baixo dos panos ela só lança Symfony\...\AccessDeniedHttpException,
+// mas essa exceção é pensada para o pipeline do HttpKernel
+// (rotas/Controllers); como este arquivo é um front/ajax clássico (fora
+// desse pipeline) e não há como validar aqui se a exceção não tratada
+// renderiza um erro razoável nesse contexto, mantemos o wrapper deprecated
+// (ainda funcional em 11.0.8) em vez de trocar por um comportamento não
+// verificado.
+$connection = Connection::loadAuthorized($connectionsId, UPDATE);
+if ($connection === null) {
     Html::displayRightError();
 }
 

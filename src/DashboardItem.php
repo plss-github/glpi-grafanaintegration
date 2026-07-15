@@ -11,11 +11,17 @@ namespace GlpiPlugin\Analyticdesign;
 
 use CommonDBTM;
 use CommonGLPI;
+use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
+use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
+use GlpiPlugin\Analyticdesign\Traits\HasCheckboxField;
 use Html;
 
 class DashboardItem extends CommonDBTM
 {
-    public static $rightname = 'plugin_analyticdesign_connection';
+    use HasCheckboxField;
+
+    /** Compartilha o direito de Connection — ver Connection::RIGHTNAME. */
+    public static $rightname = Connection::RIGHTNAME;
 
     public static function getTypeName($nb = 0)
     {
@@ -153,116 +159,157 @@ class DashboardItem extends CommonDBTM
      */
     public static function showForConnection(Connection $connection): void
     {
-        global $CFG_GLPI;
-
         $connectionsId = (int)$connection->fields['id'];
         $imported = self::getForConnection($connectionsId);
+        [$available, $listError] = self::resolveAvailableDashboards($connection, $imported);
+        $ajaxRoot = self::ajaxRoot();
 
+        self::showImportedSection($connectionsId, $imported, $ajaxRoot);
+        self::showAvailableSection($connectionsId, $available, $listError, $ajaxRoot);
+        self::showManualAddSection($connection, $connectionsId, $ajaxRoot);
+    }
+
+    private static function ajaxRoot(): string
+    {
+        global $CFG_GLPI;
+        return $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/ajax';
+    }
+
+    /**
+     * Consulta a fonte por dashboards ainda não importados. Best-effort: se a
+     * fonte não responder (ou não suportar listagem, caso do publish_to_web),
+     * devolve uma lista vazia e a mensagem de erro correspondente, deixando a
+     * UI cair no formulário de adição manual em vez de quebrar a tela.
+     *
+     * @return array{0: array<int, array{external_id:string, name:string, embed_url:?string}>, 1: ?string}
+     */
+    private static function resolveAvailableDashboards(Connection $connection, array $imported): array
+    {
         $importedExternalIds = array_map(
-            static fn (self $i) => $i->fields['external_id'],
+            static fn (self $item) => $item->fields['external_id'],
             $imported
         );
 
-        $available = [];
-        $listError = null;
         try {
-            $source = $connection->getSource();
-            foreach ($source->listDashboards() as $dash) {
-                if (!in_array($dash['external_id'], $importedExternalIds, true)) {
-                    $available[] = $dash;
-                }
-            }
+            $available = array_values(array_filter(
+                $connection->getSource()->listDashboards(),
+                static fn (array $dash) => !in_array($dash['external_id'], $importedExternalIds, true)
+            ));
+            return [$available, null];
         } catch (\Throwable $e) {
-            $listError = __('Não foi possível listar dashboards da fonte. Verifique a conexão.', 'analyticdesign');
+            return [[], __('Não foi possível listar dashboards da fonte. Verifique a conexão.', 'analyticdesign')];
         }
+    }
 
-        $ajaxRoot = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/ajax';
-
+    /** @param DashboardItem[] $imported */
+    private static function showImportedSection(int $connectionsId, array $imported, string $ajaxRoot): void
+    {
         echo "<div class='analyticdesign-imported'>";
         echo "<h3>" . __('Dashboards importados', 'analyticdesign') . "</h3>";
+
         if (empty($imported)) {
             echo "<p class='text-muted'>" . __('Nenhum dashboard importado ainda.', 'analyticdesign') . "</p>";
-        } else {
-            echo "<form name='analyticdesign_update_items' method='post' action='"
-                . htmlspecialchars($ajaxRoot . '/updatedashboarditems.php', ENT_QUOTES) . "'>";
-            echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
-            echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
-            echo "<th>" . __('Nome') . "</th>";
-            echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
-            echo "<th>" . __('Categoria', 'analyticdesign') . "</th>";
-            echo "<th>" . __('Ativo') . "</th>";
-            echo "</tr>";
-            foreach ($imported as $item) {
-                $id = (int)$item->fields['id'];
-                echo "<tr class='tab_bg_1'>";
-                echo "<td>" . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "</td>";
-                echo "<td>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
-                echo "<td>" . Html::input("items[{$id}][category]", ['value' => $item->fields['category']]) . "</td>";
-                echo "<td><input type='checkbox' name='items[{$id}][is_active]' value='1'"
-                    . ((int)$item->fields['is_active'] === 1 ? " checked" : "") . "></td>";
-                echo "</tr>";
-            }
-            echo "</table>";
-            echo "<div class='mt-2'>";
-            echo "<button type='submit' name='update' class='btn btn-primary'>" . __('Salvar') . "</button>";
             echo "</div>";
-            Html::closeForm();
+            return;
         }
-        echo "</div>";
 
+        echo "<form name='analyticdesign_update_items' method='post' action='"
+            . htmlspecialchars($ajaxRoot . '/updatedashboarditems.php', ENT_QUOTES) . "'>";
+        echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
+        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
+        echo "<th>" . __('Nome') . "</th>";
+        echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
+        echo "<th>" . __('Categoria', 'analyticdesign') . "</th>";
+        echo "<th>" . __('Ativo') . "</th>";
+        echo "</tr>";
+        foreach ($imported as $item) {
+            $id = (int)$item->fields['id'];
+            echo "<tr class='tab_bg_1'>";
+            echo "<td>" . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "</td>";
+            echo "<td>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
+            echo "<td>" . Html::input("items[{$id}][category]", ['value' => $item->fields['category']]) . "</td>";
+            echo "<td>" . self::renderCheckbox("items[{$id}][is_active]", (int)$item->fields['is_active'] === 1) . "</td>";
+            echo "</tr>";
+        }
+        echo "</table>";
+        echo "<div class='mt-2'>";
+        echo "<button type='submit' name='update' class='btn btn-primary'>" . __('Salvar') . "</button>";
+        echo "</div>";
+        Html::closeForm();
+        echo "</div>";
+    }
+
+    /** @param array<int, array{external_id:string, name:string, embed_url:?string}> $available */
+    private static function showAvailableSection(int $connectionsId, array $available, ?string $listError, string $ajaxRoot): void
+    {
         echo "<div class='analyticdesign-available mt-4'>";
         echo "<h3>" . __('Dashboards disponíveis na fonte', 'analyticdesign') . "</h3>";
+
         if ($listError !== null) {
             echo "<p class='alert alert-important alert-warning'>" . htmlspecialchars($listError, ENT_QUOTES) . "</p>";
-        } elseif (empty($available)) {
-            echo "<p class='text-muted'>" . __('Nada novo para importar — todos os dashboards já foram importados, ou a fonte não retornou nenhum.', 'analyticdesign') . "</p>";
-        } else {
-            echo "<form name='analyticdesign_import_items' method='post' action='"
-                . htmlspecialchars($ajaxRoot . '/importdashboards.php', ENT_QUOTES) . "'>";
-            echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
-            echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
-            echo "<th>" . __('Importar') . "</th>";
-            echo "<th>" . __('Nome') . "</th>";
-            echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
-            echo "<th>" . __('Categoria', 'analyticdesign') . "</th>";
-            echo "</tr>";
-            foreach ($available as $i => $dash) {
-                $extId = htmlspecialchars($dash['external_id'], ENT_QUOTES);
-                $name  = htmlspecialchars($dash['name'], ENT_QUOTES);
-                $embed = htmlspecialchars($dash['embed_url'] ?? '', ENT_QUOTES);
-                echo "<tr class='tab_bg_1'>";
-                echo "<td><input type='checkbox' name='import[{$i}][selected]' value='1'></td>";
-                echo "<td>{$name}"
-                    . "<input type='hidden' name='import[{$i}][name]' value='{$name}'>"
-                    . "<input type='hidden' name='import[{$i}][external_id]' value='{$extId}'>"
-                    . "<input type='hidden' name='import[{$i}][embed_url]' value='{$embed}'>"
-                    . "</td>";
-                echo "<td>{$extId}</td>";
-                echo "<td>" . Html::input("import[{$i}][category]", ['value' => '']) . "</td>";
-                echo "</tr>";
-            }
-            echo "</table>";
-            echo "<div class='mt-2'>";
-            echo "<button type='submit' name='import' class='btn btn-primary'>"
-                . __('Importar selecionados', 'analyticdesign') . "</button>";
             echo "</div>";
-            Html::closeForm();
+            return;
         }
-        echo "</div>";
+        if (empty($available)) {
+            echo "<p class='text-muted'>" . __('Nada novo para importar — todos os dashboards já foram importados, ou a fonte não retornou nenhum.', 'analyticdesign') . "</p>";
+            echo "</div>";
+            return;
+        }
 
-        // Adição manual: única forma de cadastrar um dashboard no modo
-        // publish_to_web (a API do Power BI não expõe essas URLs — ver
-        // PowerBiSource::listDashboards()); também serve de válvula de escape
-        // caso a listagem automática de outra fonte falhe ou fique incompleta.
+        echo "<form name='analyticdesign_import_items' method='post' action='"
+            . htmlspecialchars($ajaxRoot . '/importdashboards.php', ENT_QUOTES) . "'>";
+        echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
+        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
+        echo "<th>" . __('Importar') . "</th>";
+        echo "<th>" . __('Nome') . "</th>";
+        echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
+        echo "<th>" . __('Categoria', 'analyticdesign') . "</th>";
+        echo "</tr>";
+        foreach ($available as $i => $dash) {
+            $extId = htmlspecialchars($dash['external_id'], ENT_QUOTES);
+            $name  = htmlspecialchars($dash['name'], ENT_QUOTES);
+            $embed = htmlspecialchars($dash['embed_url'] ?? '', ENT_QUOTES);
+            echo "<tr class='tab_bg_1'>";
+            echo "<td><input type='checkbox' name='import[{$i}][selected]' value='1'></td>";
+            echo "<td>{$name}"
+                . "<input type='hidden' name='import[{$i}][name]' value='{$name}'>"
+                . "<input type='hidden' name='import[{$i}][external_id]' value='{$extId}'>"
+                . "<input type='hidden' name='import[{$i}][embed_url]' value='{$embed}'>"
+                . "</td>";
+            echo "<td>{$extId}</td>";
+            echo "<td>" . Html::input("import[{$i}][category]", ['value' => '']) . "</td>";
+            echo "</tr>";
+        }
+        echo "</table>";
+        echo "<div class='mt-2'>";
+        echo "<button type='submit' name='import' class='btn btn-primary'>"
+            . __('Importar selecionados', 'analyticdesign') . "</button>";
+        echo "</div>";
+        Html::closeForm();
+        echo "</div>";
+    }
+
+    /**
+     * Única forma de cadastrar um dashboard no modo publish_to_web (a API do
+     * Power BI não expõe essas URLs — ver PowerBiSource::listDashboards());
+     * também serve de válvula de escape caso a listagem automática de outra
+     * fonte falhe ou fique incompleta.
+     */
+    private static function showManualAddSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
+    {
         echo "<div class='analyticdesign-manual-add mt-4'>";
         echo "<h3>" . __('Adicionar manualmente', 'analyticdesign') . "</h3>";
         echo "<p class='text-muted'>" . __('Use esta opção quando a fonte não permite listar dashboards automaticamente (ex.: Power BI em modo "publish to web") — cole a URL pública/de embed diretamente.', 'analyticdesign') . "</p>";
-        if ($connection->fields['type'] === 'powerbi' && ($connection->fields['embed_mode'] ?? '') === 'publish_to_web') {
+
+        $isPublishToWeb = $connection->fields['type'] === PowerBiSource::getType()
+            && ($connection->fields['embed_mode'] ?? '') === DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB;
+        if ($isPublishToWeb) {
             echo "<p class='alert alert-important alert-danger'>"
                 . "<i class='ti ti-alert-triangle'></i> "
                 . __('Atenção: a URL colada abaixo fica acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
                 . "</p>";
         }
+
         echo "<form name='analyticdesign_add_manual' method='post' action='"
             . htmlspecialchars($ajaxRoot . '/addmanualdashboard.php', ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
@@ -315,8 +362,7 @@ class DashboardItem extends CommonDBTM
 
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Ativo') . "</td>";
-        echo "<td><input type='checkbox' name='is_active' value='1'"
-            . ((int)($this->fields['is_active'] ?? 0) === 1 ? " checked" : "") . "></td>";
+        echo "<td>" . self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1) . "</td>";
         echo "<td colspan='2'></td></tr>";
 
         $this->showFormButtons($options);

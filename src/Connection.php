@@ -12,12 +12,25 @@ namespace GlpiPlugin\Analyticdesign;
 use CommonDBTM;
 use Dropdown;
 use GLPIKey;
+use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
+use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
+use GlpiPlugin\Analyticdesign\Traits\HasCheckboxField;
 use Html;
 
 class Connection extends CommonDBTM
 {
-    public static $rightname = 'plugin_analyticdesign_connection';
+    use HasCheckboxField;
+
+    /**
+     * Único direito do plugin, compartilhado por Connection e DashboardItem
+     * (DashboardItem é sempre filho de uma Connection — não faz sentido um
+     * direito separado). Centralizado aqui para não repetir a mesma string
+     * em DashboardItem::$rightname e hook.php::plugin_analyticdesign_getrights().
+     */
+    public const RIGHTNAME = 'plugin_analyticdesign_connection';
+
+    public static $rightname = self::RIGHTNAME;
 
     /** Histórico de alterações na aba "Histórico" do item. */
     public $dohistory = true;
@@ -111,9 +124,26 @@ class Connection extends CommonDBTM
     }
 
     /** Instancia a implementação de fonte (Grafana/Power BI) associada. */
-    public function getSource(): \GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface
+    public function getSource(): DashboardSourceInterface
     {
         return SourceFactory::make($this);
+    }
+
+    /**
+     * Carrega a Connection de ID `$id` só se o usuário atual tem `$right`
+     * nela (direito **e** escopo de entidade, via `can()`) — usado pelos
+     * endpoints em `ajax/` para evitar repetir esse boilerplate de
+     * autorização em cada arquivo. Devolve `null` em vez de lançar/exibir um
+     * erro para deixar cada chamador decidir como responder (JSON, página de
+     * erro etc.).
+     */
+    public static function loadAuthorized(int $id, int $right): ?self
+    {
+        $connection = new self();
+        if ($id <= 0 || !$connection->can($id, $right)) {
+            return null;
+        }
+        return $connection;
     }
 
     /**
@@ -129,34 +159,55 @@ class Connection extends CommonDBTM
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
 
-        $types        = SourceFactory::getAvailableTypes();
-        $configFields = SourceFactory::getAllConfigFields();
-        $embedModes   = [
-            'iframe'         => __('Iframe direto (Grafana)', 'analyticdesign'),
-            'publish_to_web' => __('Publish to web — URL pública (Power BI)', 'analyticdesign'),
-            'secure'         => __('Embed seguro — Entra ID / Premium (Power BI)', 'analyticdesign'),
-        ];
+        $this->showNameAndToolFields();
+        $this->showBaseUrlField();
+        $this->showEmbedModeField();
+        $this->showCredentialFields();
+        $this->showActiveField();
+        $this->showTestConnectionButton();
 
+        $this->showFormButtons($options);
+
+        return true;
+    }
+
+    private function showNameAndToolFields(): void
+    {
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Nome') . "</td>";
         echo "<td>" . Html::input('name', ['value' => $this->fields['name']]) . "</td>";
         echo "<td>" . __('Ferramenta', 'analyticdesign') . "</td>";
         echo "<td>";
-        Dropdown::showFromArray('type', $types, ['value' => $this->fields['type']]);
+        Dropdown::showFromArray('type', SourceFactory::getAvailableTypes(), ['value' => $this->fields['type']]);
         echo "</td></tr>";
+    }
 
+    private function showBaseUrlField(): void
+    {
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('URL base', 'analyticdesign') . "</td>";
         echo "<td colspan='3'>"
             . Html::input('base_url', ['value' => $this->fields['base_url'], 'size' => 60])
             . "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>"
             . "</td></tr>";
+    }
 
-        // Modo de embed: só relevante para Power BI. Escolhido antes dos
-        // campos de credenciais porque decide QUAIS campos de credencial do
-        // Power BI fazem sentido (publish_to_web não usa nenhum — a URL
-        // pública é colada por dashboard, na aba "Dashboards").
-        echo "<tr class='tab_bg_2 analyticdesign-fields-for-type' data-source-type='powerbi'>";
+    /**
+     * Modo de embed: só relevante para Power BI. Aparece antes dos campos de
+     * credenciais porque decide QUAIS campos de credencial do Power BI fazem
+     * sentido (publish_to_web não usa nenhum — a URL pública é colada por
+     * dashboard, na aba "Dashboards").
+     */
+    private function showEmbedModeField(): void
+    {
+        $embedModes = [
+            DashboardSourceInterface::EMBED_MODE_IFRAME         => __('Iframe direto (Grafana)', 'analyticdesign'),
+            DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB => __('Publish to web — URL pública (Power BI)', 'analyticdesign'),
+            DashboardSourceInterface::EMBED_MODE_SECURE         => __('Embed seguro — Entra ID / Premium (Power BI)', 'analyticdesign'),
+        ];
+
+        echo "<tr class='tab_bg_2 analyticdesign-fields-for-type' data-source-type='"
+            . htmlspecialchars(PowerBiSource::getType(), ENT_QUOTES) . "'>";
         echo "<td>" . __('Modo de embed', 'analyticdesign') . "</td>";
         echo "<td colspan='3'>";
         Dropdown::showFromArray('embed_mode', $embedModes, ['value' => $this->fields['embed_mode']]);
@@ -165,6 +216,17 @@ class Connection extends CommonDBTM
             . __('Atenção: "Publish to web" deixa o conteúdo acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
             . "</div>";
         echo "</td></tr>";
+    }
+
+    /**
+     * Campos de credencial de todos os tipos ficam no DOM e são
+     * mostrados/escondidos por JS conforme o tipo/modo escolhido (ver
+     * public/js/analyticdesign.js), sem chamada AJAX extra.
+     */
+    private function showCredentialFields(): void
+    {
+        $types        = SourceFactory::getAvailableTypes();
+        $configFields = SourceFactory::getAllConfigFields();
 
         foreach ($configFields as $type => $fieldsForType) {
             if (empty($fieldsForType)) {
@@ -174,44 +236,53 @@ class Connection extends CommonDBTM
             echo "<td colspan='4'><strong>" . htmlspecialchars($types[$type] ?? $type, ENT_QUOTES) . "</strong></td>";
             echo "</tr>";
             foreach ($fieldsForType as $field) {
-                $inputType = $field['type'] === 'password' ? 'password' : 'text';
-                $embedModeAttr = isset($field['embed_mode'])
-                    ? " data-embed-mode='" . htmlspecialchars($field['embed_mode'], ENT_QUOTES) . "'"
-                    : '';
-                echo "<tr class='tab_bg_1 analyticdesign-fields-for-type' data-source-type='"
-                    . htmlspecialchars($type, ENT_QUOTES) . "'{$embedModeAttr}>";
-                echo "<td>" . htmlspecialchars($field['label'], ENT_QUOTES) . "</td>";
-                echo "<td colspan='3'>"
-                    . Html::input($field['name'], ['type' => $inputType, 'value' => '', 'size' => 60]);
-                if (!empty($field['help'])) {
-                    echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
-                }
-                echo "</td></tr>";
+                $this->showCredentialFieldRow($type, $field);
             }
         }
+
         echo "<tr class='tab_bg_1'><td colspan='4'><em>"
             . __('Deixe os campos de credenciais em branco para manter os valores já salvos.', 'analyticdesign')
             . "</em></td></tr>";
+    }
 
+    private function showCredentialFieldRow(string $type, array $field): void
+    {
+        $inputType = $field['type'] === 'password' ? 'password' : 'text';
+        $embedModeAttr = isset($field['embed_mode'])
+            ? " data-embed-mode='" . htmlspecialchars($field['embed_mode'], ENT_QUOTES) . "'"
+            : '';
+
+        echo "<tr class='tab_bg_1 analyticdesign-fields-for-type' data-source-type='"
+            . htmlspecialchars($type, ENT_QUOTES) . "'{$embedModeAttr}>";
+        echo "<td>" . htmlspecialchars($field['label'], ENT_QUOTES) . "</td>";
+        echo "<td colspan='3'>"
+            . Html::input($field['name'], ['type' => $inputType, 'value' => '', 'size' => 60]);
+        if (!empty($field['help'])) {
+            echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
+        }
+        echo "</td></tr>";
+    }
+
+    private function showActiveField(): void
+    {
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Ativo') . "</td>";
-        echo "<td><input type='checkbox' name='is_active' value='1'"
-            . ((int)($this->fields['is_active'] ?? 0) === 1 ? " checked" : "")
-            . "></td>";
+        echo "<td>" . self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1) . "</td>";
         echo "<td colspan='2'></td></tr>";
+    }
 
-        if ((int)$this->fields['id'] > 0) {
-            echo "<tr class='tab_bg_1'><td colspan='4'>";
-            echo "<button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' data-id='"
-                . (int)$this->fields['id'] . "'>"
-                . "<i class='ti ti-plug'></i> " . __('Testar conexão', 'analyticdesign')
-                . "</button> <span class='analyticdesign-test-result ms-2'></span>";
-            echo "</td></tr>";
+    private function showTestConnectionButton(): void
+    {
+        if ((int)$this->fields['id'] <= 0) {
+            return;
         }
 
-        $this->showFormButtons($options);
-
-        return true;
+        echo "<tr class='tab_bg_1'><td colspan='4'>";
+        echo "<button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' data-id='"
+            . (int)$this->fields['id'] . "'>"
+            . "<i class='ti ti-plug'></i> " . __('Testar conexão', 'analyticdesign')
+            . "</button> <span class='analyticdesign-test-result ms-2'></span>";
+        echo "</td></tr>";
     }
 
     /**

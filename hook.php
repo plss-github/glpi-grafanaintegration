@@ -50,6 +50,6 @@ function plugin_analyticdesign_getAddSearchOptions($itemtype)
 function plugin_analyticdesign_getrights(): array
 {
     return [
-        'plugin_analyticdesign_connection' => __('Análise de Dados: fontes e dashboards', 'analyticdesign'),
+        Connection::RIGHTNAME => __('Análise de Dados: fontes e dashboards', 'analyticdesign'),
     ];
 }
