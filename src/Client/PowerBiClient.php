@@ -43,6 +43,18 @@ class PowerBiClient
     }
 
     /**
+     * Valida o formato GUID esperado pela Microsoft para tenant/client/
+     * workspace/report id. Falhar aqui, com uma mensagem clara, é melhor do
+     * que deixar um valor mal formatado (erro de digitação, cole de espaço
+     * em branco etc.) virar um erro genérico de HTTP 400 da API externa —
+     * e evita compor URLs com valores inesperados vindos de configuração.
+     */
+    private static function isValidGuid(string $value): bool
+    {
+        return (bool)preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value);
+    }
+
+    /**
      * Troca client_id/client_secret por um access token OAuth2 (client
      * credentials grant) junto ao Entra ID. Cacheado em memória pela duração
      * do request (um embed token por render já é suficiente; não persiste
@@ -56,6 +68,9 @@ class PowerBiClient
 
         if ($this->tenantId === '' || $this->clientId === '' || $this->clientSecret === '') {
             throw new \RuntimeException('Credenciais do Power BI (tenant/client/secret) incompletas.');
+        }
+        if (!self::isValidGuid($this->tenantId) || !self::isValidGuid($this->clientId)) {
+            throw new \RuntimeException('Tenant ID ou Client ID do Power BI não têm formato de GUID válido.');
         }
 
         $tokenClient = new Client([
@@ -111,6 +126,9 @@ class PowerBiClient
         if ($this->workspaceId === '') {
             throw new \RuntimeException('Workspace (group) do Power BI não configurado.');
         }
+        if (!self::isValidGuid($this->workspaceId)) {
+            throw new \RuntimeException('Workspace ID do Power BI não tem formato de GUID válido.');
+        }
 
         $resp = $this->http->get("v1.0/myorg/groups/{$this->workspaceId}/reports", [
             'headers'     => $this->authHeaders(),
@@ -142,6 +160,9 @@ class PowerBiClient
     {
         if ($this->workspaceId === '' || $reportId === '') {
             throw new \RuntimeException('Workspace ou relatório do Power BI não informado.');
+        }
+        if (!self::isValidGuid($this->workspaceId) || !self::isValidGuid($reportId)) {
+            throw new \RuntimeException('Workspace ID ou report ID do Power BI não têm formato de GUID válido.');
         }
 
         $resp = $this->http->post("v1.0/myorg/groups/{$this->workspaceId}/reports/{$reportId}/GenerateToken", [

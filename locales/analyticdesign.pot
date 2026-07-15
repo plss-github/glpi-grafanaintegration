@@ -231,3 +231,7 @@ msgstr ""
 #: src/Source/GrafanaSource.php
 msgid "Token com permissão de leitura de dashboards."
 msgstr ""
+
+#: setup.php
+msgid "Analytic Design: dependências do GLPI não encontradas ou incompatíveis:"
+msgstr ""

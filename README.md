@@ -109,6 +109,41 @@ Pelo mesmo racional de foco, os formulários continuam em **PHP/HTML puro**
 (`showFormHeader()`/`showFormButtons()` + tabelas `tab_cadre_fixe`) em vez de
 templates Twig com `components/form/fields_macros.html.twig`.
 
+**Resiliência a futuras versões do GLPI.** Nenhum plugin de terceiros pode
+garantir 100% de compatibilidade com versões futuras de um core que não
+controla — o objetivo aqui é que, quando o GLPI mudar algo, o plugin **falhe
+de forma previsível e localizada** (uma funcionalidade específica indisponível,
+com aviso claro) em vez de um fatal error que derruba tudo. Mecanismos:
+
+- **`plugin_analyticdesign_check_config()`** (`setup.php`) não retorna mais
+  `true` incondicionalmente: verifica, antes de permitir a ativação, que as
+  classes/métodos dos quais o plugin depende diretamente ainda existem
+  (`\GLPIKey`, `CommonDBTM::can()/check()`, `Html::input()`,
+  `Dropdown::showFromArray()`, `Session::checkCSRF()`,
+  `Glpi\Plugin\Hooks`). Se uma atualização futura do GLPI remover/renomear
+  algum desses, a ativação falha aqui com uma mensagem, em vez do plugin
+  ativar e quebrar de forma imprevisível em produção.
+- **`plugin_analyticdesign_check_prerequisites()`** verifica dependências de
+  ambiente (`GuzzleHttp\Client`, extensão `sodium`) antes mesmo de listar o
+  plugin como instalável.
+- **Registro do hook de dashboard blindado**: `DASHBOARD_TYPES`/
+  `DASHBOARD_CARDS` são o subsistema mais específico/menos estável usado
+  aqui (foi o único ponto onde a modelagem inicial estava errada — ver item 1
+  acima) — `plugin_init_analyticdesign()` só registra esses dois hooks se as
+  constantes existirem (`defined(...)`). Se o GLPI mudar esse contrato de
+  novo no futuro, a integração com o dashboard nativo para de funcionar, mas
+  o CRUD de `Connection`/`DashboardItem`, o menu e os assets continuam.
+- **Ordem de fragilidade** (do mais para o menos exposto a mudanças internas
+  do GLPI, para orientar onde olhar primeiro numa atualização futura):
+  1. Contrato de dashboard (`getCards`/`provider`/`args`) — subsistema
+     interno, não uma API pública estável.
+  2. Renderização de formulário em PHP puro (`showFormHeader`/
+     `showFormButtons`/`Html::input`/`Dropdown::showFromArray`) — API mais
+     madura e amplamente usada em todo o GLPI, historicamente estável.
+  3. `CommonDBTM::can()/check()`, `Session::checkCSRF()` — fundação do
+     framework, extremamente estável.
+  4. Padrão `front/`+`ajax/` em si — legado mas garantidamente suportado.
+
 **Ainda pendente de teste real** (ver "Como testar" abaixo): rodar o fluxo
 ponta a ponta numa instância GLPI 11.0.8 viva — o código foi revisado contra
 o código-fonte, não executado.
@@ -136,6 +171,20 @@ criptografado é persistido.
   `client_id`/`tenant_id` já salvos). Agora `handleCredentialInput()` parte de
   `getDecryptedCredentials()` (valores atuais) e só sobrescreve as chaves
   efetivamente reenviadas não-vazias.
+- **Corrigido nesta revisão:** `front/connection.form.php` repassa o `$_POST`
+  inteiro para `update()`/`add()` (padrão comum em plugins GLPI) — isso
+  significava que um `credentials` enviado diretamente no POST (fora dos
+  campos do formulário, ex.: via requisição forjada) ia direto para a coluna,
+  sem passar pela criptografia. `handleCredentialInput()` agora começa
+  descartando (`unset`) qualquer `credentials` vindo do input bruto, antes de
+  qualquer outra coisa — o único caminho para popular esse campo passa a ser
+  o bloco de criptografia logo abaixo.
+- **Corrigido nesta revisão:** `PowerBiClient` valida que `tenant_id`,
+  `client_id`, `workspace_id` e o `report_id`/`external_id` usado em
+  `generateEmbedToken()` têm formato de GUID antes de compor qualquer URL ou
+  chamar a API — evita erros genéricos de HTTP 400 em configurações com
+  erro de digitação e é uma camada extra de defesa contra valores inesperados
+  acabarem interpolados em requisições HTTP de servidor.
 
 **Autorização / IDOR (entidades).** O modelo de direitos usa um único
 `$rightname` (`plugin_analyticdesign_connection`) para `Connection` e
@@ -173,6 +222,18 @@ ENT_QUOTES)` antes de ir para o HTML (nomes, categorias, mensagens de erro).
 - O iframe também já usa `sandbox` (`allow-same-origin allow-scripts
   allow-popups allow-forms`, sem `allow-top-navigation`) e
   `referrerpolicy="no-referrer"`.
+
+**CSP / política de framing (risco em aberto, fora do controle do plugin).**
+O embed depende de o navegador permitir enquadrar (`<iframe>`) uma origem
+externa (Grafana/Power BI) — se a instância GLPI tiver um `Content-Security-Policy`
+restritivo (`frame-src`) ou se o **Grafana/Power BI** enviar
+`X-Frame-Options`/`frame-ancestors` bloqueando ser enquadrado por outra
+origem, o card aparece vazio/bloqueado. Isto não é algo que o plugin possa
+corrigir sozinho no lado do GLPI (mudar CSP é uma decisão de política da
+instância, não algo que um plugin deva alterar por conta própria) nem do
+lado do Grafana/Power BI (configuração externa) — ver seção "Riscos" da
+especificação original. Documentado aqui como um pré-requisito operacional a
+validar durante a instalação (ver "Como testar"), não uma falha de segurança.
 
 **"Publish to web" (Power BI, Fase 3) — aviso obrigatório.** Este modo expõe o
 conteúdo a qualquer pessoa com o link, sem nenhuma autenticação — não é uma

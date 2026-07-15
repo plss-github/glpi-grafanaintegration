@@ -266,6 +266,15 @@ class Connection extends CommonDBTM
      */
     private function handleCredentialInput($input)
     {
+        // O único caminho válido para popular `credentials` é o bloco de
+        // criptografia abaixo. Como front/connection.form.php repassa todo o
+        // $_POST para update()/add(), um valor de `credentials` enviado
+        // diretamente (fora dos campos do formulário) precisa ser descartado
+        // aqui antes de qualquer outra coisa — senão um usuário com direito
+        // de UPDATE na Connection poderia gravar um blob arbitrário não
+        // criptografado nesse campo.
+        unset($input['credentials']);
+
         // workspace_id não é secreto por natureza, mas fica no mesmo blob
         // criptografado por simplicidade (evita migração para uma coluna nova
         // só para esse campo específico do Power BI).
