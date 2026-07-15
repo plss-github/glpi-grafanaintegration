@@ -33,6 +33,20 @@ class DashboardItem extends CommonDBTM
         return 'ti ti-layout-dashboard';
     }
 
+    /**
+     * Exemplo de URL de embed mostrado abaixo do campo — varia pela
+     * ferramenta da Connection dona, já que o formato é bem diferente entre
+     * Grafana (link direto do dashboard) e Power BI (URL de "publish to
+     * web", que embute um token opaco em `?r=`).
+     */
+    private static function embedUrlExample(?Connection $connection): string
+    {
+        if ($connection !== null && $connection->fields['type'] === PowerBiSource::getType()) {
+            return __('Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz...', 'analyticdesign');
+        }
+        return __('Ex.: https://seu-grafana.suaempresa.com/d/ab12cd34/meu-dashboard?kiosk=tv&theme=light', 'analyticdesign');
+    }
+
     /** Devolve a Connection dona deste item. */
     public function getConnection(): ?Connection
     {
@@ -321,18 +335,18 @@ class DashboardItem extends CommonDBTM
             . htmlspecialchars($ajaxRoot . '/addmanualdashboard.php', ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
         echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
-        echo "<td>" . __('Nome') . "</td>";
-        echo "<td>" . Html::input('name', ['value' => ''])
+        echo "<td class='analyticdesign-field-cell'>" . __('Nome') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . Html::input('name', ['value' => ''])
             . "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>"
             . "</td>";
-        echo "<td>" . __('Categoria', 'analyticdesign') . "</td>";
-        echo "<td>" . Html::input('category', ['value' => ''])
+        echo "<td class='analyticdesign-field-cell'>" . __('Categoria', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . Html::input('category', ['value' => ''])
             . "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>"
             . "</td>";
         echo "</tr><tr class='tab_bg_1'>";
-        echo "<td>" . __('URL de embed', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>" . Html::input('embed_url', ['value' => '', 'size' => 60])
-            . "<div class='form-text text-muted'>" . __('Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz...', 'analyticdesign') . "</div>"
+        echo "<td class='analyticdesign-field-cell'>" . __('URL de embed', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell' colspan='3'>" . Html::input('embed_url', ['value' => '', 'size' => 60])
+            . "<div class='form-text text-muted'>" . self::embedUrlExample($connection) . "</div>"
             . "</td>";
         echo "</tr></table>";
         echo "<div class='mt-2'>";
@@ -355,34 +369,34 @@ class DashboardItem extends CommonDBTM
         $connection = $this->getConnection();
 
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Nome') . "</td>";
-        echo "<td>" . Html::input('name', ['value' => $this->fields['name']])
+        echo "<td class='analyticdesign-field-cell'>" . __('Nome') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . Html::input('name', ['value' => $this->fields['name']])
             . "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>"
             . "</td>";
-        echo "<td>" . Connection::getTypeName(1) . "</td>";
-        echo "<td>" . ($connection !== null ? htmlspecialchars($connection->fields['name'], ENT_QUOTES) : '-') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . Connection::getTypeName(1) . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . ($connection !== null ? htmlspecialchars($connection->fields['name'], ENT_QUOTES) : '-') . "</td>";
         echo "</tr>";
 
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('ID externo', 'analyticdesign') . "</td>";
-        echo "<td>" . htmlspecialchars($this->fields['external_id'], ENT_QUOTES) . "</td>";
-        echo "<td>" . __('Categoria', 'analyticdesign') . "</td>";
-        echo "<td>" . Html::input('category', ['value' => $this->fields['category']])
+        echo "<td class='analyticdesign-field-cell'>" . __('ID externo', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . htmlspecialchars($this->fields['external_id'], ENT_QUOTES) . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . __('Categoria', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . Html::input('category', ['value' => $this->fields['category']])
             . "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>"
             . "</td>";
         echo "</tr>";
 
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('URL de embed', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>" . Html::input('embed_url', ['value' => $this->fields['embed_url'], 'size' => 60])
-            . "<div class='form-text text-muted'>" . __('Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz...', 'analyticdesign') . "</div>"
+        echo "<td class='analyticdesign-field-cell'>" . __('URL de embed', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell' colspan='3'>" . Html::input('embed_url', ['value' => $this->fields['embed_url'], 'size' => 60])
+            . "<div class='form-text text-muted'>" . self::embedUrlExample($connection) . "</div>"
             . "</td>";
         echo "</tr>";
 
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Ativo') . "</td>";
-        echo "<td>" . self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1) . "</td>";
-        echo "<td colspan='2'></td></tr>";
+        echo "<td class='analyticdesign-field-cell'>" . __('Ativo') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1) . "</td>";
+        echo "<td class='analyticdesign-field-cell' colspan='2'></td></tr>";
 
         $this->showFormButtons($options);
 

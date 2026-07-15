@@ -101,8 +101,8 @@ class ConnectionCharacteristics extends CommonGLPI
     private static function showBaseUrlField(Connection $item): void
     {
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('URL base', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>"
+        echo "<td class='analyticdesign-field-cell'>" . __('URL base', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell' colspan='3'>"
             . Html::input('base_url', ['value' => $item->fields['base_url'], 'size' => 60])
             . "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>"
             . "</td></tr>";
@@ -122,8 +122,8 @@ class ConnectionCharacteristics extends CommonGLPI
         $isPublishToWeb = $item->fields['embed_mode'] === DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB;
 
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Modo de embed', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>";
+        echo "<td class='analyticdesign-field-cell'>" . __('Modo de embed', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell' colspan='3'>";
         Dropdown::showFromArray('embed_mode', $embedModes, ['value' => $item->fields['embed_mode']]);
         echo "<div class='analyticdesign-publish-warning alert alert-important alert-danger' style='margin-top:.5rem;"
             . ($isPublishToWeb ? '' : 'display:none;') . "'>"
@@ -173,8 +173,8 @@ class ConnectionCharacteristics extends CommonGLPI
         }
 
         echo "<tr class='{$rowClass}'{$rowAttr}>";
-        echo "<td>" . htmlspecialchars($field['label'], ENT_QUOTES) . "</td>";
-        echo "<td colspan='3'>"
+        echo "<td class='analyticdesign-field-cell'>" . htmlspecialchars($field['label'], ENT_QUOTES) . "</td>";
+        echo "<td class='analyticdesign-field-cell' colspan='3'>"
             . Html::input($field['name'], ['type' => $inputType, 'value' => '', 'size' => 60]);
         if (!empty($field['help'])) {
             echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";

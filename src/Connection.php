@@ -175,18 +175,19 @@ class Connection extends CommonDBTM
         $isNew = (int)$this->fields['id'] <= 0;
 
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Nome') . "</td>";
-        echo "<td>" . Html::input('name', ['value' => $this->fields['name']])
+        echo "<td class='analyticdesign-field-cell'>" . __('Nome') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>" . Html::input('name', ['value' => $this->fields['name']])
             . "<div class='form-text text-muted'>" . __('Ex.: Grafana Produção', 'analyticdesign') . "</div>"
             . "</td>";
-        echo "<td>" . __('Ferramenta', 'analyticdesign') . "</td>";
-        echo "<td>";
+        echo "<td class='analyticdesign-field-cell'>" . __('Ferramenta', 'analyticdesign') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>";
         // Força vazio numa fonte nova: obriga uma escolha explícita em vez de
-        // herdar o DEFAULT 'grafana' da coluna (ver Connection::install()).
+        // herdar o DEFAULT 'grafana' da coluna (ver Connection::install()). Sem
+        // 'emptylabel' próprio: usa o "-----" padrão do GLPI, igual a qualquer
+        // outro dropdown obrigatório do core.
         Dropdown::showFromArray('type', SourceFactory::getAvailableTypes(), [
             'value'               => $isNew ? '' : $this->fields['type'],
             'display_emptychoice' => true,
-            'emptylabel'          => __('Selecione uma ferramenta', 'analyticdesign'),
             'required'            => true,
         ]);
         echo "</td></tr>";
@@ -206,11 +207,11 @@ class Connection extends CommonDBTM
         $isActive = (int)$this->fields['id'] > 0 ? (int)($this->fields['is_active'] ?? 0) : 0;
 
         echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Ativo') . "</td>";
-        echo "<td>";
+        echo "<td class='analyticdesign-field-cell'>" . __('Ativo') . "</td>";
+        echo "<td class='analyticdesign-field-cell'>";
         Dropdown::showYesNo('is_active', $isActive);
         echo "</td>";
-        echo "<td colspan='2'></td></tr>";
+        echo "<td class='analyticdesign-field-cell' colspan='2'></td></tr>";
     }
 
     /**

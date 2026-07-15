@@ -62,10 +62,6 @@ msgid "Ex.: Grafana Produção"
 msgstr ""
 
 #: src/Connection.php
-msgid "Selecione uma ferramenta"
-msgstr ""
-
-#: src/Connection.php
 msgid "Selecione uma ferramenta."
 msgstr ""
 
@@ -147,6 +143,10 @@ msgstr ""
 
 #: src/DashboardItem.php
 msgid "Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz..."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Ex.: https://seu-grafana.suaempresa.com/d/ab12cd34/meu-dashboard?kiosk=tv&theme=light"
 msgstr ""
 
 #: src/DashboardItem.php

@@ -1,8 +1,8 @@
 # Analytic Design — Guia de Configuração
 
 Tutorial passo a passo para instalar, ativar e configurar o plugin depois que
-ele já está copiado em `glpi/plugins/analyticdesign` (ou montado via
-`docker-compose.yml` — ver README). Testado ponta a ponta contra GLPI 11.0.8.
+ele já está copiado em `glpi/plugins/analyticdesign`. Testado ponta a ponta
+contra GLPI 11.0.8.
 
 ## 1. Instalar e ativar o plugin
 
@@ -23,6 +23,23 @@ php bin/console plugin:activate analyticdesign
 > `plugin:install` roda de novo o hook de instalação/migração e o GLPI marca
 > o plugin como desativado nesse tipo de atualização; `plugin:activate`
 > reativa em seguida).
+
+### Ambiente de desenvolvimento via Docker
+
+O repositório inclui um `docker-compose.yml` que sobe GLPI 11.0.8 (imagem
+oficial `glpi/glpi`) + MariaDB, com a pasta do plugin montada — só para
+instalar e testar localmente (não é config de produção):
+
+```
+cp .env.example .env
+docker compose up -d
+# aguardar a instalação automática do GLPI (alguns minutos na 1ª vez)
+docker compose exec glpi php bin/console plugin:install -u glpi analyticdesign
+docker compose exec glpi php bin/console plugin:activate analyticdesign
+```
+
+Acessar `http://localhost:8080` (login padrão pós-instalação: `glpi` / `glpi`
+— trocar a senha antes de qualquer uso além do teste local).
 
 ## 2. Conceder o direito do plugin a outros perfis (se necessário)
 
@@ -56,8 +73,8 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
 2. Preencher só:
    - **Nome**: um nome livre para identificar a fonte (ex.: "Grafana
      Produção").
-   - **Ferramenta**: `Grafana`. O dropdown nasce vazio ("Selecione uma
-     ferramenta") — é obrigatório escolher explicitamente antes de salvar.
+   - **Ferramenta**: `Grafana`. O dropdown nasce vazio ("-----") — é
+     obrigatório escolher explicitamente antes de salvar.
    - **Ativo**: `Sim` ou `Não` (nasce em `Não`).
 3. Salvar — a tela recarrega já na fonte criada, agora com abas.
 4. Abrir a aba **"Características"** e preencher:
@@ -67,10 +84,10 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
      Grafana com permissão de leitura de dashboards (Grafana > Administration
      > Service accounts).
 5. Salvar (botão **Salvar** da própria aba) e clicar em **Testar conexão**,
-   ao lado — deve responder "Conexão bem-sucedida.". Se falhar, os campos de
-   configuração somem e só a mensagem de erro fica visível — clicar em
-   **"Editar configuração"** para reabri-los e corrigir. Nesse caso,
-   confirmar:
+   ao lado (chama `GET /api/health` no Grafana) — deve responder "Conexão
+   bem-sucedida.". Se falhar, os campos de configuração somem e só a
+   mensagem de erro fica visível — clicar em **"Editar configuração"** para
+   reabri-los e corrigir. Nesse caso, confirmar:
    - que o Grafana tem `allow_embedding: true` na seção `[security]` do
      `grafana.ini` (necessário para o iframe funcionar depois, mesmo que o
      teste de conexão em si não dependa disso);
@@ -78,13 +95,17 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
      (não do seu navegador — a chamada é feita pelo backend);
    - que o token tem permissão de leitura.
 
+   Vale testar deliberadamente com uma URL/token errados uma vez, só para
+   confirmar que a tela reage como esperado (campos escondidos + mensagem +
+   botão "Editar configuração"), sem travar nem mostrar stack trace.
+
 ## 4. Importar dashboards do Grafana
 
 Na aba **"Dashboards"** do registro salvo (aparece assim que a Connection é
 criada):
 
 1. A seção **"Dashboards disponíveis na fonte"** lista automaticamente os
-   dashboards encontrados via API do Grafana.
+   dashboards encontrados via API do Grafana (`GET /api/search?type=dash-db`).
 2. Marcar os que devem virar cards, opcionalmente preencher uma **Categoria**
    por linha (ex.: "Ativos", "Indicadores gerais" — vira o agrupamento do
    card no catálogo de widgets do dashboard nativo).
@@ -115,15 +136,26 @@ workspace do Power BI).
 4. Na fonte recém-criada, abrir a aba **"Características"**:
    - **Modo de embed**: confirmar `Embed seguro — Entra ID / Premium (Power BI)`.
    - Preencher Tenant ID, Client ID, Client secret e Workspace ID.
-5. Salvar e clicar em **Testar conexão** (autentica no Entra ID e verifica
-   acesso ao workspace).
+5. Salvar e clicar em **Testar conexão** (autentica no Entra ID e chama
+   `GET /v1.0/myorg/groups` para verificar acesso ao workspace).
 6. Aba **"Dashboards"**: os relatórios do workspace aparecem em "Dashboards
-   disponíveis na fonte" — importar normalmente.
+   disponíveis na fonte" (`GET /v1.0/myorg/groups/{id}/reports`) — importar
+   normalmente.
+7. Ao adicionar o card num dashboard do GLPI, o container
+   `.analyticdesign-powerbi-secure` é hidratado pelo `powerbi-client`
+   (`public/js/analyticdesign-powerbi.js`) usando um embed token gerado no
+   render (`POST .../GenerateToken`) — vale conferir no DevTools que o
+   relatório carrega e que não há token nenhum salvo em cookies/localStorage
+   (só no atributo `data-` do próprio container, de curta duração).
 
 > O embed token é gerado a cada carregamento do card (validade ~1h, nunca
 > fica salvo). Se o dashboard ficar aberto na tela por mais de uma hora sem
 > recarregar, é esperado que o card pare de atualizar — recarregar a página
 > resolve.
+
+Vale também testar deliberadamente com credenciais inválidas ou um workspace
+sem acesso, para confirmar que os erros do Entra ID/Power BI aparecem como
+mensagem, sem stack trace exposta ao usuário final.
 
 ## 6. Cadastrar uma fonte Power BI — modo "Publish to web"
 
