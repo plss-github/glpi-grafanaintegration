@@ -1,4 +1,4 @@
-# Analytic Design by Pellissari
+# Analytic Design
 
 Plugin GLPI **11.0.8+** que integra dashboards de ferramentas externas de BI
 (**Grafana** e **Power BI**, nos dois modos de embed) ao sistema nativo de
@@ -30,11 +30,15 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
 - Entidades de dados (`Connection`, `DashboardItem`) com credenciais
   criptografadas (`GLPIKey`), `rawSearchOptions()` e abas (`defineTabs`).
 - CRUD de `Connection` via `front/connection.php` + `front/connection.form.php`
-  em dois passos: criar pede só Nome/Ferramenta/Ativo (Sim/Não); URL base,
-  modo de embed e credenciais de cada tipo ficam na aba própria
-  **"Características"** (`ConnectionCharacteristics`), que só existe depois
-  que a fonte já está salva. Botão "Testar conexão" via AJAX, sem recarregar
-  a página.
+  em dois passos: criar pede só Nome/Ferramenta/Ativo. Ferramenta nasce vazio
+  (obrigatório escolher explicitamente, sem herdar o tipo padrão da coluna) e
+  Ativo nasce **"Não"** (o cadastrante ativa a fonte depois de configurá-la);
+  URL base, modo de embed e credenciais de cada tipo ficam na aba própria
+  **"Características"** (`ConnectionCharacteristics`, com ícone próprio na
+  aba), que só existe depois que a fonte já está salva. Botão "Testar
+  conexão" via AJAX, sem recarregar a página — se a conexão falhar, os campos
+  de configuração são escondidos e só a mensagem de erro aparece, com um botão
+  para reabri-los e corrigir.
 - Aba **"Dashboards"** no formulário da `Connection`: lista os dashboards já
   importados (edição inline de categoria/ativo), os disponíveis na fonte
   (importação seletiva via `listDashboards()`, quando a fonte suporta listagem)
@@ -51,13 +55,13 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
   matriz de direitos do plugin (Ler/Atualizar/Criar/Apagar). Na instalação, o
   direito já é concedido automaticamente ao(s) perfil(is) Super-Admin.
 - Assets estáticos (`public/js`, `public/css`) e `locales/analyticdesign.pot`.
-- Licença **GPL-3.0-or-later** (acompanhando o GLPI core — ver seção Licença).
+- Licença **AGPL-3.0** (ver seção Licença).
 
 > ✅ **Testado ponta a ponta contra uma instância GLPI 11.0.8 real** (Docker,
 > imagem oficial `glpi/glpi`, ver `docker-compose.yml`): instalação/ativação
 > via `bin/console`, CRUD completo de `Connection`/`DashboardItem`, e o card
 > renderizando de fato num dashboard do GLPI (`ajax/dashboard.php`, ações
-> `get_card`/`get_cards`). Quatro bugs reais só visíveis rodando contra o core
+> `get_card`/`get_cards`). Cinco bugs reais só visíveis rodando contra o core
 > de verdade foram encontrados e corrigidos nesse processo — ver "Notas de
 > arquitetura e riscos".
 
@@ -106,6 +110,15 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
   dashboard. `getTabNameForItem()` de `DashboardItem` também estava
   declarado `static` incorretamente (a base `CommonGLPI` o declara como
   método de instância — erro fatal de compilação ao sobrescrever); corrigido.
+- **`plugin_analyticdesign_install()` não era idempotente em atualizações.**
+  O GLPI chama essa função de novo em toda mudança de
+  `PLUGIN_ANALYTICDESIGN_VERSION` (não só na primeira instalação) — sem um
+  guard, `ProfileRight::addProfileRights()` tentava inserir a mesma linha de
+  direito de novo e quebrava com erro de chave duplicada, deixando o plugin
+  preso no estado "precisa atualizar" sem conseguir reativar. Confirmado ao
+  testar a atualização de 0.2.0 para 0.3.0 contra uma instância viva;
+  corrigido com uma checagem de `countElementsInTable()` antes de
+  `addProfileRights()` (ver `hook.php`).
 
 ## Segurança
 
@@ -171,7 +184,7 @@ ferramenta = nova implementação da interface + 1 linha na `SourceFactory`.
 ## Instalação (dev)
 
 1. Copiar a pasta `analyticdesign/` para `glpi/plugins/`.
-2. Setup > Plugins > instalar e ativar "Analytic Design by Pellissari".
+2. Setup > Plugins > instalar e ativar "Analytic Design".
 3. Administração > Análise de Dados > adicionar uma fonte Grafana.
 
 ### Ambiente local via Docker
@@ -184,9 +197,16 @@ para instalar e testar localmente (não é config de produção):
 cp .env.example .env
 docker compose up -d
 # aguardar a instalação automática do GLPI (alguns minutos na 1ª vez)
-docker compose exec glpi php bin/console glpi:plugin:install -u glpi analyticdesign
-docker compose exec glpi php bin/console glpi:plugin:activate analyticdesign
+docker compose exec glpi php bin/console plugin:install -u glpi analyticdesign
+docker compose exec glpi php bin/console plugin:activate analyticdesign
 ```
+
+> Ao atualizar o plugin (nova versão de `PLUGIN_ANALYTICDESIGN_VERSION` em
+> `setup.php`), o GLPI marca o plugin como desativado automaticamente na
+> próxima vez que a tela Setup > Plugins for aberta (estado "precisa
+> atualizar") — repita os dois comandos acima (`plugin:install` de novo, para
+> rodar o hook de instalação/migração, seguido de `plugin:activate`) para
+> voltar a ativá-lo.
 
 Acessar `http://localhost:8080` (login padrão pós-instalação: `glpi` / `glpi`
 — trocar a senha antes de qualquer uso além do teste local).
@@ -201,7 +221,8 @@ automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
 1. Ter um Grafana acessível com `allow_embedding: true` (seção `[security]` do
    `grafana.ini`) e um **service account token** com permissão de leitura.
 2. Administração > Análise de Dados > Fontes de dados > adicionar: Nome,
-   Ferramenta = Grafana, Ativo = Sim, salvar.
+   Ferramenta = **Grafana** (o dropdown nasce vazio — escolha explícita
+   obrigatória), Ativo = Sim (nasce "Não" por padrão), salvar.
 3. Na fonte recém-criada, aba **"Características"**: URL base
    `https://seu-grafana`, token no campo "API Token / Service account token",
    salvar e clicar em **"Testar conexão"** — deve responder "Conexão
@@ -219,6 +240,9 @@ automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
 7. Repetir o teste com uma fonte inválida (URL/token errados) para confirmar
    que "Testar conexão" e a listagem tratam a falha com uma mensagem, sem
    quebrar a tela (ver `list_error`/try-catch em `DashboardItem::showForConnection()`).
+   Na aba "Características", clicar em "Testar conexão" com dados inválidos
+   deve esconder os campos e mostrar só a mensagem de erro, com um botão
+   "Editar configuração" para reabri-los e corrigir.
 
 ## Como testar o fluxo completo (Fase 2 — Power BI, modo `secure`)
 
@@ -228,8 +252,9 @@ automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
    Fabric APIs" no admin portal do Power BI). Anotar `tenant_id`, `client_id`,
    `client_secret` e o `workspace_id` (GUID do workspace/group).
 2. Administração > Análise de Dados > Fontes de dados > adicionar: Nome,
-   Ferramenta = Power BI, Ativo = Sim, salvar (o modo de embed já nasce
-   `secure` por padrão numa fonte Power BI nova).
+   Ferramenta = **Power BI** (o dropdown nasce vazio — escolha explícita
+   obrigatória), Ativo = Sim (nasce "Não" por padrão), salvar (o modo de
+   embed já nasce `secure` por padrão numa fonte Power BI nova).
 3. Na fonte recém-criada, aba **"Características"**: confirmar Modo de embed
    = **Embed seguro**, preencher Tenant ID, Client ID, Client secret e
    Workspace ID, salvar e clicar em **"Testar conexão"** — deve responder
@@ -292,7 +317,7 @@ automaticamente. Para liberar o plugin a outros perfis, há uma aba própria
 
 ```
 analyticdesign/
-├── LICENSE                   # GPL-3.0-or-later (texto integral)
+├── LICENSE                   # AGPL-3.0 (texto integral)
 ├── setup.php                 # metadados + init (menu, hooks de dashboard, assets)
 ├── hook.php                  # install/uninstall + direitos
 ├── composer.json             # autoload PSR-4
@@ -338,8 +363,10 @@ analyticdesign/
 
 ## Licença
 
-**GPL-3.0-or-later** — ver arquivo `LICENSE`. O GLPI core migrou de GPL-2.0
-para GPL-3.0-or-later na versão 10.0.1 (o motivo foi uma incompatibilidade de
-licença com código do FusionInventory, AGPL-3.0, incorporado ao core:
-https://www.glpi-project.org/en/glpi-gpl-3-0/); como este plugin roda sobre e
-distribui código derivado do GLPI 11.0.x, acompanha a mesma licença do core.
+**AGPL-3.0** — ver arquivo `LICENSE`. O GLPI core é GPL-3.0-or-later; a GPLv3
+§13 permite expressamente combinar um programa GPLv3 com código licenciado
+sob a AGPLv3 num mesmo todo (foi essa mesma cláusula que permitiu ao próprio
+GLPI incorporar código AGPL-3.0 do FusionInventory ao migrar de GPL-2.0 para
+GPL-3.0-or-later na versão 10.0.1: https://www.glpi-project.org/en/glpi-gpl-3-0/).
+Este plugin adota a AGPL-3.0 — mais restritiva que a licença do core —, o que
+é compatível com rodar sobre e distribuir código derivado do GLPI 11.0.x.

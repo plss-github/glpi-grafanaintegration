@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Edição pontual de um dashboard exposto (acessado a partir da busca geral).
  * O fluxo principal de importação/edição é a aba "Dashboards" da Connection.

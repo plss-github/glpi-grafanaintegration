@@ -1,4 +1,4 @@
-# Analytic Design by Pellissari — Guia de Configuração
+# Analytic Design — Guia de Configuração
 
 Tutorial passo a passo para instalar, ativar e configurar o plugin depois que
 ele já está copiado em `glpi/plugins/analyticdesign` (ou montado via
@@ -9,15 +9,20 @@ ele já está copiado em `glpi/plugins/analyticdesign` (ou montado via
 Pela interface web:
 
 1. **Setup > Plugins**.
-2. Localizar "Analytic Design by Pellissari" e clicar em **Instalar**.
+2. Localizar "Analytic Design" e clicar em **Instalar**.
 3. Depois de instalado, clicar em **Ativar**.
 
 Ou via linha de comando (dentro do container/servidor, na raiz do GLPI):
 
 ```
-php bin/console glpi:plugin:install --username=glpi analyticdesign
-php bin/console glpi:plugin:activate analyticdesign
+php bin/console plugin:install -u glpi analyticdesign
+php bin/console plugin:activate analyticdesign
 ```
+
+> Ao atualizar o plugin para uma versão nova, repita os dois comandos (o
+> `plugin:install` roda de novo o hook de instalação/migração e o GLPI marca
+> o plugin como desativado nesse tipo de atualização; `plugin:activate`
+> reativa em seguida).
 
 ## 2. Conceder o direito do plugin a outros perfis (se necessário)
 
@@ -51,8 +56,9 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
 2. Preencher só:
    - **Nome**: um nome livre para identificar a fonte (ex.: "Grafana
      Produção").
-   - **Ferramenta**: `Grafana`.
-   - **Ativo**: `Sim` ou `Não`.
+   - **Ferramenta**: `Grafana`. O dropdown nasce vazio ("Selecione uma
+     ferramenta") — é obrigatório escolher explicitamente antes de salvar.
+   - **Ativo**: `Sim` ou `Não` (nasce em `Não`).
 3. Salvar — a tela recarrega já na fonte criada, agora com abas.
 4. Abrir a aba **"Características"** e preencher:
    - **URL base**: a URL da instância, ex. `https://grafana.suaempresa.com`
@@ -61,7 +67,10 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
      Grafana com permissão de leitura de dashboards (Grafana > Administration
      > Service accounts).
 5. Salvar (botão **Salvar** da própria aba) e clicar em **Testar conexão**,
-   ao lado — deve responder "Conexão bem-sucedida.". Se falhar, confirmar:
+   ao lado — deve responder "Conexão bem-sucedida.". Se falhar, os campos de
+   configuração somem e só a mensagem de erro fica visível — clicar em
+   **"Editar configuração"** para reabri-los e corrigir. Nesse caso,
+   confirmar:
    - que o Grafana tem `allow_embedding: true` na seção `[security]` do
      `grafana.ini` (necessário para o iframe funcionar depois, mesmo que o
      teste de conexão em si não dependa disso);
@@ -99,9 +108,10 @@ workspace do Power BI).
 2. Anotar: **Tenant ID**, **Client ID**, **Client secret**, e o **Workspace
    ID** (GUID do workspace/group — está na URL do workspace no Power BI).
 3. **Administração > Análise de Dados > Fontes de dados > Adicionar**:
-   preencher só **Nome**, **Ferramenta** (`Power BI`) e **Ativo**, e salvar
-   (o modo de embed já nasce como "Embed seguro" por padrão para uma fonte
-   Power BI nova — ajustável na aba seguinte).
+   preencher só **Nome**, **Ferramenta** (`Power BI` — o dropdown nasce
+   vazio, escolha obrigatória) e **Ativo** (nasce `Não`), e salvar (o modo de
+   embed já nasce como "Embed seguro" por padrão para uma fonte Power BI
+   nova — ajustável na aba seguinte).
 4. Na fonte recém-criada, abrir a aba **"Características"**:
    - **Modo de embed**: confirmar `Embed seguro — Entra ID / Premium (Power BI)`.
    - Preencher Tenant ID, Client ID, Client secret e Workspace ID.
@@ -165,7 +175,7 @@ plugin.
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
 | Menu/telas do plugin não aparecem, ou "Acesso negado" | Direito não concedido ao perfil (perfis diferentes do Super-Admin não recebem acesso automático) | Ver passo 2 acima (aba "Análise de Dados" dentro do perfil); sair e entrar de novo depois de salvar |
-| "Testar conexão" falha | URL/token errados, ou Grafana/Power BI inacessível a partir do **servidor** do GLPI | Confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
+| "Testar conexão" falha e os campos da aba "Características" somem | Comportamento esperado (não é erro) — a falha esconde os campos e mostra só a mensagem | Clicar em "Editar configuração" para reabrir os campos e corrigir; confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
 | Card aparece vazio/quebrado no dashboard | Política de CSP da instância GLPI, ou `X-Frame-Options`/CSP do Grafana/Power BI bloqueando ser enquadrado por outra origem | Verificar `allow_embedding` no Grafana; checar CSP da instância GLPI (fora do controle do plugin) |
 | Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |
 | "Publish to web" com aviso vermelho | Comportamento esperado, não é erro | Não usar esse modo para dados confidenciais |

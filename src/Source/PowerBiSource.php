@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * FONTE POWER BI.
  *
@@ -125,28 +125,28 @@ class PowerBiSource extends AbstractDashboardSource
                 'name'       => 'tenant_id',
                 'label'      => __('Tenant ID (Entra ID)', 'analyticdesign'),
                 'type'       => 'text',
-                'help'       => __('GUID do tenant do Azure AD / Entra ID.', 'analyticdesign'),
+                'help'       => __('GUID do tenant do Azure AD / Entra ID. Ex.: 3fa85f64-5717-4562-b3fc-2c963f66afa6', 'analyticdesign'),
                 'embed_mode' => self::EMBED_MODE_SECURE,
             ],
             [
                 'name'       => 'client_id',
                 'label'      => __('Client ID (aplicativo registrado)', 'analyticdesign'),
                 'type'       => 'text',
-                'help'       => __('ID do aplicativo (service principal) registrado no Entra ID.', 'analyticdesign'),
+                'help'       => __('ID do aplicativo (service principal) registrado no Entra ID. Ex.: 8f2c1e4a-9b3d-4a6e-8c1f-5d7e2b9a4c6f', 'analyticdesign'),
                 'embed_mode' => self::EMBED_MODE_SECURE,
             ],
             [
                 'name'       => 'client_secret',
                 'label'      => __('Client secret', 'analyticdesign'),
                 'type'       => 'password',
-                'help'       => __('Segredo do aplicativo registrado no Entra ID.', 'analyticdesign'),
+                'help'       => __('Segredo do aplicativo registrado no Entra ID. Ex.: valor gerado em Entra ID > Registros de aplicativo > Certificados e segredos (copie assim que criar; não é possível visualizar depois).', 'analyticdesign'),
                 'embed_mode' => self::EMBED_MODE_SECURE,
             ],
             [
                 'name'       => 'workspace_id',
                 'label'      => __('Workspace ID (group)', 'analyticdesign'),
                 'type'       => 'text',
-                'help'       => __('GUID do workspace do Power BI onde os relatórios estão publicados.', 'analyticdesign'),
+                'help'       => __('GUID do workspace do Power BI onde os relatórios estão publicados. Ex.: 6d4e8a2c-1f3b-4c9d-a7e5-2b8f6c1d9a3e', 'analyticdesign'),
                 'embed_mode' => self::EMBED_MODE_SECURE,
             ],
         ];

@@ -1,11 +1,13 @@
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Comportamento das telas do plugin:
  *  - alterna os campos de credencial do Power BI conforme o modo de embed
  *    selecionado (secure vs publish_to_web), na aba "Características";
  *  - alerta quando o modo de embed "publish to web" é escolhido;
- *  - botão "Testar conexão" via fetch, sem recarregar a página.
+ *  - botão "Testar conexão" via fetch, sem recarregar a página; quando a
+ *    conexão falha, esconde os campos e mostra só o erro (com um botão para
+ *    reabrir os campos e corrigir a configuração).
  *
  * Tudo via *event delegation* em `document` (nada de
  * `document.querySelector(...).addEventListener(...)` direto): o GLPI carrega
@@ -30,6 +32,12 @@ document.addEventListener('click', function (event) {
     var testBtn = event.target.closest('.analyticdesign-test-connection');
     if (testBtn) {
         testConnection(testBtn);
+        return;
+    }
+
+    var reopenBtn = event.target.closest('.analyticdesign-reopen-fields');
+    if (reopenBtn) {
+        showCharacteristicsFields(reopenBtn.closest('.analyticdesign-characteristics'));
     }
 });
 
@@ -49,6 +57,7 @@ function toggleEmbedModeFields(embedModeSelect) {
 
 function testConnection(testBtn) {
     var resultEl = testBtn.parentElement.querySelector('.analyticdesign-test-result');
+    var container = testBtn.closest('.analyticdesign-characteristics');
     var id = testBtn.dataset.id;
     var csrfInput = testBtn.closest('form')
         ? testBtn.closest('form').querySelector('input[name="_glpi_csrf_token"]')
@@ -72,18 +81,57 @@ function testConnection(testBtn) {
     })
         .then(function (resp) { return resp.json(); })
         .then(function (data) {
-            if (resultEl) {
-                resultEl.textContent = data.message || (data.success ? 'OK' : 'Falhou');
-                resultEl.style.color = data.success ? '#2fa84f' : '#c0392b';
+            if (data.success) {
+                if (resultEl) {
+                    resultEl.textContent = data.message || 'OK';
+                    resultEl.style.color = '#2fa84f';
+                }
+                return;
             }
+            showCharacteristicsError(container, data.message || 'Falhou');
         })
         .catch(function () {
-            if (resultEl) {
-                resultEl.textContent = 'Erro de rede ao testar a conexão.';
-                resultEl.style.color = '#c0392b';
-            }
+            showCharacteristicsError(container, 'Erro de rede ao testar a conexão.');
         })
         .finally(function () {
             testBtn.disabled = false;
         });
+}
+
+/** Esconde os campos e mostra a mensagem de erro no lugar deles. */
+function showCharacteristicsError(container, message) {
+    if (!container) {
+        return;
+    }
+
+    var errorEl = container.querySelector('.analyticdesign-error');
+    var wrapperEl = container.querySelector('.analyticdesign-fields-wrapper');
+
+    if (errorEl) {
+        var messageEl = errorEl.querySelector('.analyticdesign-error-message');
+        if (messageEl) {
+            messageEl.textContent = message;
+        }
+        errorEl.style.display = '';
+    }
+    if (wrapperEl) {
+        wrapperEl.style.display = 'none';
+    }
+}
+
+/** Reverte showCharacteristicsError(): reabre os campos para o usuário corrigir a configuração. */
+function showCharacteristicsFields(container) {
+    if (!container) {
+        return;
+    }
+
+    var errorEl = container.querySelector('.analyticdesign-error');
+    var wrapperEl = container.querySelector('.analyticdesign-fields-wrapper');
+
+    if (errorEl) {
+        errorEl.style.display = 'none';
+    }
+    if (wrapperEl) {
+        wrapperEl.style.display = '';
+    }
 }

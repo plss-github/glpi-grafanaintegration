@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Rotinas de instalação e desinstalação.
  */
@@ -29,9 +29,17 @@ function plugin_analyticdesign_install(): bool
     // consegue usá-lo até entrar manualmente em Administração > Perfis e
     // marcar as permissões (confirmado como uma armadilha real testando
     // contra uma instância viva — ver docs/CONFIGURACAO.md).
-    \ProfileRight::addProfileRights([Connection::RIGHTNAME]);
-    foreach (\Profile::getSuperAdminProfilesId() as $profilesId) {
-        \ProfileRight::updateProfileRights($profilesId, [Connection::RIGHTNAME => ALLSTANDARDRIGHT]);
+    //
+    // GLPI chama este install() de novo em toda atualização de versão do
+    // plugin (não só na primeira instalação) — sem este guard,
+    // addProfileRights() tenta inserir a mesma linha de novo e quebra com um
+    // erro de chave duplicada (confirmado ao testar a atualização de 0.2.0
+    // para 0.3.0 contra uma instância viva).
+    if (countElementsInTable('glpi_profilerights', ['name' => Connection::RIGHTNAME]) === 0) {
+        \ProfileRight::addProfileRights([Connection::RIGHTNAME]);
+        foreach (\Profile::getSuperAdminProfilesId() as $profilesId) {
+            \ProfileRight::updateProfileRights($profilesId, [Connection::RIGHTNAME => ALLSTANDARDRIGHT]);
+        }
     }
 
     return true;

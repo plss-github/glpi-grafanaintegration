@@ -1,5 +1,5 @@
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Estilos mínimos do formulário de administração. O embed em si (iframe/card)
  * usa estilo inline (ver AbstractDashboardSource::buildIframe) para garantir
@@ -20,6 +20,13 @@
 }
 
 .analyticdesign-error {
-    border: 1px dashed #c0392b;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1rem;
     border-radius: 4px;
+}
+
+.analyticdesign-error-message {
+    flex: 1;
 }

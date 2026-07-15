@@ -1,13 +1,15 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Plugin GLPI 11.0.x — integração de dashboards de BI externos (Grafana / Power BI)
  * ao sistema nativo de dashboards do GLPI.
  *
- * Licença: GPL-3.0-or-later (GLPI passou de GPL-2.0 para GPL-3.0 a partir da
- * versão 10.0.1; plugins devem acompanhar a licença do core — ver LICENSE).
+ * Licença: AGPL-3.0. O GLPI em si é GPL-3.0-or-later; a GPLv3 §13 permite
+ * expressamente combinar código GPLv3 com código AGPLv3 num mesmo programa,
+ * então usar uma licença mais restritiva (AGPL) neste plugin é compatível
+ * com o core — ver LICENSE.
  */
 
 use Glpi\Plugin\Hooks;
@@ -15,7 +17,7 @@ use GlpiPlugin\Analyticdesign\Dashboard;
 use GlpiPlugin\Analyticdesign\Menu;
 use GlpiPlugin\Analyticdesign\ProfileRights;
 
-define('PLUGIN_ANALYTICDESIGN_VERSION', '0.2.0');
+define('PLUGIN_ANALYTICDESIGN_VERSION', '0.3.0');
 // Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
 // desta revisão). CommonDBTM::can()/check() nesta versão tipam `int $right`
 // e `?array &$input` — sem impacto no uso feito por este plugin, mas registrado
@@ -86,10 +88,10 @@ function plugin_init_analyticdesign(): void
 function plugin_version_analyticdesign(): array
 {
     return [
-        'name'           => 'Analytic Design by Pellissari',
+        'name'           => 'Analytic Design',
         'version'        => PLUGIN_ANALYTICDESIGN_VERSION,
         'author'         => 'Pellissari',
-        'license'        => 'GPL-3.0-or-later',
+        'license'        => 'AGPL-3.0',
         'homepage'       => '',
         'requirements'   => [
             'glpi' => [

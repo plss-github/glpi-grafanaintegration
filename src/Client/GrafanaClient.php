@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Client mínimo da API REST do Grafana (listagem de dashboards + ping).
  * Usa Guzzle (já disponível no GLPI 11).

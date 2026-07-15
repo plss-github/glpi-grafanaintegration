@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Contrato comum a todas as fontes de BI (Grafana, Power BI, ...).
  *

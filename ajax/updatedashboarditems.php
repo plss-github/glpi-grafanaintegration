@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Salva em lote a edição inline (categoria/ativo) dos dashboards já importados,
  * feita na aba "Dashboards" da Connection.

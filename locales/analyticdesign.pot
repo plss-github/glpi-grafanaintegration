@@ -1,4 +1,4 @@
-# Analytic Design by Pellissari — translation template.
+# Analytic Design — translation template.
 # Copyright (C) 2026 Pellissari
 # This file is distributed under the same license as the analyticdesign plugin.
 #
@@ -57,6 +57,18 @@ msgstr[1] ""
 msgid "Ferramenta"
 msgstr ""
 
+#: src/Connection.php
+msgid "Ex.: Grafana Produção"
+msgstr ""
+
+#: src/Connection.php
+msgid "Selecione uma ferramenta"
+msgstr ""
+
+#: src/Connection.php
+msgid "Selecione uma ferramenta."
+msgstr ""
+
 #: src/Connection.php src/ConnectionCharacteristics.php
 msgid "URL base"
 msgstr ""
@@ -103,6 +115,10 @@ msgstr ""
 msgid "Testar conexão"
 msgstr ""
 
+#: src/ConnectionCharacteristics.php
+msgid "Editar configuração"
+msgstr ""
+
 #: src/DashboardItem.php
 msgid "Dashboard exposto"
 msgid_plural "Dashboards expostos"
@@ -119,6 +135,18 @@ msgstr ""
 
 #: src/DashboardItem.php
 msgid "URL de embed"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Ex.: Indicadores de chamados"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Ex.: Infraestrutura de TI"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz..."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -193,7 +221,7 @@ msgid "Tenant ID (Entra ID)"
 msgstr ""
 
 #: src/Source/PowerBiSource.php
-msgid "GUID do tenant do Azure AD / Entra ID."
+msgid "GUID do tenant do Azure AD / Entra ID. Ex.: 3fa85f64-5717-4562-b3fc-2c963f66afa6"
 msgstr ""
 
 #: src/Source/PowerBiSource.php
@@ -201,7 +229,7 @@ msgid "Client ID (aplicativo registrado)"
 msgstr ""
 
 #: src/Source/PowerBiSource.php
-msgid "ID do aplicativo (service principal) registrado no Entra ID."
+msgid "ID do aplicativo (service principal) registrado no Entra ID. Ex.: 8f2c1e4a-9b3d-4a6e-8c1f-5d7e2b9a4c6f"
 msgstr ""
 
 #: src/Source/PowerBiSource.php
@@ -209,7 +237,10 @@ msgid "Client secret"
 msgstr ""
 
 #: src/Source/PowerBiSource.php
-msgid "Segredo do aplicativo registrado no Entra ID."
+msgid ""
+"Segredo do aplicativo registrado no Entra ID. Ex.: valor gerado em Entra "
+"ID > Registros de aplicativo > Certificados e segredos (copie assim que "
+"criar; não é possível visualizar depois)."
 msgstr ""
 
 #: src/Source/PowerBiSource.php
@@ -217,7 +248,9 @@ msgid "Workspace ID (group)"
 msgstr ""
 
 #: src/Source/PowerBiSource.php
-msgid "GUID do workspace do Power BI onde os relatórios estão publicados."
+msgid ""
+"GUID do workspace do Power BI onde os relatórios estão publicados. Ex.: "
+"6d4e8a2c-1f3b-4c9d-a7e5-2b8f6c1d9a3e"
 msgstr ""
 
 #: src/Source/GrafanaSource.php
@@ -225,7 +258,9 @@ msgid "API Token / Service account token"
 msgstr ""
 
 #: src/Source/GrafanaSource.php
-msgid "Token com permissão de leitura de dashboards."
+msgid ""
+"Token com permissão de leitura de dashboards. Ex.: "
+"glsa_1a2b3c4d5e6f7g8h9i0j_abcdef12"
 msgstr ""
 
 #: setup.php

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Formulário de cadastro/edição de uma fonte de dados (Connection).
  * Ver nota de arquitetura em front/connection.php.
@@ -23,6 +23,11 @@ $item = new Connection();
 if (isset($_POST['add'])) {
     $item->check(-1, CREATE, $_POST);
     $newID = $item->add($_POST);
+    if ($newID === false) {
+        // prepareInputForAdd() rejeitou o input (ex.: nenhuma ferramenta
+        // selecionada) e já registrou o erro via addMessageAfterRedirect().
+        Html::back();
+    }
     Html::redirect(Connection::getFormURLWithID($newID));
 } elseif (isset($_POST['update'])) {
     $item->check($_POST['id'], UPDATE);

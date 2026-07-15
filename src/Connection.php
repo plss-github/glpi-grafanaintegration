@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Fonte de BI cadastrada (uma linha por Grafana/Power BI configurado).
  * Tabela: glpi_plugin_analyticdesign_connections
@@ -16,6 +16,7 @@ use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
 use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
 use Html;
+use Session;
 
 class Connection extends CommonDBTM
 {
@@ -171,12 +172,23 @@ class Connection extends CommonDBTM
 
     private function showNameAndToolFields(): void
     {
+        $isNew = (int)$this->fields['id'] <= 0;
+
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Nome') . "</td>";
-        echo "<td>" . Html::input('name', ['value' => $this->fields['name']]) . "</td>";
+        echo "<td>" . Html::input('name', ['value' => $this->fields['name']])
+            . "<div class='form-text text-muted'>" . __('Ex.: Grafana Produção', 'analyticdesign') . "</div>"
+            . "</td>";
         echo "<td>" . __('Ferramenta', 'analyticdesign') . "</td>";
         echo "<td>";
-        Dropdown::showFromArray('type', SourceFactory::getAvailableTypes(), ['value' => $this->fields['type']]);
+        // Força vazio numa fonte nova: obriga uma escolha explícita em vez de
+        // herdar o DEFAULT 'grafana' da coluna (ver Connection::install()).
+        Dropdown::showFromArray('type', SourceFactory::getAvailableTypes(), [
+            'value'               => $isNew ? '' : $this->fields['type'],
+            'display_emptychoice' => true,
+            'emptylabel'          => __('Selecione uma ferramenta', 'analyticdesign'),
+            'required'            => true,
+        ]);
         echo "</td></tr>";
     }
 
@@ -188,10 +200,10 @@ class Connection extends CommonDBTM
     private function showActiveField(): void
     {
         // getEmpty()/initForm() zeram is_active para um item novo (não
-        // respeitam o DEFAULT 1 da coluna) — força "Sim" como valor inicial
-        // do dropdown num item novo, já que é o que se espera ao cadastrar
-        // uma fonte (ninguém cria uma fonte para começar inativa).
-        $isActive = (int)$this->fields['id'] > 0 ? (int)($this->fields['is_active'] ?? 1) : 1;
+        // respeitam o DEFAULT 1 da coluna) — mantém "Não" como valor inicial
+        // do dropdown num item novo, forçando o cadastrante a ativar
+        // explicitamente a fonte depois de configurá-la.
+        $isActive = (int)$this->fields['id'] > 0 ? (int)($this->fields['is_active'] ?? 0) : 0;
 
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Ativo') . "</td>";
@@ -232,11 +244,24 @@ class Connection extends CommonDBTM
 
     public function prepareInputForAdd($input)
     {
+        // O dropdown "Ferramenta" nasce vazio por design (ver
+        // showNameAndToolFields()) — rejeita aqui em vez de deixar o DEFAULT
+        // 'grafana' da coluna entrar silenciosamente caso o usuário ignore o
+        // "required" do lado do cliente (JS desabilitado, requisição forjada etc.).
+        if (empty($input['type'])) {
+            Session::addMessageAfterRedirect(
+                __('Selecione uma ferramenta.', 'analyticdesign'),
+                false,
+                ERROR
+            );
+            return false;
+        }
+
         // O formulário de criação não pergunta o modo de embed (só a aba
         // "Características", depois de salvo) — sem isso, uma Connection
         // Power BI nasceria com o DEFAULT genérico da coluna ('iframe'),
         // que não é uma opção válida no dropdown de embed_mode do Power BI.
-        if (($input['type'] ?? '') === PowerBiSource::getType() && empty($input['embed_mode'])) {
+        if ($input['type'] === PowerBiSource::getType() && empty($input['embed_mode'])) {
             $input['embed_mode'] = DashboardSourceInterface::EMBED_MODE_SECURE;
         }
         return $this->handleCredentialInput($input);

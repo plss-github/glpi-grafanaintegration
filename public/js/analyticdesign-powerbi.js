@@ -1,5 +1,5 @@
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Bootstrap do embed seguro do Power BI (Fase 2): hidrata os containers
  * `.analyticdesign-powerbi-secure` renderizados por PowerBiSource::renderEmbed()

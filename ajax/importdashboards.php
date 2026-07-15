@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Recebe a seleção de dashboards marcados na aba "Dashboards" da Connection
  * (ver DashboardItem::showForConnection()) e cria os DashboardItem correspondentes.

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Base compartilhada pelas implementações de fonte. Guarda a Connection e
  * oferece utilidades comuns (decode de credenciais, montagem de iframe seguro).

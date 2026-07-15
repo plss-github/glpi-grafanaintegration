@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Aba dedicada de direitos do plugin em Administração > Perfis.
  *
@@ -28,10 +28,15 @@ class ProfileRights extends CommonGLPI
         return __('Análise de Dados', 'analyticdesign');
     }
 
+    public static function getIcon()
+    {
+        return 'ti ti-chart-dots';
+    }
+
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
         if ($item instanceof Profile) {
-            return self::getTypeName();
+            return self::createTabEntry(self::getTypeName());
         }
         return '';
     }

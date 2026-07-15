@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Client do modo "embed seguro" do Power BI (Fase 2): autentica como service
  * principal no Entra ID (OAuth2 client_credentials) e fala com a API REST do

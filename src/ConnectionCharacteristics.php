@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Aba "Características" no formulário da Connection: URL base, modo de
  * embed e credenciais específicas do tipo de fonte já escolhido.
@@ -39,10 +39,15 @@ class ConnectionCharacteristics extends CommonGLPI
         return __('Características', 'analyticdesign');
     }
 
+    public static function getIcon()
+    {
+        return 'ti ti-settings';
+    }
+
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
         if ($item instanceof Connection) {
-            return self::getTypeName();
+            return self::createTabEntry(self::getTypeName());
         }
         return '';
     }
@@ -56,6 +61,18 @@ class ConnectionCharacteristics extends CommonGLPI
         global $CFG_GLPI;
         $formUrl = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/connection.form.php';
 
+        echo "<div class='analyticdesign-characteristics'>";
+
+        // Substitui os campos quando "Testar conexão" falha (ver
+        // public/js/analyticdesign.js) — a mensagem real vem do JSON do
+        // endpoint de teste, não é fixa aqui.
+        echo "<div class='analyticdesign-error alert alert-important alert-danger' style='display:none;'>";
+        echo "<i class='ti ti-plug-x'></i> <span class='analyticdesign-error-message'></span>";
+        echo " <button type='button' class='btn btn-sm btn-outline-danger analyticdesign-reopen-fields'>"
+            . __('Editar configuração', 'analyticdesign') . "</button>";
+        echo "</div>";
+
+        echo "<div class='analyticdesign-fields-wrapper'>";
         echo "<form name='analyticdesign_characteristics' method='post' action='"
             . htmlspecialchars($formUrl, ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='id' value='" . (int)$item->fields['id'] . "'>";
@@ -74,6 +91,9 @@ class ConnectionCharacteristics extends CommonGLPI
             . "</button> <span class='analyticdesign-test-result ms-2'></span>";
         echo "</div>";
         Html::closeForm();
+        echo "</div>"; // .analyticdesign-fields-wrapper
+
+        echo "</div>"; // .analyticdesign-characteristics
 
         return true;
     }

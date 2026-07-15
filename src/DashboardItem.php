@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Dashboard externo exposto como card no GLPI.
  * Tabela: glpi_plugin_analyticdesign_items
@@ -322,12 +322,18 @@ class DashboardItem extends CommonDBTM
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
         echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
         echo "<td>" . __('Nome') . "</td>";
-        echo "<td>" . Html::input('name', ['value' => '']) . "</td>";
+        echo "<td>" . Html::input('name', ['value' => ''])
+            . "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>"
+            . "</td>";
         echo "<td>" . __('Categoria', 'analyticdesign') . "</td>";
-        echo "<td>" . Html::input('category', ['value' => '']) . "</td>";
+        echo "<td>" . Html::input('category', ['value' => ''])
+            . "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>"
+            . "</td>";
         echo "</tr><tr class='tab_bg_1'>";
         echo "<td>" . __('URL de embed', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>" . Html::input('embed_url', ['value' => '', 'size' => 60]) . "</td>";
+        echo "<td colspan='3'>" . Html::input('embed_url', ['value' => '', 'size' => 60])
+            . "<div class='form-text text-muted'>" . __('Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz...', 'analyticdesign') . "</div>"
+            . "</td>";
         echo "</tr></table>";
         echo "<div class='mt-2'>";
         echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Adicionar', 'analyticdesign') . "</button>";
@@ -350,7 +356,9 @@ class DashboardItem extends CommonDBTM
 
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('Nome') . "</td>";
-        echo "<td>" . Html::input('name', ['value' => $this->fields['name']]) . "</td>";
+        echo "<td>" . Html::input('name', ['value' => $this->fields['name']])
+            . "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>"
+            . "</td>";
         echo "<td>" . Connection::getTypeName(1) . "</td>";
         echo "<td>" . ($connection !== null ? htmlspecialchars($connection->fields['name'], ENT_QUOTES) : '-') . "</td>";
         echo "</tr>";
@@ -359,12 +367,16 @@ class DashboardItem extends CommonDBTM
         echo "<td>" . __('ID externo', 'analyticdesign') . "</td>";
         echo "<td>" . htmlspecialchars($this->fields['external_id'], ENT_QUOTES) . "</td>";
         echo "<td>" . __('Categoria', 'analyticdesign') . "</td>";
-        echo "<td>" . Html::input('category', ['value' => $this->fields['category']]) . "</td>";
+        echo "<td>" . Html::input('category', ['value' => $this->fields['category']])
+            . "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>"
+            . "</td>";
         echo "</tr>";
 
         echo "<tr class='tab_bg_1'>";
         echo "<td>" . __('URL de embed', 'analyticdesign') . "</td>";
-        echo "<td colspan='3'>" . Html::input('embed_url', ['value' => $this->fields['embed_url'], 'size' => 60]) . "</td>";
+        echo "<td colspan='3'>" . Html::input('embed_url', ['value' => $this->fields['embed_url'], 'size' => 60])
+            . "<div class='form-text text-muted'>" . __('Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz...', 'analyticdesign') . "</div>"
+            . "</td>";
         echo "</tr>";
 
         echo "<tr class='tab_bg_1'>";

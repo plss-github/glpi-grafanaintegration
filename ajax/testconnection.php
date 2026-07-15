@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Endpoint AJAX: testa a conexão de uma fonte já salva e devolve JSON.
  * Chamado pelo botão "Testar conexão" (public/js/analyticdesign.js).

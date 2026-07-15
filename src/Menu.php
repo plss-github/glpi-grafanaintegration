@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Entrada de menu "Análise de Dados" sob Administração.
  * Registrada via $PLUGIN_HOOKS['menu_toadd']['analyticdesign']['admin'].

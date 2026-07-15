@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Pequeno helper HTML compartilhado por Connection/DashboardItem, cujos
  * formulários são renderizados em PHP puro (ver decisão documentada em

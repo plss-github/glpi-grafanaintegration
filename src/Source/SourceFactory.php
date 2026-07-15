@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Resolve uma Connection (com seu 'type') para a implementação de fonte correta.
  * Este é o ÚNICO ponto que precisa mudar ao adicionar uma nova ferramenta de BI.

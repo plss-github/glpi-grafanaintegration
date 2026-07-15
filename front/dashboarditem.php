@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Listagem geral de dashboards expostos (todas as fontes). A importação e a
  * edição do dia a dia acontecem na aba "Dashboards" da Connection; esta tela

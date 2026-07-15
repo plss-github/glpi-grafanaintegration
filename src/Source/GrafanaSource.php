@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Fonte Grafana (Fase 1). Primeira implementação concreta do contrato
  * DashboardSourceInterface. Embedding via iframe.
@@ -93,7 +93,7 @@ class GrafanaSource extends AbstractDashboardSource
                 'name'  => 'api_token',
                 'label' => __('API Token / Service account token', 'analyticdesign'),
                 'type'  => 'password',
-                'help'  => __('Token com permissão de leitura de dashboards.', 'analyticdesign'),
+                'help'  => __('Token com permissão de leitura de dashboards. Ex.: glsa_1a2b3c4d5e6f7g8h9i0j_abcdef12', 'analyticdesign'),
             ],
         ];
     }

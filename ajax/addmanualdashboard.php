@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design by Pellissari
+ * Analytic Design
  * -----------------------------------------------------------------------------
  * Adiciona um DashboardItem manualmente (nome + URL de embed + categoria),
  * usado quando a fonte não permite listar dashboards automaticamente — caso
