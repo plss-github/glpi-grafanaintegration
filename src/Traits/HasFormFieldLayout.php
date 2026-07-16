@@ -5,19 +5,24 @@
  * -----------------------------------------------------------------------------
  * Reproduz em PHP puro o mesmo HTML/CSS que o GLPI 11 gera para campos de
  * formulário via Twig (ver templates/components/form/fields_macros.html.twig,
- * macros field()/horizontalField() no core do GLPI): um `<div class="row">`
- * de campos independentes, cada um com rótulo em `col-form-label` alinhado à
- * direita e o campo em `field-container`, ocupando metade da linha
- * (`col-sm-6`) ou a linha inteira. Usa as MESMAS classes Bootstrap que o
- * core já carrega globalmente — nenhuma classe nova precisa ser definida.
+ * macro verticalField() no core do GLPI): rótulo em `col-form-label` numa
+ * linha própria, campo logo abaixo em `field-container`, o par ocupando
+ * metade da linha (`col-sm-6`) ou a linha inteira. Usa as MESMAS classes
+ * Bootstrap que o core já carrega globalmente — nenhuma classe nova precisa
+ * ser definida.
+ *
+ * A variante horizontalField() do core (rótulo ao LADO do campo, via
+ * col-xxl-5/col-xxl-7) foi tentada primeiro e descartada: só funciona a
+ * partir do breakpoint xxl (1400px — confirmado em lib/tabler.css), abaixo
+ * disso rótulo e campo quebram linha de qualquer forma, e nesse modo
+ * quebrado um <select> (Dropdown::showFromArray) e um <input> de texto não
+ * ficam com o mesmo espaçamento vertical em relação ao próprio rótulo —
+ * confirmado visualmente contra a instância viva. verticalField() não tem
+ * esse problema: rótulo e campo estão sempre em blocos empilhados, nunca
+ * lado a lado, então não há quebra de layout dependente da largura da tela.
  *
  * Reproduzido em PHP em vez de chamar o Twig diretamente porque o restante
- * do plugin já é PHP/HTML puro (ver docblock de Connection::showForm()) e
- * porque cada campo daqui tem um texto de exemplo abaixo (`.form-text`), algo
- * que os formulários nativos do GLPI não fazem (eles usam tooltip no
- * rótulo) — por isso cada campo é independente (não compartilha uma linha
- * de tabela com outro campo), o que evita o rótulo de um campo "flutuar" no
- * meio da altura de um campo vizinho mais alto.
+ * do plugin já é PHP/HTML puro (ver docblock de Connection::showForm()).
  */
 
 namespace GlpiPlugin\Analyticdesign\Traits;
@@ -49,18 +54,13 @@ trait HasFormFieldLayout
         string $extraClass = '',
         string $extraAttr = ''
     ): void {
-        // align-items-start (não align-items-center, usado pelo GLPI): quando
-        // dois campos ficam lado a lado (col-sm-6) e um deles tem texto de
-        // exemplo abaixo do input, o Bootstrap estica os dois para a mesma
-        // altura (flex, mesma linha) — com "center" o rótulo do campo mais
-        // curto fica flutuando no meio dessa altura extra; com "start" ele
-        // sempre fica colado no topo, alinhado com o rótulo do campo vizinho.
         $widthClass = $fullWidth ? 'col-12' : 'col-12 col-sm-6';
-        echo "<div class='form-field row align-items-start {$widthClass} {$extraClass} mb-2' data-testid='form-field-"
+        echo "<div class='form-field {$widthClass} {$extraClass} mb-2' data-testid='form-field-"
             . htmlspecialchars($name, ENT_QUOTES) . "'{$extraAttr}>";
-        echo "<label class='col-form-label col-xxl-5 text-xxl-end' for='"
-            . htmlspecialchars($forId, ENT_QUOTES) . "'>" . $label . "</label>";
-        echo "<div class='col-xxl-7 field-container'>";
+        echo "<div class='d-flex align-items-center'>";
+        echo "<label class='col-form-label' for='" . htmlspecialchars($forId, ENT_QUOTES) . "'>" . $label . "</label>";
+        echo "</div>";
+        echo "<div class='field-container'>";
     }
 
     private static function closeField(): void
