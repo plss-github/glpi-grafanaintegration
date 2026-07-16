@@ -15,11 +15,14 @@ use GLPIKey;
 use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
 use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
+use GlpiPlugin\Analyticdesign\Traits\HasFormFieldLayout;
 use Html;
 use Session;
 
 class Connection extends CommonDBTM
 {
+    use HasFormFieldLayout;
+
     /**
      * Único direito do plugin, compartilhado por Connection e DashboardItem
      * (DashboardItem é sempre filho de uma Connection — não faz sentido um
@@ -154,17 +157,24 @@ class Connection extends CommonDBTM
      * registro (Nome, Ferramenta, Ativo) — URL base, modo de embed e
      * credenciais específicas do tipo ficam na aba "Características"
      * (ConnectionCharacteristics), que só existe depois que a Connection já
-     * tem um tipo salvo. Renderizado em PHP/HTML puro
-     * (showFormHeader/showFormButtons), mesma decisão de sempre neste plugin.
+     * tem um tipo salvo. Renderizado em PHP/HTML puro, mas reproduzindo o
+     * mesmo layout em grid (Bootstrap `row`/`col-*`, rótulo em
+     * `col-form-label`) que o GLPI 11 usa nos seus próprios formulários
+     * baseados em Twig (ver HasFormFieldLayout) — showFormHeader()/
+     * showFormButtons() continuam sendo usados (título, CSRF, botões), só a
+     * <table> que eles abrem é fechada imediatamente e substituída por uma
+     * única célula larga contendo nosso grid de campos.
      */
     public function showForm($ID, array $options = [])
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
+        echo "</td></tr><tr><td colspan='4'>";
 
         $this->showNameAndToolFields();
         $this->showActiveField();
 
+        echo "</td></tr>";
         $this->showFormButtons($options);
 
         return true;
@@ -174,23 +184,28 @@ class Connection extends CommonDBTM
     {
         $isNew = (int)$this->fields['id'] <= 0;
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Nome') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . Html::input('name', ['value' => $this->fields['name']])
-            . "<div class='form-text text-muted'>" . __('Ex.: Grafana Produção', 'analyticdesign') . "</div>"
-            . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Ferramenta', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>";
+        self::openFieldsRow();
+
+        self::openField('name', __('Nome'), 'analyticdesign_name');
+        echo Html::input('name', ['id' => 'analyticdesign_name', 'value' => $this->fields['name']]);
+        echo "<div class='form-text text-muted'>" . __('Ex.: Grafana Produção', 'analyticdesign') . "</div>";
+        self::closeField();
+
+        self::openField('type', __('Ferramenta', 'analyticdesign'), 'dropdown_type1');
         // Força vazio numa fonte nova: obriga uma escolha explícita em vez de
         // herdar o DEFAULT 'grafana' da coluna (ver Connection::install()). Sem
         // 'emptylabel' próprio: usa o "-----" padrão do GLPI, igual a qualquer
-        // outro dropdown obrigatório do core.
+        // outro dropdown obrigatório do core. 'rand' fixo para o <label for>
+        // acima apontar para o id de fato gerado (ver Dropdown::showFromArray()).
         Dropdown::showFromArray('type', SourceFactory::getAvailableTypes(), [
             'value'               => $isNew ? '' : $this->fields['type'],
             'display_emptychoice' => true,
             'required'            => true,
+            'rand'                => 1,
         ]);
-        echo "</td></tr>";
+        self::closeField();
+
+        self::closeFieldsRow();
     }
 
     /**
@@ -206,12 +221,11 @@ class Connection extends CommonDBTM
         // explicitamente a fonte depois de configurá-la.
         $isActive = (int)$this->fields['id'] > 0 ? (int)($this->fields['is_active'] ?? 0) : 0;
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Ativo') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>";
-        Dropdown::showYesNo('is_active', $isActive);
-        echo "</td>";
-        echo "<td class='analyticdesign-field-cell' colspan='2'></td></tr>";
+        self::openFieldsRow();
+        self::openField('is_active', __('Ativo'), 'dropdown_is_active2');
+        Dropdown::showYesNo('is_active', $isActive, -1, ['rand' => 2]);
+        self::closeField();
+        self::closeFieldsRow();
     }
 
     /**

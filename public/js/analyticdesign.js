@@ -43,7 +43,7 @@ document.addEventListener('click', function (event) {
 
 function toggleEmbedModeFields(embedModeSelect) {
     var selectedEmbedMode = embedModeSelect.value;
-    var container = embedModeSelect.closest('table') || document;
+    var container = embedModeSelect.closest('.analyticdesign-fields-wrapper') || document;
 
     container.querySelectorAll('.analyticdesign-embed-mode-field').forEach(function (row) {
         row.style.display = (row.dataset.embedMode === selectedEmbedMode) ? '' : 'none';

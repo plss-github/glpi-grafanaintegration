@@ -14,11 +14,13 @@ use CommonGLPI;
 use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
 use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Traits\HasCheckboxField;
+use GlpiPlugin\Analyticdesign\Traits\HasFormFieldLayout;
 use Html;
 
 class DashboardItem extends CommonDBTM
 {
     use HasCheckboxField;
+    use HasFormFieldLayout;
 
     /** Compartilha o direito de Connection — ver Connection::RIGHTNAME. */
     public static $rightname = Connection::RIGHTNAME;
@@ -334,21 +336,26 @@ class DashboardItem extends CommonDBTM
         echo "<form name='analyticdesign_add_manual' method='post' action='"
             . htmlspecialchars($ajaxRoot . '/addmanualdashboard.php', ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
-        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Nome') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . Html::input('name', ['value' => ''])
-            . "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>"
-            . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Categoria', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . Html::input('category', ['value' => ''])
-            . "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>"
-            . "</td>";
-        echo "</tr><tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('URL de embed', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell' colspan='3'>" . Html::input('embed_url', ['value' => '', 'size' => 60])
-            . "<div class='form-text text-muted'>" . self::embedUrlExample($connection) . "</div>"
-            . "</td>";
-        echo "</tr></table>";
+
+        self::openFieldsRow();
+        self::openField('name', __('Nome'), 'analyticdesign_manual_name');
+        echo Html::input('name', ['id' => 'analyticdesign_manual_name', 'value' => '']);
+        echo "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>";
+        self::closeField();
+
+        self::openField('category', __('Categoria', 'analyticdesign'), 'analyticdesign_manual_category');
+        echo Html::input('category', ['id' => 'analyticdesign_manual_category', 'value' => '']);
+        echo "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>";
+        self::closeField();
+        self::closeFieldsRow();
+
+        self::openFieldsRow();
+        self::openField('embed_url', __('URL de embed', 'analyticdesign'), 'analyticdesign_manual_embed_url', true);
+        echo Html::input('embed_url', ['id' => 'analyticdesign_manual_embed_url', 'value' => '']);
+        echo "<div class='form-text text-muted'>" . self::embedUrlExample($connection) . "</div>";
+        self::closeField();
+        self::closeFieldsRow();
+
         echo "<div class='mt-2'>";
         echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Adicionar', 'analyticdesign') . "</button>";
         echo "</div>";
@@ -365,39 +372,53 @@ class DashboardItem extends CommonDBTM
     {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
+        echo "</td></tr><tr><td colspan='4'>";
 
         $connection = $this->getConnection();
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Nome') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . Html::input('name', ['value' => $this->fields['name']])
-            . "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>"
-            . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . Connection::getTypeName(1) . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . ($connection !== null ? htmlspecialchars($connection->fields['name'], ENT_QUOTES) : '-') . "</td>";
-        echo "</tr>";
+        self::openFieldsRow();
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('ID externo', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . htmlspecialchars($this->fields['external_id'], ENT_QUOTES) . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Categoria', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . Html::input('category', ['value' => $this->fields['category']])
-            . "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>"
-            . "</td>";
-        echo "</tr>";
+        self::openField('name', __('Nome'), 'analyticdesign_item_name');
+        echo Html::input('name', ['id' => 'analyticdesign_item_name', 'value' => $this->fields['name']]);
+        echo "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>";
+        self::closeField();
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('URL de embed', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell' colspan='3'>" . Html::input('embed_url', ['value' => $this->fields['embed_url'], 'size' => 60])
-            . "<div class='form-text text-muted'>" . self::embedUrlExample($connection) . "</div>"
-            . "</td>";
-        echo "</tr>";
+        self::openField('connections_id', Connection::getTypeName(1), 'analyticdesign_item_connection');
+        echo "<span id='analyticdesign_item_connection' class='form-control-plaintext'>"
+            . ($connection !== null ? htmlspecialchars($connection->fields['name'], ENT_QUOTES) : '-')
+            . "</span>";
+        self::closeField();
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Ativo') . "</td>";
-        echo "<td class='analyticdesign-field-cell'>" . self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1) . "</td>";
-        echo "<td class='analyticdesign-field-cell' colspan='2'></td></tr>";
+        self::closeFieldsRow();
 
+        self::openFieldsRow();
+
+        self::openField('external_id', __('ID externo', 'analyticdesign'), 'analyticdesign_item_external_id');
+        echo "<span id='analyticdesign_item_external_id' class='form-control-plaintext'>"
+            . htmlspecialchars($this->fields['external_id'], ENT_QUOTES) . "</span>";
+        self::closeField();
+
+        self::openField('category', __('Categoria', 'analyticdesign'), 'analyticdesign_item_category');
+        echo Html::input('category', ['id' => 'analyticdesign_item_category', 'value' => $this->fields['category']]);
+        echo "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>";
+        self::closeField();
+
+        self::closeFieldsRow();
+
+        self::openFieldsRow();
+        self::openField('embed_url', __('URL de embed', 'analyticdesign'), 'analyticdesign_item_embed_url', true);
+        echo Html::input('embed_url', ['id' => 'analyticdesign_item_embed_url', 'value' => $this->fields['embed_url']]);
+        echo "<div class='form-text text-muted'>" . self::embedUrlExample($connection) . "</div>";
+        self::closeField();
+        self::closeFieldsRow();
+
+        self::openFieldsRow();
+        self::openField('is_active', __('Ativo'), 'analyticdesign_item_is_active');
+        echo self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1);
+        self::closeField();
+        self::closeFieldsRow();
+
+        echo "</td></tr>";
         $this->showFormButtons($options);
 
         return true;

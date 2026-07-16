@@ -6,22 +6,6 @@
  * dimensionamento correto dentro do widget do dashboard nativo.
  */
 
-/*
- * As linhas dos nossos formulários (Connection, Características,
- * DashboardItem) misturam colunas com só um rótulo curto e colunas com
- * input + texto de exemplo abaixo — sem isso, o vertical-align:middle padrão
- * do navegador para <td> deixa o rótulo "flutuando" no meio da linha
- * enquanto o campo ao lado fica mais alto, parecendo desalinhado.
- */
-.analyticdesign-field-cell {
-    vertical-align: top;
-    padding-top: .6rem;
-}
-
-.analyticdesign-embed-mode-field > td {
-    padding-top: .5rem;
-}
-
 .analyticdesign-publish-warning {
     padding: .5rem .75rem;
     border-radius: 4px;

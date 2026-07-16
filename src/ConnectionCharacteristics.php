@@ -30,10 +30,13 @@ use Dropdown;
 use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
 use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
+use GlpiPlugin\Analyticdesign\Traits\HasFormFieldLayout;
 use Html;
 
 class ConnectionCharacteristics extends CommonGLPI
 {
+    use HasFormFieldLayout;
+
     public static function getTypeName($nb = 0)
     {
         return __('Características', 'analyticdesign');
@@ -76,13 +79,11 @@ class ConnectionCharacteristics extends CommonGLPI
         echo "<form name='analyticdesign_characteristics' method='post' action='"
             . htmlspecialchars($formUrl, ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='id' value='" . (int)$item->fields['id'] . "'>";
-        echo "<table class='tab_cadre_fixe'>";
 
         self::showBaseUrlField($item);
         self::showEmbedModeField($item);
         self::showCredentialFields($item);
 
-        echo "</table>";
         echo "<div class='mt-2'>";
         echo "<button type='submit' name='update' class='btn btn-primary'>" . __('Salvar') . "</button>";
         echo " <button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' data-id='"
@@ -100,12 +101,12 @@ class ConnectionCharacteristics extends CommonGLPI
 
     private static function showBaseUrlField(Connection $item): void
     {
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('URL base', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell' colspan='3'>"
-            . Html::input('base_url', ['value' => $item->fields['base_url'], 'size' => 60])
-            . "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>"
-            . "</td></tr>";
+        self::openFieldsRow();
+        self::openField('base_url', __('URL base', 'analyticdesign'), 'analyticdesign_base_url', true);
+        echo Html::input('base_url', ['id' => 'analyticdesign_base_url', 'value' => $item->fields['base_url']]);
+        echo "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>";
+        self::closeField();
+        self::closeFieldsRow();
     }
 
     /** Modo de embed: só relevante para Power BI. */
@@ -121,16 +122,16 @@ class ConnectionCharacteristics extends CommonGLPI
         ];
         $isPublishToWeb = $item->fields['embed_mode'] === DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB;
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td class='analyticdesign-field-cell'>" . __('Modo de embed', 'analyticdesign') . "</td>";
-        echo "<td class='analyticdesign-field-cell' colspan='3'>";
-        Dropdown::showFromArray('embed_mode', $embedModes, ['value' => $item->fields['embed_mode']]);
+        self::openFieldsRow();
+        self::openField('embed_mode', __('Modo de embed', 'analyticdesign'), 'dropdown_embed_mode3', true);
+        Dropdown::showFromArray('embed_mode', $embedModes, ['value' => $item->fields['embed_mode'], 'rand' => 3]);
         echo "<div class='analyticdesign-publish-warning alert alert-important alert-danger' style='margin-top:.5rem;"
             . ($isPublishToWeb ? '' : 'display:none;') . "'>"
             . "<i class='ti ti-alert-triangle'></i> "
             . __('Atenção: "Publish to web" deixa o conteúdo acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
             . "</div>";
-        echo "</td></tr>";
+        self::closeField();
+        self::closeFieldsRow();
     }
 
     /**
@@ -151,34 +152,38 @@ class ConnectionCharacteristics extends CommonGLPI
             self::showCredentialFieldRow($item, $field);
         }
 
-        echo "<tr class='tab_bg_1'><td colspan='4'><em>"
+        echo "<p class='text-muted fst-italic'>"
             . __('Deixe os campos de credenciais em branco para manter os valores já salvos.', 'analyticdesign')
-            . "</em></td></tr>";
+            . "</p>";
     }
 
     private static function showCredentialFieldRow(Connection $item, array $field): void
     {
+        static $rand = 10;
+        $rand++;
+
         $inputType = $field['type'] === 'password' ? 'password' : 'text';
+        $fieldId   = 'analyticdesign_' . $field['name'];
 
         // Só campos marcados com 'embed_mode' (hoje, os do modo "secure" do
         // Power BI) entram no toggle de JS — os demais (ex.: api_token do
         // Grafana) ficam sempre visíveis, sem a classe/atributo de toggle.
-        $rowClass = 'tab_bg_1';
-        $rowAttr  = '';
+        $extraClass = '';
+        $extraAttr  = '';
         if (isset($field['embed_mode'])) {
-            $rowClass .= ' analyticdesign-embed-mode-field';
+            $extraClass = 'analyticdesign-embed-mode-field';
             $hidden = $field['embed_mode'] !== $item->fields['embed_mode'] ? 'display:none;' : '';
-            $rowAttr = " data-embed-mode='" . htmlspecialchars($field['embed_mode'], ENT_QUOTES) . "'"
+            $extraAttr = " data-embed-mode='" . htmlspecialchars($field['embed_mode'], ENT_QUOTES) . "'"
                 . " style='{$hidden}'";
         }
 
-        echo "<tr class='{$rowClass}'{$rowAttr}>";
-        echo "<td class='analyticdesign-field-cell'>" . htmlspecialchars($field['label'], ENT_QUOTES) . "</td>";
-        echo "<td class='analyticdesign-field-cell' colspan='3'>"
-            . Html::input($field['name'], ['type' => $inputType, 'value' => '', 'size' => 60]);
+        self::openFieldsRow();
+        self::openField($field['name'], htmlspecialchars($field['label'], ENT_QUOTES), $fieldId, true, $extraClass, $extraAttr);
+        echo Html::input($field['name'], ['id' => $fieldId, 'type' => $inputType, 'value' => '']);
         if (!empty($field['help'])) {
             echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
         }
-        echo "</td></tr>";
+        self::closeField();
+        self::closeFieldsRow();
     }
 }
