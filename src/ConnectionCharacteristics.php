@@ -94,6 +94,11 @@ class ConnectionCharacteristics extends CommonGLPI
         Html::closeForm();
         echo "</div>"; // .analyticdesign-fields-wrapper
 
+        // "Configurações do dashboard" (cadastro manual + visibilidade +
+        // substituição de módulo) mora aqui, não na aba "Dashboards" (que é
+        // só um pré-visualizador — ver DashboardItem::showForConnection()).
+        DashboardItem::showManualAddSection($item, (int)$item->fields['id'], DashboardItem::ajaxRoot());
+
         echo "</div>"; // .analyticdesign-characteristics
 
         return true;

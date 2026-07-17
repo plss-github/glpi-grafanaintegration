@@ -207,6 +207,13 @@ class DashboardItem extends CommonDBTM
             'name'     => __('Visibilidade restrita', 'analyticdesign'),
             'datatype' => 'bool',
         ];
+        $tab[] = [
+            'id'       => '16',
+            'table'    => self::getTable(),
+            'field'    => 'replaces_module',
+            'name'     => __('Substitui dashboard do módulo', 'analyticdesign'),
+            'datatype' => 'string',
+        ];
 
         return $tab;
     }
@@ -239,9 +246,14 @@ class DashboardItem extends CommonDBTM
     }
 
     /**
-     * Renderiza, dentro da aba "Dashboards" da Connection:
-     *  - os dashboards já importados (edição inline de categoria/ativo);
-     *  - a lista de dashboards disponíveis na fonte, prontos para importar.
+     * Renderiza a aba "Dashboards" da Connection — um PRÉ-VISUALIZADOR: só
+     * lista os dashboards já importados (com pré-visualização e edição
+     * inline de categoria/ativo) e os disponíveis na fonte, prontos para
+     * importar. A configuração de fato (nome/categoria/URL/visibilidade/
+     * substituição de módulo) fica na aba "Características" — ver
+     * ConnectionCharacteristics::displayTabContentForItem(), que reaproveita
+     * DashboardItem::showManualAddSection() de lá.
+     *
      * A listagem ao vivo (testConnection/listDashboards) é best-effort: se a
      * fonte não responder, mostramos apenas o que já foi importado.
      *
@@ -258,21 +270,9 @@ class DashboardItem extends CommonDBTM
 
         self::showImportedSection($connectionsId, $imported, $ajaxRoot);
         self::showAvailableSection($connectionsId, $available, $listError, $ajaxRoot);
-
-        // Quando a listagem falha por erro de conexão, não cai mais no
-        // formulário de adição manual: o problema é a própria conexão (URL/
-        // credenciais), resolvido na aba "Características" — não faz
-        // sentido oferecer para digitar um dashboard à mão nesse caso.
-        // "Adicionar manualmente" continua disponível quando o tipo/modo
-        // simplesmente não lista automaticamente por design (ex.: Power BI
-        // publish_to_web), que não passa por aqui como erro (ver
-        // PowerBiSource::listDashboards()).
-        if ($listError === null) {
-            self::showManualAddSection($connection, $connectionsId, $ajaxRoot);
-        }
     }
 
-    private static function ajaxRoot(): string
+    public static function ajaxRoot(): string
     {
         global $CFG_GLPI;
         return $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/ajax';
@@ -319,11 +319,15 @@ class DashboardItem extends CommonDBTM
         echo "<form name='analyticdesign_update_items' method='post' action='"
             . htmlspecialchars($ajaxRoot . '/updatedashboarditems.php', ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
+        global $CFG_GLPI;
+        $previewRoot = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/previewdashboarditem.php';
+
         echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
         echo "<th>" . __('Nome') . "</th>";
         echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Categoria', 'analyticdesign') . "</th>";
         echo "<th>" . __('Ativo') . "</th>";
+        echo "<th>" . __('Pré-visualizar', 'analyticdesign') . "</th>";
         echo "</tr>";
         foreach ($imported as $item) {
             $id = (int)$item->fields['id'];
@@ -332,6 +336,9 @@ class DashboardItem extends CommonDBTM
             echo "<td>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
             echo "<td>" . Html::input("items[{$id}][category]", ['value' => $item->fields['category']]) . "</td>";
             echo "<td>" . self::renderCheckbox("items[{$id}][is_active]", (int)$item->fields['is_active'] === 1) . "</td>";
+            echo "<td><a class='btn btn-sm btn-outline-secondary' target='_blank' rel='noopener' href='"
+                . htmlspecialchars($previewRoot . '?id=' . $id, ENT_QUOTES) . "'>"
+                . "<i class='ti ti-eye'></i> " . __('Ver', 'analyticdesign') . "</a></td>";
             echo "</tr>";
         }
         echo "</table>";
@@ -393,20 +400,23 @@ class DashboardItem extends CommonDBTM
     }
 
     /**
-     * Única forma de cadastrar um dashboard no modo publish_to_web (a API do
-     * Power BI não expõe essas URLs — ver PowerBiSource::listDashboards()).
-     * Só é chamada quando a fonte simplesmente não suporta listagem
-     * automática por design (`$listError === null` no chamador) — quando a
-     * listagem FALHA (fonte fora do ar, credenciais erradas), esta seção
-     * fica escondida de propósito: o problema é a própria conexão, resolvido
-     * na aba "Características", não digitando um dashboard à mão (ver
-     * showForConnection()).
+     * "Configurações do dashboard" — cadastro manual de um dashboard exposto
+     * (nome/categoria/URL de embed/visibilidade/substituição de módulo).
+     * Chamado a partir da aba "Características" da Connection (ver
+     * ConnectionCharacteristics::displayTabContentForItem()), não mais da
+     * aba "Dashboards" (que virou um pré-visualizador — ver
+     * DashboardItem::showForConnection()).
+     *
+     * É a única forma de cadastrar um dashboard no modo publish_to_web (a
+     * API do Power BI não expõe essas URLs — ver
+     * PowerBiSource::listDashboards()); serve também para configurar
+     * visibilidade/substituição de módulo em qualquer outro tipo de fonte.
      */
-    private static function showManualAddSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
+    public static function showManualAddSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
         echo "<div class='analyticdesign-manual-add mt-4'>";
-        echo "<h3>" . __('Adicionar manualmente', 'analyticdesign') . "</h3>";
-        echo "<p class='text-muted'>" . __('Use esta opção quando a fonte não permite listar dashboards automaticamente (ex.: Power BI em modo "publish to web") — cole a URL pública/de embed diretamente.', 'analyticdesign') . "</p>";
+        echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
+        echo "<p class='text-muted'>" . __('Cadastre aqui um dashboard manualmente — necessário quando a fonte não permite listar automaticamente (ex.: Power BI em modo "publish to web"), ou para configurar visibilidade/substituição de módulo.', 'analyticdesign') . "</p>";
 
         $isPublishToWeb = $connection->fields['type'] === PowerBiSource::getType()
             && ($connection->fields['embed_mode'] ?? '') === DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB;
@@ -462,9 +472,14 @@ class DashboardItem extends CommonDBTM
      * Reaproveitado tanto na criação (Adicionar manualmente) quanto na
      * edição de um item já importado (showForm()).
      *
+     * O campo "Substituir dashboard do módulo" (ModuleDashboard) fica dentro
+     * do bloco "Restrito a...": só é permitido substituir o Dashboard nativo
+     * de um módulo para um público restrito e explícito (Perfil/Grupo/
+     * Usuário/Entidade) — ver docblock de ModuleDashboard sobre por que.
+     *
      * @param array<class-string, int[]> $currentRights
      */
-    private static function showVisibilityField(bool $isPrivate, array $currentRights): void
+    private static function showVisibilityField(bool $isPrivate, array $currentRights, string $replacesModule = ''): void
     {
         self::openFieldsRow();
         self::openField('is_private', __('Visibilidade', 'analyticdesign'), 'analyticdesign_item_is_private', true);
@@ -485,6 +500,15 @@ class DashboardItem extends CommonDBTM
         echo "<div class='form-text text-muted'>"
             . __('Além de quem já tem o direito de leitura do módulo, restringe este card a perfis/grupos/usuários/entidades específicos.', 'analyticdesign')
             . "</div>";
+
+        echo "<div class='mt-3'>";
+        echo "<label class='form-label'>" . __('Substituir dashboard do módulo', 'analyticdesign') . "</label>";
+        $moduleOptions = [0 => __('Não substituir', 'analyticdesign')] + ModuleDashboard::MODULES;
+        Dropdown::showFromArray('replaces_module', $moduleOptions, ['value' => $replacesModule !== '' ? $replacesModule : 0]);
+        echo "<div class='form-text text-muted'>"
+            . __('Os alvos de visibilidade acima passam a ser exatamente quem vê a tela "Dashboard" desse módulo no lugar da nativa do GLPI — ver documentação.', 'analyticdesign')
+            . "</div>";
+        echo "</div>";
         echo "</div>";
         self::closeField();
         self::closeFieldsRow();
@@ -547,7 +571,8 @@ class DashboardItem extends CommonDBTM
 
         self::showVisibilityField(
             (bool)((int)($this->fields['is_private'] ?? 0)),
-            ItemVisibility::getForItem((int)$this->fields['id'])
+            ItemVisibility::getForItem((int)$this->fields['id']),
+            (string)($this->fields['replaces_module'] ?? '')
         );
 
         echo "</td></tr>";
@@ -568,7 +593,7 @@ class DashboardItem extends CommonDBTM
      * AbstractRightsDropdown posta (ex.: `['profiles_id-3', 'groups_id-1']`)
      * — convertido por itemtype só em saveVisibilityFromInput() (post_addItem).
      *
-     * @param array<int, array{external_id:string, name:string, embed_url?:string, category?:string, is_private?:bool, visibility?:string[]}> $selection
+     * @param array<int, array{external_id:string, name:string, embed_url?:string, category?:string, is_private?:bool, visibility?:string[], replaces_module?:string}> $selection
      * @return int quantidade efetivamente criada
      */
     public static function importSelection(Connection $connection, array $selection): int
@@ -588,6 +613,7 @@ class DashboardItem extends CommonDBTM
                 'is_active'           => 1,
                 'is_private'          => !empty($dash['is_private']) ? 1 : 0,
                 'visibility'          => $dash['visibility'] ?? [],
+                'replaces_module'     => $dash['replaces_module'] ?? '',
             ]);
             if ($ok) {
                 $created++;
@@ -596,16 +622,59 @@ class DashboardItem extends CommonDBTM
         return $created;
     }
 
+    public function prepareInputForAdd($input)
+    {
+        return $this->validateModuleReplacement($input);
+    }
+
+    public function prepareInputForUpdate($input)
+    {
+        return $this->validateModuleReplacement($input);
+    }
+
+    /**
+     * Substituir o dashboard nativo de um módulo só é permitido pra um item
+     * restrito a um público explícito — ver docblock de ModuleDashboard
+     * sobre por que ("Todos com acesso ao módulo" não é uma lista
+     * enumerável de Perfil/Grupo/Usuário/Entidade, e o dashboard nativo
+     * auto-provisionado precisa de uma lista concreta pra conceder acesso).
+     * Não rejeita a submissão inteira — só limpa `replaces_module` com um
+     * aviso, mantendo o resto das alterações.
+     */
+    private function validateModuleReplacement(array $input): array
+    {
+        $module = trim((string)($input['replaces_module'] ?? ''));
+        if ($module === '' || $module === '0' || !isset(ModuleDashboard::MODULES[$module])) {
+            $input['replaces_module'] = '';
+            return $input;
+        }
+
+        $isPrivate  = !empty($input['is_private']);
+        $hasTargets = !empty(array_filter((array)($input['visibility'] ?? [])));
+        if (!$isPrivate || !$hasTargets) {
+            Session::addMessageAfterRedirect(
+                __('Para substituir o dashboard de um módulo, marque "Restrito a..." e adicione pelo menos um perfil/grupo/usuário/entidade.', 'analyticdesign'),
+                false,
+                ERROR
+            );
+            $input['replaces_module'] = '';
+        }
+
+        return $input;
+    }
+
     public function post_addItem()
     {
         parent::post_addItem();
         $this->saveVisibilityFromInput();
+        ModuleDashboard::syncNativeDashboard($this);
     }
 
     public function post_updateItem($history = true)
     {
         parent::post_updateItem($history);
         $this->saveVisibilityFromInput();
+        ModuleDashboard::syncNativeDashboard($this);
     }
 
     /**
@@ -646,6 +715,7 @@ class DashboardItem extends CommonDBTM
                     `embed_url` TEXT NULL,
                     `is_active` TINYINT NOT NULL DEFAULT 1,
                     `is_private` TINYINT NOT NULL DEFAULT 0,
+                    `replaces_module` VARCHAR(20) NOT NULL DEFAULT '',
                     `date_creation` TIMESTAMP NULL DEFAULT NULL,
                     `date_mod` TIMESTAMP NULL DEFAULT NULL,
                     PRIMARY KEY (`id`),
@@ -654,12 +724,15 @@ class DashboardItem extends CommonDBTM
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
         }
-        // Coluna adicionada depois da 0.3.0: em upgrade, a tabela já existe
-        // sem `is_private` — ver nota de idempotência de install() em
-        // hook.php (este método também roda de novo em toda atualização de
-        // versão, não só na primeira instalação).
+        // Colunas adicionadas em versões depois da 0.3.0: em upgrade, a
+        // tabela já existe sem elas — ver nota de idempotência de install()
+        // em hook.php (este método também roda de novo em toda atualização
+        // de versão, não só na primeira instalação).
         if (!$DB->fieldExists($table, 'is_private')) {
             $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `is_private` TINYINT NOT NULL DEFAULT 0 AFTER `is_active`");
+        }
+        if (!$DB->fieldExists($table, 'replaces_module')) {
+            $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `replaces_module` VARCHAR(20) NOT NULL DEFAULT '' AFTER `is_private`");
         }
 
         ItemVisibility::install();
@@ -668,6 +741,29 @@ class DashboardItem extends CommonDBTM
     public static function uninstall(): void
     {
         global $DB;
+
+        // Limpa os dashboards nativos auto-provisionados (ver
+        // ModuleDashboard::syncNativeDashboard()) antes de derrubar a
+        // própria tabela — depois de dropada não haveria mais como calcular
+        // as chaves a partir dos ids dos itens. `glpi_dashboards_dashboards`
+        // é tabela do core, não é limpa junto com o resto do plugin.
+        if ($DB->tableExists('glpi_dashboards_dashboards')) {
+            // Apaga direto via query builder, não `CommonDBTM::delete()`: esse
+            // método refaz um `getFromDB($id)` internamente, e
+            // `Glpi\Dashboard\Dashboard::getFromDB()` busca pela coluna `key`
+            // (string), não pelo `id` numérico — nunca acharia a linha (ver
+            // ModuleDashboard::deleteNativeDashboard(), mesmo bug corrigido lá).
+            $ids = $DB->request([
+                'SELECT' => 'id',
+                'FROM'   => 'glpi_dashboards_dashboards',
+                'WHERE'  => ['context' => 'analyticdesign'],
+            ]);
+            foreach ($ids as $row) {
+                $DB->delete('glpi_dashboards_rights', ['dashboards_dashboards_id' => (int)$row['id']]);
+                $DB->delete('glpi_dashboards_dashboards', ['id' => (int)$row['id']]);
+            }
+        }
+
         $table = self::getTable();
         if ($DB->tableExists($table)) {
             $DB->doQuery("DROP TABLE `{$table}`");

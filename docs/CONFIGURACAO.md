@@ -139,11 +139,14 @@ criada):
    categoria/ativo depois e salvar.
 
 Se a listagem falhar (fonte fora do ar, token errado), a tela mostra apenas o
-aviso — a seção **"Adicionar manualmente"** fica escondida nesse caso, porque
-o problema é a própria conexão, resolvido na aba "Características" (passo 5
-acima), não digitando um dashboard à mão. "Adicionar manualmente" só aparece
-quando a ferramenta simplesmente não suporta listagem automática por design
-(caso do Power BI em modo *publish to web* — ver seção 6).
+aviso — resolva a conexão na aba "Características" (passo 5 acima) e volte
+aqui.
+
+> A aba **"Dashboards"** é só um pré-visualizador: lista o que já foi
+> importado (com um botão **"Ver"** por linha, que abre o card renderizado
+> numa aba nova) e o que está disponível para importar na fonte. Cadastro
+> manual, visibilidade e substituição de módulo (seções 6, 8 e 9) ficam na
+> aba **"Características"**, em **"Configurações do dashboard"**.
 
 ## 5. Cadastrar uma fonte Power BI — modo "Embed seguro"
 
@@ -210,8 +213,8 @@ escondê-lo.
    mesmo de salvar. Este modo não usa nenhuma credencial (os campos de
    Tenant/Client/Workspace somem).
 3. Salvar. Como a API do Power BI **não expõe** as URLs de publish-to-web,
-   não há listagem automática — usar a aba **"Dashboards" > "Adicionar
-   manualmente"**:
+   não há listagem automática — usar, na própria aba **"Características"**,
+   a seção **"Configurações do dashboard"**:
    - **Nome**: nome livre para o card.
    - **Categoria**: opcional, define o agrupamento no catálogo de widgets.
    - **URL de embed**: a URL pública copiada do Power BI.
@@ -249,10 +252,10 @@ todos os cards ativos. Para restringir um card específico (ex.: um dashboard
 financeiro que só o time Financeiro deve ver, mesmo que outros usuários
 tenham o direito geral do plugin):
 
-1. Abrir o card já importado — aba **"Dashboards"** da Connection > clicar no
-   nome do item (ou **Administração > Análise de Dados > Dashboards
-   expostos** na busca geral) — ou configurar já na criação, via
-   **"Adicionar manualmente"**.
+1. Abrir o card já importado — **Administração > Análise de Dados >
+   Dashboards expostos** na busca geral, clicar no nome do item — ou
+   configurar já na criação, na aba **"Características" > "Configurações do
+   dashboard"**.
 2. No campo **Visibilidade**, trocar de **"Todos com acesso ao módulo"**
    (padrão) para **"Restrito a..."**.
 3. Um segundo campo aparece — buscar e adicionar **Perfil**, **Grupo**,
@@ -271,6 +274,176 @@ adicionar) quanto para um card já posicionado num dashboard — desativar um
 card (**Ativo** = `Não`) também para de renderizá-lo imediatamente, mesmo
 que já esteja posicionado em algum dashboard.
 
+Essa mesma restrição (Perfil/Grupo/Usuário/Entidade) é o pré-requisito para
+**substituir o Dashboard nativo de um módulo** por este card — ver seção 9.
+
+## 9. Substituir o dashboard nativo de um módulo
+
+Além de virar um card avulso (seção 7), um dashboard exposto pode
+**substituir inteiramente a tela "Dashboard" de um módulo do GLPI** para um
+público específico. Exemplo: um dashboard com todos os indicadores de ativos
+do Setor X, e um Grupo do GLPI que representa esse setor — todo usuário desse
+Grupo passa a ver esse dashboard automaticamente ao abrir **Ativos >
+Dashboard**, no lugar do dashboard nativo padrão.
+
+Módulos suportados: **Ativos**, **Assistência**, **Gerência**,
+**Ferramentas** e **Administração**. O módulo **Configurar** não é oferecido
+— não é um módulo com uma tela de dashboard.
+
+> **Ativos** e **Assistência** já têm uma tela "Dashboard" nativa no GLPI —
+> a substituição troca o que aparece nela. **Gerência**, **Ferramentas** e
+> **Administração** não têm essa tela por padrão; o plugin cria uma e só
+> adiciona o link **"Dashboard"** no menu desses módulos quando existe, para
+> o usuário atual, uma substituição ativa configurada — sem isso, o menu
+> desses módulos continua exatamente como hoje.
+
+Para configurar:
+
+1. Abrir o card (**Administração > Análise de Dados > Dashboards expostos**,
+   ou a aba **"Características" > "Configurações do dashboard"** ao
+   cadastrar um novo).
+2. Marcar **Visibilidade** como **"Restrito a..."** e adicionar ao menos um
+   Perfil/Grupo/Usuário/Entidade (seção 8) — **obrigatório**: só é possível
+   substituir o dashboard de um módulo para um público explícito e restrito,
+   nunca para "todos com acesso ao módulo em geral". Tentar salvar sem isso
+   reverte o campo abaixo para "Não substituir" e mostra uma mensagem
+   explicando o motivo.
+3. Em **"Substituir dashboard do módulo"**, escolher o módulo desejado (ou
+   "Não substituir" para desligar).
+4. Salvar.
+
+> **A mudança só vale a partir do próximo login.** A checagem de qual
+> dashboard mostrar para cada usuário roda uma vez por sessão — quem já
+> estava logado quando a configuração foi criada/alterada precisa sair e
+> entrar de novo para ver o efeito (mesma exigência da seção 2, para
+> direitos de perfil).
+
+> Se mais de uma configuração ativa mirar o mesmo módulo e o mesmo usuário
+> (regras de visibilidade sobrepostas), vale a primeira cadastrada — não é
+> um erro, mas evite sobreposição intencional para não depender dessa ordem.
+
+## 10. Arquitetura e riscos de integração
+
+Decisões relevantes para quem for manter ou estender o plugin:
+
+- **`front/` + `ajax/` clássico, não Controllers.** O padrão Controller
+  (roteamento por atributos) do GLPI 11 é o alvo recomendado a médio prazo,
+  mas o padrão clássico é o único garantidamente funcional em qualquer
+  11.0.8+ sem reescrever todo o roteamento.
+- **Formulários em PHP/HTML puro**, não Twig — `showFormHeader()`/
+  `showFormButtons()` + tabelas `tab_cadre_fixe`/grid (`HasFormFieldLayout`)
+  são API madura e estável em todo o GLPI, ao custo de não reaproveitar os
+  templates Twig do core.
+- **Contrato do hook de dashboard** (`getCards()`/`provider`/`args`, ver
+  docblock de `src/Dashboard.php`) é o ponto de integração mais específico e
+  menos estável usado por este plugin — o mais provável de mudar numa versão
+  futura do GLPI. O registro desses hooks em `setup.php` é condicional
+  (`defined(Hooks::DASHBOARD_TYPES/...)`): se o contrato mudar de novo, só a
+  integração com o dashboard nativo para, sem afetar CRUD/menu/assets do
+  resto do plugin.
+- **Substituição do Dashboard nativo de um módulo** (`ModuleDashboard`, seção
+  9) não usa nenhum mecanismo nativo do GLPI para "forçar um dashboard para
+  um Grupo" — porque ele não existe. A substituição funciona sobrepondo a
+  "última visualização" da sessão (`$_SESSION['last_dashboards']`, o mesmo
+  mecanismo que o GLPI usa para lembrar o último dashboard que você viu numa
+  tela) e espelhando a regra de visibilidade do card no sistema nativo de
+  compartilhamento de dashboards (`Glpi\Dashboard\Right`) — é por isso que a
+  mudança só vale a partir do próximo login (a sessão é onde a sobreposição
+  vive) e por que a visibilidade precisa ser explícita (só um conjunto
+  enumerável de Perfil/Grupo/Usuário/Entidade pode ser espelhado; "todos com
+  acesso ao módulo" não é um conjunto enumerável).
+- **Direitos do plugin na tela de Perfis:** a matriz "nativa" de direitos de
+  um perfil não tem ponto de extensão para plugins, então o plugin usa
+  `Plugin::registerClass(ProfileRights::class, ['addtabon' =>
+  Profile::class])` para adicionar sua própria aba "Análise de Dados" ao
+  perfil — mesmo mecanismo que o core usa internamente para outras
+  extensões.
+- **Resiliência a atualizações do GLPI:** `plugin_analyticdesign_check_config()`
+  e `plugin_analyticdesign_check_prerequisites()` (`setup.php`) verificam em
+  runtime, antes da ativação, que as dependências do plugin ainda existem —
+  se algo for removido/renomeado numa atualização futura, a ativação falha
+  com mensagem clara em vez do plugin quebrar em produção.
+- **`plugin_analyticdesign_install()` precisa continuar idempotente.** O
+  GLPI chama essa função de novo em toda mudança de
+  `PLUGIN_ANALYTICDESIGN_VERSION` (não só na primeira instalação, também em
+  cada atualização de versão) — qualquer `INSERT` sem checagem prévia
+  (`countElementsInTable()` ou equivalente) quebra a reativação com erro de
+  chave duplicada.
+- **Testado ponta a ponta** contra GLPI 11.0.8 real via Docker (ver seção
+  "Ambiente de desenvolvimento via Docker" acima): instalação, ativação,
+  CRUD, importação, visibilidade, substituição de módulo e o card
+  renderizando de fato num dashboard.
+
+## 11. Segurança
+
+- **CSRF:** plugin `CSRF_COMPLIANT`. A validação em si **não** é feita
+  chamando `Session::checkCSRF()` no código do plugin — no GLPI 11, o kernel
+  já valida e **consome** o token `_glpi_csrf_token` automaticamente para
+  toda requisição não-GET, antes do script rodar, seguindo o mesmo padrão do
+  core (nenhum `front/*.php` do core chama `Session::checkCSRF()`). O JS
+  continua enviando `_glpi_csrf_token` no corpo do `fetch()` para satisfazer
+  essa checagem automática.
+- **Credenciais:** criptografadas em repouso via `GLPIKey`, nunca em texto
+  plano; nunca retornam ao navegador (campos de senha sempre em branco no
+  formulário); update parcial faz merge com as credenciais já salvas, em vez
+  de sobrescrever tudo; o campo `credentials` vindo direto do `$_POST` bruto
+  é sempre descartado — só o bloco de criptografia pode populá-lo.
+- **Autorização (IDOR/entidades):** todo endpoint usa `$connection->can($id,
+  RIGHT)` (direito **e** escopo de entidade), não apenas checagem global de
+  direito — evita que um usuário atue sobre registros de outra entidade só
+  adivinhando o ID. `DashboardItem` (sem entidade própria) é autorizado
+  através da `Connection` pai. O render do card
+  (`DashboardItem::isVisibleForCurrentUser()`) aplica quatro camadas, todas
+  obrigatórias: `is_active`, direito de leitura do módulo, escopo de
+  entidade da `Connection` dona e, se privado, `ItemVisibility`.
+- **Visibilidade restrita por card (`is_private`):** além do direito geral
+  do módulo, cada `DashboardItem` pode ser restrito a Perfil/Grupo/Usuário/
+  Entidade específicos (seção 8) — mesmo modelo de compartilhamento que o
+  GLPI usa nos próprios dashboards nativos
+  (`Glpi\Dashboard\Dashboard::checkRights()`). Sem nenhuma regra
+  configurada, um card marcado como restrito fica invisível para todo mundo
+  (nega por padrão, não abre por padrão).
+- **XSS:** toda saída passa por `htmlspecialchars(..., ENT_QUOTES)`;
+  `buildIframe()` só renderiza URLs `http`/`https` (bloqueia `javascript:`/
+  `data:` em `embed_url`); iframe usa `sandbox` e
+  `referrerpolicy="no-referrer"`.
+- **Power BI (embed seguro):** embed token de curta duração (~1h), gerado a
+  cada render e nunca persistido; `accessLevel: 'View'` (somente leitura);
+  `tenant_id`/`client_id`/`workspace_id`/`report_id` validados como GUID
+  antes de compor URLs ou chamar a API.
+- **"Publish to web":** aviso obrigatório, fixo e em destaque na UI nos dois
+  pontos onde a URL pública é definida (modo da `Connection` e
+  "Configurações do dashboard") — esse conteúdo fica acessível a qualquer
+  pessoa com o link, sem autenticação, por natureza do recurso do Power BI.
+- **Biblioteca de terceiros:** `powerbi-client` (Microsoft, MIT) vendorizada
+  e fixada em versão (`public/js/vendor/`, ver `NOTICE.md`), não carregada de
+  um CDN em tempo de execução.
+- **SQL:** só via query builder do GLPI (`$DB->request()`,
+  `CommonDBTM::add()/update()/getFromDB()`) — nenhuma concatenação de input
+  em SQL cru.
+- **Riscos aceitos / fora do controle do plugin:** SSRF via `base_url`
+  configurada pelo admin do Grafana (inerente ao recurso — mitigado por
+  exigir o direito administrativo do plugin; o Power BI não tem essa
+  exposição, seus endpoints são fixos no código); política de CSP/framing da
+  instância e do Grafana/Power BI (se restritiva, bloqueia o iframe —
+  configuração externa, fora do escopo do plugin).
+- **Usuário/conta dedicada em cada ferramenta de BI** (pesquisado contra a
+  documentação oficial de ambas):
+  - **Grafana:** o *service account token* configurado só autentica as
+    chamadas de API do *backend* do plugin (`/api/health`, `/api/search`) —
+    o `<iframe>` que embeda o dashboard é uma requisição direta do navegador
+    de cada usuário do GLPI para o Grafana, **sem** esse token. Sem
+    configuração adicional no Grafana (ver seção 3), cada usuário do GLPI
+    cai na tela de login do Grafana dentro do card.
+  - **Power BI, modo "secure":** padrão oficial da Microsoft ["embed for
+    your customers"](https://learn.microsoft.com/power-bi/developer/embedded/embed-sample-for-customers) —
+    usuários do GLPI **não precisam de conta nem licença do Power BI**; só o
+    *service principal* precisa de acesso ao workspace, atrás de uma
+    capacity (qualquer SKU A/EM/P/F).
+  - **Power BI, modo "publish to web":** o oposto — nenhuma conta é
+    necessária porque o conteúdo é público para qualquer pessoa com o link
+    (por isso o aviso de segurança fixo na UI).
+
 ## Solução de problemas
 
 | Sintoma | Causa provável | O que fazer |
@@ -282,3 +455,6 @@ que já esteja posicionado em algum dashboard.
 | Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |
 | Card configurado como "Restrito a..." não aparece para ninguém | Nenhum alvo (Perfil/Grupo/Usuário/Entidade) foi adicionado — comportamento esperado, nega por padrão | Editar o card (seção 8) e adicionar ao menos um alvo de visibilidade |
 | "Publish to web" com aviso vermelho | Comportamento esperado, não é erro | Não usar esse modo para dados confidenciais |
+| Campo "Substituir dashboard do módulo" volta para "Não substituir" ao salvar | Visibilidade não estava em "Restrito a..." ou não tinha nenhum alvo adicionado (seção 9) | Marcar "Restrito a..." e adicionar ao menos um alvo antes de escolher o módulo |
+| "Dashboard" de um módulo não mudou depois de configurar a substituição | A sobreposição é aplicada uma vez por sessão (seção 9) | Sair e entrar de novo |
+| Botão "Ver" (pré-visualizar) na aba "Dashboards" não mostra nada / dá acesso negado | O card está inativo, ou o usuário logado não passa em `isVisibleForCurrentUser()` (mesma checagem do render real) | Confirmar **Ativo** = `Sim` e, se restrito, que o usuário atual casa com algum alvo de visibilidade |

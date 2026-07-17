@@ -39,11 +39,11 @@ msgstr ""
 msgid "Dashboard não encontrado."
 msgstr ""
 
-#: src/Dashboard.php
+#: src/Dashboard.php front/previewdashboarditem.php
 msgid "Fonte de dados indisponível."
 msgstr ""
 
-#: src/Dashboard.php
+#: src/Dashboard.php front/previewdashboarditem.php
 msgid "Falha ao renderizar o dashboard."
 msgstr ""
 
@@ -142,6 +142,10 @@ msgid "Visibilidade restrita"
 msgstr ""
 
 #: src/DashboardItem.php
+msgid "Substitui dashboard do módulo"
+msgstr ""
+
+#: src/DashboardItem.php
 msgid "Visibilidade"
 msgstr ""
 
@@ -155,6 +159,26 @@ msgstr ""
 
 #: src/DashboardItem.php
 msgid "Além de quem já tem o direito de leitura do módulo, restringe este card a perfis/grupos/usuários/entidades específicos."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Substituir dashboard do módulo"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Não substituir"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid ""
+"Os alvos de visibilidade acima passam a ser exatamente quem vê a tela "
+"\"Dashboard\" desse módulo no lugar da nativa do GLPI — ver documentação."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid ""
+"Para substituir o dashboard de um módulo, marque \"Restrito a...\" e "
+"adicione pelo menos um perfil/grupo/usuário/entidade."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -186,6 +210,14 @@ msgid "Nenhum dashboard importado ainda."
 msgstr ""
 
 #: src/DashboardItem.php
+msgid "Pré-visualizar"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Ver"
+msgstr ""
+
+#: src/DashboardItem.php
 msgid "Dashboards disponíveis na fonte"
 msgstr ""
 
@@ -200,7 +232,7 @@ msgid "Importar selecionados"
 msgstr ""
 
 #: src/DashboardItem.php
-msgid "Adicionar manualmente"
+msgid "Configurações do dashboard"
 msgstr ""
 
 #: src/DashboardItem.php
@@ -209,9 +241,9 @@ msgstr ""
 
 #: src/DashboardItem.php
 msgid ""
-"Use esta opção quando a fonte não permite listar dashboards "
-"automaticamente (ex.: Power BI em modo \"publish to web\") — cole a URL "
-"pública/de embed diretamente."
+"Cadastre aqui um dashboard manualmente — necessário quando a fonte não "
+"permite listar automaticamente (ex.: Power BI em modo \"publish to "
+"web\"), ou para configurar visibilidade/substituição de módulo."
 msgstr ""
 
 #: src/DashboardItem.php

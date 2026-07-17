@@ -47,6 +47,7 @@ if ($name !== '' && $embedUrl !== '') {
         // DashboardItem::saveVisibilityFromInput() (post_addItem) que vira
         // um array por itemtype via VisibilityDropdown::getPostedIds().
         'visibility'  => $_POST['visibility'] ?? [],
+        'replaces_module' => trim((string)($_POST['replaces_module'] ?? '')),
     ]]);
 }
 

@@ -15,9 +15,10 @@
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Analyticdesign\Dashboard;
 use GlpiPlugin\Analyticdesign\Menu;
+use GlpiPlugin\Analyticdesign\ModuleDashboard;
 use GlpiPlugin\Analyticdesign\ProfileRights;
 
-define('PLUGIN_ANALYTICDESIGN_VERSION', '0.4.0');
+define('PLUGIN_ANALYTICDESIGN_VERSION', '0.7.0');
 // Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
 // desta revisão). CommonDBTM::can()/check() nesta versão tipam `int $right`
 // e `?array &$input` — sem impacto no uso feito por este plugin, mas registrado
@@ -70,6 +71,17 @@ function plugin_init_analyticdesign(): void
         // Novos cards (um por dashboard exposto).
         $PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['analyticdesign'] = Dashboard::class . '::getCards';
     }
+
+    // --- Substituição do Dashboard nativo de um módulo (ver docblock de
+    // ModuleDashboard) ---
+    // POST_INIT: roda uma vez por sessão e força a "última visualização"
+    // (ver ModuleDashboard::applySessionOverrides()) pras telas de Ativos/
+    // Assistência que o usuário atual deve ver substituídas.
+    $PLUGIN_HOOKS[Hooks::POST_INIT]['analyticdesign'] = ModuleDashboard::class . '::applySessionOverrides';
+    // REDEFINE_MENUS: injeta o link "Dashboard" no menu de Gerência/
+    // Ferramentas/Administração (que não têm um nativo) quando o usuário
+    // atual tem uma substituição ativa pra aquele módulo.
+    $PLUGIN_HOOKS[Hooks::REDEFINE_MENUS]['analyticdesign'] = ModuleDashboard::class . '::redefineMenus';
 
     // Assets do plugin: toggle de campos por tipo/modo de fonte, botão "Testar
     // conexão" e o bootstrap do embed seguro do Power BI (Fase 2) — a lib
