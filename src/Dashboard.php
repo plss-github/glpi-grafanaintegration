@@ -70,6 +70,15 @@ class Dashboard
         $cards ??= [];
 
         foreach (DashboardItem::getActiveItems() as $item) {
+            // Sem isso, QUALQUER usuário que pudesse ver QUALQUER dashboard
+            // nativo do GLPI enxergava este card no catálogo de widgets —
+            // este hook nunca checou o direito do plugin nem o escopo de
+            // entidade da Connection dona (achado na revisão de segurança;
+            // ver docblock de DashboardItem::isVisibleForCurrentUser()).
+            if (!$item->isVisibleForCurrentUser()) {
+                continue;
+            }
+
             $id       = (int)$item->fields['id'];
             $category = $item->fields['category'] !== ''
                 ? $item->fields['category']
@@ -116,6 +125,15 @@ class Dashboard
         $item = new DashboardItem();
         if (!$item->getFromDB($itemId)) {
             return self::errorBox(__('Dashboard não encontrado.', 'analyticdesign'));
+        }
+
+        // Checagem obrigatória aqui, não só em getCards(): um card já
+        // posicionado num dashboard continua sendo renderizado neste
+        // caminho mesmo que a listagem/catálogo nunca seja consultada de
+        // novo — só filtrar o catálogo não bastava (ver docblock de
+        // DashboardItem::isVisibleForCurrentUser()).
+        if (!$item->isVisibleForCurrentUser()) {
+            return self::errorBox(__('Você não tem permissão para ver este dashboard.', 'analyticdesign'));
         }
 
         $connection = $item->getConnection();

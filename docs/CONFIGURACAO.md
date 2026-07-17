@@ -83,6 +83,31 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
    - **API Token / Service account token**: um *service account token* do
      Grafana com permissão de leitura de dashboards (Grafana > Administration
      > Service accounts).
+
+> ⚠️ **Importante — esse token não dá acesso aos usuários do GLPI ao
+> dashboard embedado.** Ele só autentica as chamadas do *backend* do plugin
+> (`GET /api/health`, `GET /api/search`) — o `<iframe>` que renderiza o
+> dashboard de fato é uma requisição direta do navegador de cada usuário do
+> GLPI para o Grafana, sem carregar esse token. Isso significa que, sem
+> configuração adicional no Grafana, cada usuário do GLPI vai ver a tela de
+> login do Grafana dentro do card em vez do dashboard. As opções (documentação
+> oficial do Grafana):
+> - **`[auth.anonymous]`** no `grafana.ini`: libera acesso sem login para
+>   todo mundo que alcançar o Grafana, numa org/role fixos — simples, mas
+>   vale para a instância/org inteira, não só para os dashboards deste
+>   plugin.
+> - **Shared/Public dashboards** (Grafana ≥ 9.1, disponível também na versão
+>   open source): converte um dashboard específico para acesso público sem
+>   login — a opção mais alinhada ao que este plugin embeda; nesse caso, a
+>   URL colada aqui/importada deve ser a URL pública do dashboard, não a URL
+>   interna. Tem limitações (kiosk mode fixo, sem variáveis de template,
+>   sem anotações que não sejam nativas do Grafana).
+> - Se os usuários do GLPI já têm login próprio no Grafana (SSO comum, ou
+>   sessão de navegador já aberta), o iframe também funciona sem nada extra.
+>
+> `allow_embedding: true` (abaixo) só permite que o Grafana seja carregado
+> dentro de um `<iframe>` (cabeçalho `X-Frame-Options`) — não resolve, sozinho,
+> a questão de autenticação acima.
 5. Salvar (botão **Salvar** da própria aba) e clicar em **Testar conexão**,
    ao lado (chama `GET /api/health` no Grafana) — deve responder "Conexão
    bem-sucedida.". Se falhar, os campos de configuração somem e só a
@@ -113,19 +138,32 @@ criada):
 4. Os itens aparecem em **"Dashboards importados"**, onde dá para ajustar
    categoria/ativo depois e salvar.
 
-Se a listagem falhar (fonte fora do ar, token errado), a tela mostra um aviso
-e cai automaticamente na seção **"Adicionar manualmente"** abaixo — dá para
-colar a URL de embed de um dashboard específico à mão.
+Se a listagem falhar (fonte fora do ar, token errado), a tela mostra apenas o
+aviso — a seção **"Adicionar manualmente"** fica escondida nesse caso, porque
+o problema é a própria conexão, resolvido na aba "Características" (passo 5
+acima), não digitando um dashboard à mão. "Adicionar manualmente" só aparece
+quando a ferramenta simplesmente não suporta listagem automática por design
+(caso do Power BI em modo *publish to web* — ver seção 6).
 
 ## 5. Cadastrar uma fonte Power BI — modo "Embed seguro"
 
-Uso recomendado para dados sensíveis (requer licença/capacity **Premium** no
-workspace do Power BI).
+Uso recomendado para dados sensíveis. Este é o padrão oficial da Microsoft
+chamado **"embed for your customers"** (ver
+[documentação](https://learn.microsoft.com/power-bi/developer/embedded/embed-sample-for-customers)):
+usuários do GLPI **não precisam de nenhuma conta ou licença do Power BI** —
+só o *service principal* (aplicativo registrado no Entra ID) precisa de
+acesso ao workspace. É necessária **alguma capacity** (SKU A/EM/P/F — não
+precisa ser especificamente Premium/F64+; esse patamar maior só é exigido
+para outros cenários de embed, como "embed for your organization") por trás
+do workspace para uso em produção.
 
 1. No **Entra ID** (Azure AD): registrar um aplicativo, gerar um **client
-   secret**, e no **admin portal do Power BI**, garantir que o service
-   principal tem acesso ao workspace (como membro, ou habilitando "Service
-   principals can use Fabric APIs").
+   secret** (não é preciso configurar nenhuma permissão de API no
+   registro — a Microsoft recomenda explicitamente não adicionar nenhuma).
+   No **admin portal do Power BI** (Configurações do locatário >
+   Configurações do desenvolvedor), habilitar **"Embed content in apps"** e
+   **"Service principals can call Fabric public APIs"**, e garantir que o
+   service principal é **Membro** (ou Admin) do workspace de destino.
 2. Anotar: **Tenant ID**, **Client ID**, **Client secret**, e o **Workspace
    ID** (GUID do workspace/group — está na URL do workspace no Power BI).
 3. **Administração > Análise de Dados > Fontes de dados > Adicionar**:
@@ -177,6 +215,8 @@ escondê-lo.
    - **Nome**: nome livre para o card.
    - **Categoria**: opcional, define o agrupamento no catálogo de widgets.
    - **URL de embed**: a URL pública copiada do Power BI.
+   - **Visibilidade**: opcional — ver seção 8 abaixo para restringir quem
+     pode ver este card especificamente.
 4. Salvar — o aviso de segurança aparece de novo nesta tela, como lembrete.
 
 ## 7. Posicionar os cards num dashboard do GLPI
@@ -202,6 +242,35 @@ plugin.
 > não aparecer, `php bin/console cache:clear` resolve na grande maioria dos
 > casos.
 
+## 8. Restringir quem vê um dashboard específico (visibilidade)
+
+Por padrão, qualquer usuário com o direito de leitura do módulo (seção 2) vê
+todos os cards ativos. Para restringir um card específico (ex.: um dashboard
+financeiro que só o time Financeiro deve ver, mesmo que outros usuários
+tenham o direito geral do plugin):
+
+1. Abrir o card já importado — aba **"Dashboards"** da Connection > clicar no
+   nome do item (ou **Administração > Análise de Dados > Dashboards
+   expostos** na busca geral) — ou configurar já na criação, via
+   **"Adicionar manualmente"**.
+2. No campo **Visibilidade**, trocar de **"Todos com acesso ao módulo"**
+   (padrão) para **"Restrito a..."**.
+3. Um segundo campo aparece — buscar e adicionar **Perfil**, **Grupo**,
+   **Usuário** e/ou **Entidade** (pode combinar vários; basta casar com um
+   deles para ver o card — mesmo modelo de "compartilhamento" que o próprio
+   GLPI usa para seus dashboards nativos).
+4. Salvar.
+
+> Um card marcado "Restrito a..." sem nenhum alvo adicionado fica invisível
+> para todo mundo (inclusive quem tem o direito geral do plugin) — é o
+> comportamento esperado (nega por padrão), não um bug; adicione ao menos um
+> alvo para o card voltar a aparecer para alguém.
+
+A restrição vale tanto para o catálogo de widgets (o card nem aparece para
+adicionar) quanto para um card já posicionado num dashboard — desativar um
+card (**Ativo** = `Não`) também para de renderizá-lo imediatamente, mesmo
+que já esteja posicionado em algum dashboard.
+
 ## Solução de problemas
 
 | Sintoma | Causa provável | O que fazer |
@@ -209,5 +278,7 @@ plugin.
 | Menu/telas do plugin não aparecem, ou "Acesso negado" | Direito não concedido ao perfil (perfis diferentes do Super-Admin não recebem acesso automático) | Ver passo 2 acima (aba "Análise de Dados" dentro do perfil); sair e entrar de novo depois de salvar |
 | "Testar conexão" falha e os campos da aba "Características" somem | Comportamento esperado (não é erro) — a falha esconde os campos e mostra só a mensagem | Clicar em "Editar configuração" para reabrir os campos e corrigir; confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
 | Card aparece vazio/quebrado no dashboard | Política de CSP da instância GLPI, ou `X-Frame-Options`/CSP do Grafana/Power BI bloqueando ser enquadrado por outra origem | Verificar `allow_embedding` no Grafana; checar CSP da instância GLPI (fora do controle do plugin) |
+| Card do Grafana pede login em vez de mostrar o dashboard | Comportamento esperado — o service account token só autentica as chamadas de API do backend, não o `<iframe>` do navegador (ver seção 4) | Habilitar `auth.anonymous` no Grafana, converter o dashboard para "Shared/Public dashboard", ou usar um Grafana com SSO/sessão já compartilhada |
 | Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |
+| Card configurado como "Restrito a..." não aparece para ninguém | Nenhum alvo (Perfil/Grupo/Usuário/Entidade) foi adicionado — comportamento esperado, nega por padrão | Editar o card (seção 8) e adicionar ao menos um alvo de visibilidade |
 | "Publish to web" com aviso vermelho | Comportamento esperado, não é erro | Não usar esse modo para dados confidenciais |

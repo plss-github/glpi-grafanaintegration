@@ -89,6 +89,22 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
   direito — evita que um usuário atue sobre registros de outra entidade só
   adivinhando o ID. `DashboardItem` (sem entidade própria) é autorizado
   através da `Connection` pai.
+- **Falha real encontrada e corrigida (revisão de segurança):** o caminho de
+  render do card (`Dashboard::getCards()`/`renderEmbedWidget()`) nunca
+  checava o direito do plugin nem o escopo de entidade da `Connection` dona
+  antes desta revisão — qualquer usuário que pudesse ver qualquer dashboard
+  nativo do GLPI (um direito muito mais amplo e comum que o do plugin)
+  enxergava o conteúdo de BI embedado, mesmo sem nenhum direito no plugin.
+  Corrigido centralizando a checagem em
+  `DashboardItem::isVisibleForCurrentUser()`, chamada nos dois pontos.
+- **Visibilidade restrita por card (`is_private`):** além do direito geral
+  do módulo, cada `DashboardItem` pode ser restrito a Perfil/Grupo/Usuário/
+  Entidade específicos (ver `ItemVisibility`, seção 8 do
+  [guia de configuração](docs/CONFIGURACAO.md)) — mesmo modelo de
+  compartilhamento que o GLPI usa nos próprios dashboards nativos
+  (`Glpi\Dashboard\Dashboard::checkRights()`). Sem nenhuma regra configurada,
+  um card marcado como restrito fica invisível para todo mundo (nega por
+  padrão, não abre por padrão).
 - **XSS:** toda saída passa por `htmlspecialchars(..., ENT_QUOTES)`;
   `buildIframe()` só renderiza URLs `http`/`https` (bloqueia `javascript:`/
   `data:` em `embed_url`); iframe usa `sandbox` e
@@ -113,6 +129,26 @@ grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo.
   exposição, seus endpoints são fixos no código); política de CSP/framing da
   instância e do Grafana/Power BI (se restritiva, bloqueia o iframe —
   configuração externa, fora do escopo do plugin).
+- **Usuário/conta dedicada em cada ferramenta de BI (pesquisado contra a
+  documentação oficial de ambas):**
+  - **Grafana:** o *service account token* configurado só autentica as
+    chamadas de API do *backend* do plugin (`/api/health`, `/api/search`) —
+    o `<iframe>` que embeda o dashboard é uma requisição direta do navegador
+    de cada usuário do GLPI para o Grafana, **sem** esse token. Sem
+    configuração adicional no Grafana (`auth.anonymous`, converter o
+    dashboard para *Shared/Public dashboard*, ou SSO/sessão já
+    compartilhada), cada usuário do GLPI cai na tela de login do Grafana
+    dentro do card — ver seção 4 do
+    [guia de configuração](docs/CONFIGURACAO.md) para as opções.
+  - **Power BI, modo "secure":** é o padrão oficial da Microsoft
+    ["embed for your customers"](https://learn.microsoft.com/power-bi/developer/embedded/embed-sample-for-customers) —
+    usuários do GLPI **não precisam de conta nem licença do Power BI**; só o
+    *service principal* precisa de acesso ao workspace, atrás de uma
+    capacity (qualquer SKU A/EM/P/F, não precisa ser Premium/F64+
+    especificamente).
+  - **Power BI, modo "publish to web":** o oposto — nenhuma conta é
+    necessária porque o conteúdo é público para qualquer pessoa com o link
+    (por isso o aviso de segurança fixo na UI).
 
 ## Arquitetura
 

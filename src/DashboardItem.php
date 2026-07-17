@@ -4,13 +4,17 @@
  * Analytic Design
  * -----------------------------------------------------------------------------
  * Dashboard externo exposto como card no GLPI.
- * Tabela: glpi_plugin_analyticdesign_items
+ * Tabela: glpi_plugin_analyticdesign_dashboarditems (nome derivado da classe
+ * por CommonDBTM::getTable() — não é `..._items`, apesar do que sugeriria
+ * uma leitura rápida do nome da classe).
  */
 
 namespace GlpiPlugin\Analyticdesign;
 
 use CommonDBTM;
 use CommonGLPI;
+use Dropdown;
+use Session;
 use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
 use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Traits\HasCheckboxField;
@@ -49,14 +53,72 @@ class DashboardItem extends CommonDBTM
         return __('Ex.: https://seu-grafana.suaempresa.com/d/ab12cd34/meu-dashboard?kiosk=tv&theme=light', 'analyticdesign');
     }
 
-    /** Devolve a Connection dona deste item. */
+    private ?Connection $connectionCache = null;
+    private bool $connectionCacheLoaded = false;
+
+    /**
+     * Devolve a Connection dona deste item — cacheada na instância: tanto
+     * `isVisibleForCurrentUser()` quanto o chamador de `renderEmbedWidget()`
+     * (ver Dashboard.php) precisam da Connection na mesma requisição; sem o
+     * cache, cada render fazia a mesma consulta duas vezes (achado na
+     * revisão de código).
+     */
     public function getConnection(): ?Connection
     {
-        $conn = new Connection();
-        if ($conn->getFromDB((int)($this->fields['connections_id'] ?? 0))) {
-            return $conn;
+        if (!$this->connectionCacheLoaded) {
+            $conn = new Connection();
+            $this->connectionCache = $conn->getFromDB((int)($this->fields['connections_id'] ?? 0)) ? $conn : null;
+            $this->connectionCacheLoaded = true;
         }
-        return null;
+        return $this->connectionCache;
+    }
+
+    /**
+     * O usuário logado pode ver este card? Único ponto de checagem usado
+     * tanto no catálogo de widgets (Dashboard::getCards()) quanto no render
+     * de fato (Dashboard::renderEmbedWidget()) — ver docblock de
+     * ItemVisibility sobre o modelo de visibilidade.
+     *
+     * Quatro camadas, todas obrigatórias (E entre elas, ao contrário do OR
+     * dentro de cada uma):
+     *  1. `is_active` — desativar um item deve parar de renderizá-lo mesmo
+     *     que já esteja posicionado num dashboard (getActiveItems() já filtra
+     *     isso do catálogo, mas o caminho de render direto por ID, chamado
+     *     de novo a cada vez que o dashboard é aberto, não checava; achado
+     *     na revisão de código).
+     *  2. Direito de leitura do módulo (`Connection::RIGHTNAME`) — sem isso,
+     *     antes desta correção, QUALQUER usuário que pudesse ver qualquer
+     *     dashboard nativo do GLPI enxergava o conteúdo embedado, mesmo sem
+     *     nenhum direito no plugin (achado na revisão de segurança).
+     *  3. Escopo de entidade da Connection dona (`entities_id`/`is_recursive`)
+     *     — mesma regra de multi-tenant que o resto do GLPI já aplica a
+     *     `Connection::can()`, mas que o caminho de render de card nunca
+     *     verificava.
+     *  4. Se `is_private`, casar com pelo menos uma regra de visibilidade
+     *     (ItemVisibility) — a restrição fina pedida (Perfil/Grupo/Usuário/
+     *     Entidade específicos), além de quem já passou pelas de cima.
+     */
+    public function isVisibleForCurrentUser(): bool
+    {
+        if ((int)($this->fields['is_active'] ?? 0) !== 1) {
+            return false;
+        }
+        if (!Session::haveRight(self::$rightname, READ)) {
+            return false;
+        }
+
+        $connection = $this->getConnection();
+        if ($connection === null) {
+            return false;
+        }
+        if (!Session::haveAccessToEntity((int)$connection->fields['entities_id'], (bool)$connection->fields['is_recursive'])) {
+            return false;
+        }
+
+        if (!(bool)((int)($this->fields['is_private'] ?? 0))) {
+            return true;
+        }
+        return ItemVisibility::isVisibleForCurrentUser((int)$this->fields['id']);
     }
 
     /** @return DashboardItem[] todos os itens ativos, para o hook de cards. */
@@ -138,6 +200,13 @@ class DashboardItem extends CommonDBTM
             'datatype' => 'string',
             'massiveaction' => false,
         ];
+        $tab[] = [
+            'id'       => '15',
+            'table'    => self::getTable(),
+            'field'    => 'is_private',
+            'name'     => __('Visibilidade restrita', 'analyticdesign'),
+            'datatype' => 'bool',
+        ];
 
         return $tab;
     }
@@ -189,7 +258,18 @@ class DashboardItem extends CommonDBTM
 
         self::showImportedSection($connectionsId, $imported, $ajaxRoot);
         self::showAvailableSection($connectionsId, $available, $listError, $ajaxRoot);
-        self::showManualAddSection($connection, $connectionsId, $ajaxRoot);
+
+        // Quando a listagem falha por erro de conexão, não cai mais no
+        // formulário de adição manual: o problema é a própria conexão (URL/
+        // credenciais), resolvido na aba "Características" — não faz
+        // sentido oferecer para digitar um dashboard à mão nesse caso.
+        // "Adicionar manualmente" continua disponível quando o tipo/modo
+        // simplesmente não lista automaticamente por design (ex.: Power BI
+        // publish_to_web), que não passa por aqui como erro (ver
+        // PowerBiSource::listDashboards()).
+        if ($listError === null) {
+            self::showManualAddSection($connection, $connectionsId, $ajaxRoot);
+        }
     }
 
     private static function ajaxRoot(): string
@@ -314,9 +394,13 @@ class DashboardItem extends CommonDBTM
 
     /**
      * Única forma de cadastrar um dashboard no modo publish_to_web (a API do
-     * Power BI não expõe essas URLs — ver PowerBiSource::listDashboards());
-     * também serve de válvula de escape caso a listagem automática de outra
-     * fonte falhe ou fique incompleta.
+     * Power BI não expõe essas URLs — ver PowerBiSource::listDashboards()).
+     * Só é chamada quando a fonte simplesmente não suporta listagem
+     * automática por design (`$listError === null` no chamador) — quando a
+     * listagem FALHA (fonte fora do ar, credenciais erradas), esta seção
+     * fica escondida de propósito: o problema é a própria conexão, resolvido
+     * na aba "Características", não digitando um dashboard à mão (ver
+     * showForConnection()).
      */
     private static function showManualAddSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
@@ -356,11 +440,54 @@ class DashboardItem extends CommonDBTM
         self::closeField();
         self::closeFieldsRow();
 
+        self::showVisibilityField(false, self::emptyVisibilityRights());
+
         echo "<div class='mt-2'>";
         echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Adicionar', 'analyticdesign') . "</button>";
         echo "</div>";
         Html::closeForm();
         echo "</div>";
+    }
+
+    /** @return array<class-string, int[]> todas as regras vazias — item novo, nada configurado ainda. */
+    private static function emptyVisibilityRights(): array
+    {
+        return array_fill_keys(ItemVisibility::TARGET_TYPES, []);
+    }
+
+    /**
+     * Campo "Visibilidade": Todos (quem já tem o direito de leitura do
+     * módulo) ou Restrito a perfis/grupos/usuários/entidades específicos —
+     * ver docblock de ItemVisibility e DashboardItem::isVisibleForCurrentUser().
+     * Reaproveitado tanto na criação (Adicionar manualmente) quanto na
+     * edição de um item já importado (showForm()).
+     *
+     * @param array<class-string, int[]> $currentRights
+     */
+    private static function showVisibilityField(bool $isPrivate, array $currentRights): void
+    {
+        self::openFieldsRow();
+        self::openField('is_private', __('Visibilidade', 'analyticdesign'), 'analyticdesign_item_is_private', true);
+        Dropdown::showFromArray('is_private', [
+            0 => __('Todos com acesso ao módulo', 'analyticdesign'),
+            1 => __('Restrito a...', 'analyticdesign'),
+        ], ['value' => $isPrivate ? 1 : 0]);
+
+        $dropdownValues = [];
+        foreach ($currentRights as $itemtype => $ids) {
+            if (!empty($ids)) {
+                $dropdownValues[$itemtype::getForeignKeyField()] = $ids;
+            }
+        }
+        echo "<div class='analyticdesign-visibility-targets' style='margin-top:.5rem;"
+            . ($isPrivate ? '' : 'display:none;') . "'>";
+        echo VisibilityDropdown::show('visibility', $dropdownValues);
+        echo "<div class='form-text text-muted'>"
+            . __('Além de quem já tem o direito de leitura do módulo, restringe este card a perfis/grupos/usuários/entidades específicos.', 'analyticdesign')
+            . "</div>";
+        echo "</div>";
+        self::closeField();
+        self::closeFieldsRow();
     }
 
     /**
@@ -418,6 +545,11 @@ class DashboardItem extends CommonDBTM
         self::closeField();
         self::closeFieldsRow();
 
+        self::showVisibilityField(
+            (bool)((int)($this->fields['is_private'] ?? 0)),
+            ItemVisibility::getForItem((int)$this->fields['id'])
+        );
+
         echo "</td></tr>";
         $this->showFormButtons($options);
 
@@ -427,7 +559,16 @@ class DashboardItem extends CommonDBTM
     /**
      * Cria os DashboardItem selecionados pelo admin na tela de importação.
      *
-     * @param array<int, array{external_id:string, name:string, embed_url?:string, category?:string}> $selection
+     * `is_private`/`visibility` são opcionais: a listagem em lote não tem UI
+     * para configurá-los por linha (ver showAvailableSection()) — nascem
+     * "Todos" e ficam editáveis depois via showForm(). O fluxo de adição
+     * manual (ver addmanualdashboard.php) já informa os dois desde a criação.
+     *
+     * `visibility`, quando informado, é o array "achatado" que o
+     * AbstractRightsDropdown posta (ex.: `['profiles_id-3', 'groups_id-1']`)
+     * — convertido por itemtype só em saveVisibilityFromInput() (post_addItem).
+     *
+     * @param array<int, array{external_id:string, name:string, embed_url?:string, category?:string, is_private?:bool, visibility?:string[]}> $selection
      * @return int quantidade efetivamente criada
      */
     public static function importSelection(Connection $connection, array $selection): int
@@ -439,18 +580,55 @@ class DashboardItem extends CommonDBTM
             }
             $item = new self();
             $ok = $item->add([
-                'connections_id' => (int)$connection->fields['id'],
-                'external_id'    => $dash['external_id'],
-                'name'           => $dash['name'] ?? $dash['external_id'],
-                'category'       => $dash['category'] ?? '',
-                'embed_url'      => $dash['embed_url'] ?? '',
-                'is_active'      => 1,
+                'connections_id'      => (int)$connection->fields['id'],
+                'external_id'         => $dash['external_id'],
+                'name'                => $dash['name'] ?? $dash['external_id'],
+                'category'            => $dash['category'] ?? '',
+                'embed_url'           => $dash['embed_url'] ?? '',
+                'is_active'           => 1,
+                'is_private'          => !empty($dash['is_private']) ? 1 : 0,
+                'visibility'          => $dash['visibility'] ?? [],
             ]);
             if ($ok) {
                 $created++;
             }
         }
         return $created;
+    }
+
+    public function post_addItem()
+    {
+        parent::post_addItem();
+        $this->saveVisibilityFromInput();
+    }
+
+    public function post_updateItem($history = true)
+    {
+        parent::post_updateItem($history);
+        $this->saveVisibilityFromInput();
+    }
+
+    /**
+     * Sincroniza as regras de ItemVisibility — só quando o formulário
+     * realmente incluía o campo `is_private` (presença da própria chave no
+     * input, não um marcador à parte: todo formulário que renderiza
+     * showVisibilityField() sempre posta `is_private`, e o único que não
+     * inclui esse campo é a edição em lote de categoria/ativo em
+     * showImportedSection() — não roda para essa, para não apagar regras já
+     * configuradas por engano).
+     */
+    private function saveVisibilityFromInput(): void
+    {
+        if (!array_key_exists('is_private', $this->input)) {
+            return;
+        }
+
+        $posted = $this->input['visibility'] ?? [];
+        $rights = [];
+        foreach (ItemVisibility::TARGET_TYPES as $itemtype) {
+            $rights[$itemtype] = VisibilityDropdown::getPostedIds($posted, $itemtype);
+        }
+        ItemVisibility::replaceForItem((int)$this->fields['id'], $rights);
     }
 
     public static function install(\Migration $migration): void
@@ -467,6 +645,7 @@ class DashboardItem extends CommonDBTM
                     `category` VARCHAR(255) NOT NULL DEFAULT '',
                     `embed_url` TEXT NULL,
                     `is_active` TINYINT NOT NULL DEFAULT 1,
+                    `is_private` TINYINT NOT NULL DEFAULT 0,
                     `date_creation` TIMESTAMP NULL DEFAULT NULL,
                     `date_mod` TIMESTAMP NULL DEFAULT NULL,
                     PRIMARY KEY (`id`),
@@ -475,6 +654,15 @@ class DashboardItem extends CommonDBTM
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
         }
+        // Coluna adicionada depois da 0.3.0: em upgrade, a tabela já existe
+        // sem `is_private` — ver nota de idempotência de install() em
+        // hook.php (este método também roda de novo em toda atualização de
+        // versão, não só na primeira instalação).
+        if (!$DB->fieldExists($table, 'is_private')) {
+            $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `is_private` TINYINT NOT NULL DEFAULT 0 AFTER `is_active`");
+        }
+
+        ItemVisibility::install();
     }
 
     public static function uninstall(): void
@@ -484,5 +672,6 @@ class DashboardItem extends CommonDBTM
         if ($DB->tableExists($table)) {
             $DB->doQuery("DROP TABLE `{$table}`");
         }
+        ItemVisibility::uninstall();
     }
 }

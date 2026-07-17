@@ -47,6 +47,10 @@ msgstr ""
 msgid "Falha ao renderizar o dashboard."
 msgstr ""
 
+#: src/Dashboard.php
+msgid "Você não tem permissão para ver este dashboard."
+msgstr ""
+
 #: src/Connection.php
 msgid "Fonte de dados"
 msgid_plural "Fontes de dados"
@@ -134,6 +138,26 @@ msgid "URL de embed"
 msgstr ""
 
 #: src/DashboardItem.php
+msgid "Visibilidade restrita"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Visibilidade"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Todos com acesso ao módulo"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Restrito a..."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Além de quem já tem o direito de leitura do módulo, restringe este card a perfis/grupos/usuários/entidades específicos."
+msgstr ""
+
+#: src/DashboardItem.php
 msgid "Ex.: Indicadores de chamados"
 msgstr ""
 
@@ -177,6 +201,10 @@ msgstr ""
 
 #: src/DashboardItem.php
 msgid "Adicionar manualmente"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Adicionar"
 msgstr ""
 
 #: src/DashboardItem.php

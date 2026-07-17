@@ -40,6 +40,13 @@ if ($name !== '' && $embedUrl !== '') {
         'name'        => $name,
         'embed_url'   => $embedUrl,
         'category'    => trim((string)($_POST['category'] ?? '')),
+        'is_private'  => !empty($_POST['is_private']),
+        // Array "achatado" (ex.: ['profiles_id-3', 'groups_id-1']) tal como
+        // o AbstractRightsDropdown posta — DashboardItem::importSelection()
+        // repassa isso adiante para add(), e é só em
+        // DashboardItem::saveVisibilityFromInput() (post_addItem) que vira
+        // um array por itemtype via VisibilityDropdown::getPostedIds().
+        'visibility'  => $_POST['visibility'] ?? [],
     ]]);
 }
 

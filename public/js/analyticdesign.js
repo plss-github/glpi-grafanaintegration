@@ -22,10 +22,15 @@
  */
 document.addEventListener('change', function (event) {
     var embedModeSelect = event.target.closest('select[name="embed_mode"]');
-    if (!embedModeSelect) {
+    if (embedModeSelect) {
+        toggleEmbedModeFields(embedModeSelect);
         return;
     }
-    toggleEmbedModeFields(embedModeSelect);
+
+    var visibilitySelect = event.target.closest('select[name="is_private"]');
+    if (visibilitySelect) {
+        toggleVisibilityTargets(visibilitySelect);
+    }
 });
 
 document.addEventListener('click', function (event) {
@@ -52,6 +57,15 @@ function toggleEmbedModeFields(embedModeSelect) {
     var warning = container.querySelector('.analyticdesign-publish-warning');
     if (warning) {
         warning.style.display = (selectedEmbedMode === 'publish_to_web') ? '' : 'none';
+    }
+}
+
+/** Mostra o seletor de Perfil/Grupo/Usuário/Entidade só quando "Restrito a..." está selecionado. */
+function toggleVisibilityTargets(visibilitySelect) {
+    var container = visibilitySelect.closest('.field-container') || visibilitySelect.parentElement;
+    var targets = container.querySelector('.analyticdesign-visibility-targets');
+    if (targets) {
+        targets.style.display = (visibilitySelect.value === '1') ? '' : 'none';
     }
 }
 

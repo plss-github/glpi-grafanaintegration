@@ -17,7 +17,7 @@ use GlpiPlugin\Analyticdesign\Dashboard;
 use GlpiPlugin\Analyticdesign\Menu;
 use GlpiPlugin\Analyticdesign\ProfileRights;
 
-define('PLUGIN_ANALYTICDESIGN_VERSION', '0.3.0');
+define('PLUGIN_ANALYTICDESIGN_VERSION', '0.4.0');
 // Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
 // desta revisão). CommonDBTM::can()/check() nesta versão tipam `int $right`
 // e `?array &$input` — sem impacto no uso feito por este plugin, mas registrado
