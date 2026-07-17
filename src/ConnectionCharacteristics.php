@@ -188,9 +188,16 @@ class ConnectionCharacteristics extends CommonGLPI
                 . " style='{$hidden}'";
         }
 
+        $isConfigured = !empty($item->getDecryptedCredentials()[$field['name']] ?? '');
+        $placeholder = $isConfigured ? self::configuredPlaceholder() : '';
+
         self::openFieldsRow();
         self::openField($field['name'], htmlspecialchars($field['label'], ENT_QUOTES), $fieldId, true, $extraClass, $extraAttr);
-        echo Html::input($field['name'], ['id' => $fieldId, 'type' => $inputType, 'value' => '']);
+        if ($inputType === 'password') {
+            self::showDisclosablePasswordInput($field['name'], $fieldId, '', $placeholder);
+        } else {
+            echo Html::input($field['name'], ['id' => $fieldId, 'value' => '', 'placeholder' => $placeholder]);
+        }
         if (!empty($field['help'])) {
             echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
         }

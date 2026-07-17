@@ -8,8 +8,9 @@
  *  - botão "Testar conexão" via fetch, sem recarregar a página; quando a
  *    conexão falha, esconde os campos e mostra só o erro (com um botão para
  *    reabrir os campos e corrigir a configuração);
- *  - no Grafana, "Testar conexão" (agora na aba "Fonte de dados") só aparece
- *    depois que algo é digitado no token de API;
+ *  - no Grafana, "Testar conexão" (agora na aba "Fonte de dados") aparece
+ *    quando já existe token salvo ou algo é digitado no campo;
+ *  - esconde a seção de URL/API do Grafana quando o Status da fonte é "Não";
  *  - mostra o seletor de Perfil/Grupo/Usuário/Entidade só quando a
  *    visibilidade é "Restrito a..." (aba "Configurações").
  *
@@ -34,6 +35,12 @@ document.addEventListener('change', function (event) {
     var visibilitySelect = event.target.closest('select[name="is_private"]');
     if (visibilitySelect) {
         toggleVisibilityTargets(visibilitySelect);
+        return;
+    }
+
+    var statusSelect = event.target.closest('select[name="is_active"]');
+    if (statusSelect) {
+        toggleGrafanaSectionVisibility(statusSelect);
     }
 });
 
@@ -72,16 +79,27 @@ function toggleEmbedModeFields(embedModeSelect) {
 }
 
 /**
- * Só mostra "Testar conexão" depois que algo é digitado no token de API —
- * testar uma fonte sem token não faz sentido (ver
+ * Mostra "Testar conexão" quando algo é digitado no token de API, OU quando
+ * já existe um token salvo (`data-has-credentials`, setado no servidor) —
+ * sem essa segunda condição, o botão sumia de novo a cada reload, já que o
+ * campo de senha sempre nasce vazio por segurança (ver
  * Connection::showGrafanaCredentialsSection()).
  */
 function toggleTestButtonVisibility(apiTokenInput) {
     var container = apiTokenInput.closest('.analyticdesign-characteristics') || document;
     var testBtn = container.querySelector('.analyticdesign-test-connection');
     if (testBtn) {
-        testBtn.style.display = apiTokenInput.value.trim() !== '' ? '' : 'none';
+        var hasCredentials = testBtn.dataset.hasCredentials === '1';
+        var hasTyped = apiTokenInput.value.trim() !== '';
+        testBtn.style.display = (hasCredentials || hasTyped) ? '' : 'none';
     }
+}
+
+/** Esconde/mostra a seção de URL/API do Grafana conforme o Status (is_active) da fonte. */
+function toggleGrafanaSectionVisibility(statusSelect) {
+    document.querySelectorAll('.analyticdesign-status-toggle').forEach(function (section) {
+        section.style.display = (statusSelect.value === '1') ? '' : 'none';
+    });
 }
 
 /** Mostra o seletor de Perfil/Grupo/Usuário/Entidade só quando "Restrito a..." está selecionado. */

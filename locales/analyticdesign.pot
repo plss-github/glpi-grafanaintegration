@@ -47,6 +47,13 @@ msgstr ""
 msgid "Falha ao renderizar o dashboard."
 msgstr ""
 
+#: front/previewdashboarditem.php
+msgid ""
+"Se aparecer uma tela de login do Grafana aqui em vez do dashboard, veja a "
+"seção \"Cadastrar uma fonte Grafana\" do guia de configuração — o token de "
+"API não autentica este iframe, só as chamadas de backend."
+msgstr ""
+
 #: src/Dashboard.php
 msgid "Você não tem permissão para ver este dashboard."
 msgstr ""
@@ -223,6 +230,10 @@ msgstr ""
 
 #: src/DashboardItem.php
 msgid "Configurações do dashboard"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Você não tem direito de editar esta fonte de dados."
 msgstr ""
 
 #: src/DashboardItem.php

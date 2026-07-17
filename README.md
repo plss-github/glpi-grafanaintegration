@@ -53,7 +53,7 @@ analyticdesign/
 │   ├── updatedashboarditems.php  # salva edição em lote (módulo/ativo)
 │   └── getvisibilitydropdownvalue.php # endpoint do AbstractRightsDropdown (Perfil/Grupo/Usuário/Entidade)
 ├── src/
-│   ├── Connection.php        # CommonDBTM: fontes cadastradas + showForm() (Nome/Ferramenta/Ativo + URL/token do Grafana)
+│   ├── Connection.php        # CommonDBTM: fontes cadastradas + showForm() (Nome/Ferramenta/Status + Comentários + URL/token do Grafana)
 │   ├── ConnectionCharacteristics.php # aba "Configurações" (Power BI: URL/embed_mode/credenciais; ambos: config. do dashboard)
 │   ├── DashboardItem.php     # CommonDBTM: dashboards expostos + aba "Pré-Visualização" na Connection
 │   ├── Dashboard.php         # hooks getTypes/getCards + provider + render do widget

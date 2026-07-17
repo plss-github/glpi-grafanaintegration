@@ -18,6 +18,7 @@
 include('../../../inc/includes.php');
 
 use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Analyticdesign\Source\GrafanaSource;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
 
 $id = (int)($_GET['id'] ?? 0);
@@ -40,6 +41,22 @@ Html::header(
     false, // burguermenu
     false  // add_id_class
 );
+
+// Lembrete contextual só para Grafana: o iframe é uma requisição direta do
+// navegador de quem está vendo, sem o token de API configurado na aba
+// "Fonte de dados" (esse token só autentica as chamadas de backend do
+// plugin) — sem auth.anonymous/Shared dashboard/SSO no Grafana, a tela de
+// login do Grafana aparece aqui dentro no lugar do dashboard. Não é um
+// defeito do plugin — ver seção 3 do guia de configuração.
+if ($connection->fields['type'] === GrafanaSource::getType()) {
+    echo "<div class='alert alert-info' style='margin-bottom:1rem;'>"
+        . "<i class='ti ti-info-circle'></i> "
+        . htmlspecialchars(
+            __('Se aparecer uma tela de login do Grafana aqui em vez do dashboard, veja a seção "Cadastrar uma fonte Grafana" do guia de configuração — o token de API não autentica este iframe, só as chamadas de backend.', 'analyticdesign'),
+            ENT_QUOTES
+        )
+        . "</div>";
+}
 
 try {
     echo SourceFactory::make($connection)->renderEmbed($item, ['width' => '100%', 'height' => '85vh']);

@@ -40,6 +40,11 @@ trait HasFormFieldLayout
     }
 
     /**
+     * @param bool|string $width      `true` = linha inteira (col-12), `false` =
+     *                                 metade (col-12 col-sm-6, padrão) — ou uma
+     *                                 classe Bootstrap literal (ex.: `'col-12
+     *                                 col-sm-4'`, três campos por linha — ver
+     *                                 Connection::showNameAndToolFields()).
      * @param string $extraClass classes adicionais no `<div class='form-field ...'>`
      *                           (ex.: para toggle de JS por tipo/modo — ver
      *                           ConnectionCharacteristics::showCredentialFieldRow()).
@@ -50,11 +55,11 @@ trait HasFormFieldLayout
         string $name,
         string $label,
         string $forId,
-        bool $fullWidth = false,
+        bool|string $width = false,
         string $extraClass = '',
         string $extraAttr = ''
     ): void {
-        $widthClass = $fullWidth ? 'col-12' : 'col-12 col-sm-6';
+        $widthClass = is_string($width) ? $width : ($width ? 'col-12' : 'col-12 col-sm-6');
         echo "<div class='form-field {$widthClass} {$extraClass} mb-2' data-testid='form-field-"
             . htmlspecialchars($name, ENT_QUOTES) . "'{$extraAttr}>";
         echo "<div class='d-flex align-items-center'>";
@@ -80,11 +85,22 @@ trait HasFormFieldLayout
      * `public/js/common.js` do core, carregado globalmente; não precisamos
      * declarar nada em JS próprio para isso funcionar.
      */
-    private static function showDisclosablePasswordInput(string $name, string $id, string $value = ''): void
+    /**
+     * Placeholder "já configurado" — não revela o valor nem seu tamanho real
+     * (mesmo número de bolinhas sempre). Traits não podem ter constantes
+     * antes do PHP 8.3 (este plugin mira 8.2+), daí ser um método.
+     */
+    private static function configuredPlaceholder(): string
+    {
+        return '••••••••••••';
+    }
+
+    private static function showDisclosablePasswordInput(string $name, string $id, string $value = '', string $placeholder = ''): void
     {
         echo "<div class='btn-group btn-group-sm d-flex'>";
         echo "<input type='password' id='" . htmlspecialchars($id, ENT_QUOTES) . "'"
             . " class='form-control rounded-end-0' name='" . htmlspecialchars($name, ENT_QUOTES) . "'"
+            . " placeholder='" . htmlspecialchars($placeholder, ENT_QUOTES) . "'"
             . " value='" . htmlspecialchars($value, ENT_QUOTES) . "' />";
         echo "<button type='button' class='btn btn-outline-secondary'"
             . " onmousedown=\"showDisclosablePasswordField('" . htmlspecialchars($id, ENT_QUOTES) . "')\""

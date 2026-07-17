@@ -94,7 +94,7 @@ class Connection extends CommonDBTM
             'id'       => '13',
             'table'    => self::getTable(),
             'field'    => 'is_active',
-            'name'     => __('Ativo'),
+            'name'     => __('Status'),
             'datatype' => 'bool',
         ];
         $tab[] = [
@@ -155,7 +155,8 @@ class Connection extends CommonDBTM
 
     /**
      * Formulário de cadastro/edição da fonte. Só o essencial para criar o
-     * registro (Nome, Ferramenta, Ativo) — URL base, modo de embed e
+     * registro (Nome, Ferramenta, Status) + Comentários — URL base, modo de
+     * embed e
      * credenciais específicas do tipo ficam na aba "Características"
      * (ConnectionCharacteristics), que só existe depois que a Connection já
      * tem um tipo salvo. Renderizado em PHP/HTML puro, mas reproduzindo o
@@ -172,8 +173,8 @@ class Connection extends CommonDBTM
         $this->showFormHeader($options);
         echo "</td></tr><tr><td colspan='4'>";
 
-        $this->showNameAndToolFields();
-        $this->showActiveField();
+        $this->showNameToolAndStatusFields();
+        $this->showCommentField();
 
         if ((int)$this->fields['id'] > 0 && $this->fields['type'] === GrafanaSource::getType()) {
             $this->showGrafanaCredentialsSection();
@@ -185,18 +186,25 @@ class Connection extends CommonDBTM
         return true;
     }
 
-    private function showNameAndToolFields(): void
+    /**
+     * Nome, Ferramenta e Status lado a lado (3 colunas, `col-sm-4`) — pedido
+     * explicitamente para ficar mais compacto/organizado do que uma coluna
+     * por linha. "Status" (era "Ativo"): mesmo campo `is_active`, só o
+     * rótulo mudou — renomeado em todo o plugin (ver DashboardItem).
+     */
+    private function showNameToolAndStatusFields(): void
     {
         $isNew = (int)$this->fields['id'] <= 0;
+        $thirdWidth = 'col-12 col-sm-4';
 
         self::openFieldsRow();
 
-        self::openField('name', __('Nome'), 'analyticdesign_name');
+        self::openField('name', __('Nome'), 'analyticdesign_name', $thirdWidth);
         echo Html::input('name', ['id' => 'analyticdesign_name', 'value' => $this->fields['name']]);
         echo "<div class='form-text text-muted'>" . __('Ex.: Grafana Produção', 'analyticdesign') . "</div>";
         self::closeField();
 
-        self::openField('type', __('Ferramenta', 'analyticdesign'), 'dropdown_type1');
+        self::openField('type', __('Ferramenta', 'analyticdesign'), 'dropdown_type1', $thirdWidth);
         // Força vazio numa fonte nova: obriga uma escolha explícita em vez de
         // herdar o DEFAULT 'grafana' da coluna (ver Connection::install()). Sem
         // 'emptylabel' próprio: usa o "-----" padrão do GLPI, igual a qualquer
@@ -210,25 +218,27 @@ class Connection extends CommonDBTM
         ]);
         self::closeField();
 
+        // Lista suspensa Sim/Não (Dropdown::showYesNo()) em vez de checkbox —
+        // mais explícito para quem está preenchendo o formulário pela
+        // primeira vez. getEmpty()/initForm() zeram is_active para um item
+        // novo (não respeitam o DEFAULT 1 da coluna) — mantém "Não" como
+        // valor inicial num item novo, forçando o cadastrante a ativar
+        // explicitamente a fonte depois de configurá-la.
+        $isActive = !$isNew ? (int)($this->fields['is_active'] ?? 0) : 0;
+        self::openField('is_active', __('Status'), 'dropdown_is_active2', $thirdWidth);
+        Dropdown::showYesNo('is_active', $isActive, -1, ['rand' => 2]);
+        self::closeField();
+
         self::closeFieldsRow();
     }
 
-    /**
-     * "Ativo" como lista suspensa Sim/Não (Dropdown::showYesNo()) em vez de
-     * checkbox — mais explícito para quem está preenchendo o formulário pela
-     * primeira vez.
-     */
-    private function showActiveField(): void
+    /** Campo livre de anotações — não interpretado pelo plugin, só um bloco de texto para quem administra a fonte. */
+    private function showCommentField(): void
     {
-        // getEmpty()/initForm() zeram is_active para um item novo (não
-        // respeitam o DEFAULT 1 da coluna) — mantém "Não" como valor inicial
-        // do dropdown num item novo, forçando o cadastrante a ativar
-        // explicitamente a fonte depois de configurá-la.
-        $isActive = (int)$this->fields['id'] > 0 ? (int)($this->fields['is_active'] ?? 0) : 0;
-
         self::openFieldsRow();
-        self::openField('is_active', __('Ativo'), 'dropdown_is_active2');
-        Dropdown::showYesNo('is_active', $isActive, -1, ['rand' => 2]);
+        self::openField('comment', __('Comentários'), 'analyticdesign_comment', true);
+        echo "<textarea name='comment' id='analyticdesign_comment' class='form-control' rows='3'>"
+            . htmlspecialchars($this->fields['comment'] ?? '', ENT_QUOTES) . "</textarea>";
         self::closeField();
         self::closeFieldsRow();
     }
@@ -244,19 +254,28 @@ class Connection extends CommonDBTM
      * O campo de API token usa o mesmo padrão "revelável" que o GLPI usa
      * para a chave de licença do GLPI Network (ver
      * HasFormFieldLayout::showDisclosablePasswordInput()) — pedido
-     * explicitamente para ficar visualmente igual.
+     * explicitamente para ficar visualmente igual. Quando já existe um
+     * valor salvo, o campo nasce com um placeholder de bolinhas (nunca o
+     * valor de fato — mesma convenção de "deixe em branco para manter o
+     * valor salvo") para indicar visualmente que algo está configurado.
      *
-     * O botão "Testar conexão" nasce escondido: só aparece depois que algo é
-     * digitado no campo de API token (ver toggleTestButtonVisibility() em
-     * public/js/analyticdesign.js) — testar uma fonte sem token não faz
-     * sentido, e um token já salvo nunca é reexibido aqui (mesma convenção
-     * de "deixe em branco para manter o valor salvo").
+     * O bloco inteiro fica escondido quando a fonte está com Status "Não" —
+     * volta ao reativar (ver toggleGrafanaSectionVisibility() em
+     * public/js/analyticdesign.js). O botão "Testar conexão" nasce visível
+     * se já existe um token salvo; senão só aparece depois que algo é
+     * digitado no campo (ver toggleTestButtonVisibility() no mesmo arquivo).
      */
     private function showGrafanaCredentialsSection(): void
     {
         $fieldsForType = SourceFactory::getConfigFieldsFor(GrafanaSource::getType());
+        $credentials = $this->getDecryptedCredentials();
+        $hasToken = !empty($credentials['api_token'] ?? '');
+        $isActive = (int)($this->fields['is_active'] ?? 0) === 1;
 
-        echo "<div class='analyticdesign-characteristics'>";
+        // Escondida quando a fonte está desativada — volta ao ativar de novo
+        // (ver toggleGrafanaSectionVisibility() em public/js/analyticdesign.js).
+        echo "<div class='analyticdesign-characteristics analyticdesign-status-toggle' style='"
+            . ($isActive ? '' : 'display:none;') . "'>";
         echo "<div class='analyticdesign-error alert alert-important alert-danger' style='display:none;'>";
         echo "<i class='ti ti-plug-x'></i> <span class='analyticdesign-error-message'></span>";
         echo " <button type='button' class='btn btn-sm btn-outline-danger analyticdesign-reopen-fields'>"
@@ -274,12 +293,14 @@ class Connection extends CommonDBTM
 
         foreach ($fieldsForType as $field) {
             $fieldId = 'analyticdesign_grafana_' . $field['name'];
+            $isConfigured = !empty($credentials[$field['name']] ?? '');
+            $placeholder = $isConfigured ? self::configuredPlaceholder() : '';
             self::openFieldsRow();
             self::openField($field['name'], htmlspecialchars($field['label'], ENT_QUOTES), $fieldId, true);
             if (($field['type'] ?? '') === 'password') {
-                self::showDisclosablePasswordInput($field['name'], $fieldId, '');
+                self::showDisclosablePasswordInput($field['name'], $fieldId, '', $placeholder);
             } else {
-                echo Html::input($field['name'], ['id' => $fieldId, 'value' => '']);
+                echo Html::input($field['name'], ['id' => $fieldId, 'value' => '', 'placeholder' => $placeholder]);
             }
             if (!empty($field['help'])) {
                 echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
@@ -294,7 +315,11 @@ class Connection extends CommonDBTM
         }
 
         echo "<div class='mt-2'>";
-        echo "<button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' style='display:none;' data-id='"
+        // Visível desde o início se já existe token salvo (não fica escondido
+        // de novo só porque o campo, por segurança, nasce vazio na tela — ver
+        // toggleTestButtonVisibility() em public/js/analyticdesign.js).
+        echo "<button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' style='"
+            . ($hasToken ? '' : 'display:none;') . "' data-has-credentials='" . ($hasToken ? '1' : '0') . "' data-id='"
             . (int)$this->fields['id'] . "'>"
             . "<i class='ti ti-plug'></i> " . __('Testar conexão', 'analyticdesign')
             . "</button> <span class='analyticdesign-test-result ms-2'></span>";
@@ -422,6 +447,7 @@ class Connection extends CommonDBTM
                     `credentials` TEXT NULL,
                     `embed_mode` VARCHAR(50) NOT NULL DEFAULT 'iframe',
                     `is_active` TINYINT NOT NULL DEFAULT 1,
+                    `comment` TEXT NULL,
                     `entities_id` INT UNSIGNED NOT NULL DEFAULT 0,
                     `is_recursive` TINYINT NOT NULL DEFAULT 0,
                     `date_creation` TIMESTAMP NULL DEFAULT NULL,
@@ -431,6 +457,11 @@ class Connection extends CommonDBTM
                     KEY `entities_id` (`entities_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
+        }
+        // Coluna adicionada em versão posterior — ver nota de idempotência de
+        // install() em hook.php (roda de novo a cada atualização de versão).
+        if (!$DB->fieldExists($table, 'comment')) {
+            $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `comment` TEXT NULL AFTER `is_active`");
         }
     }
 

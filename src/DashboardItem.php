@@ -209,7 +209,7 @@ class DashboardItem extends CommonDBTM
             'id'       => '13',
             'table'    => self::getTable(),
             'field'    => 'is_active',
-            'name'     => __('Ativo'),
+            'name'     => __('Status'),
             'datatype' => 'bool',
         ];
         $tab[] = [
@@ -355,7 +355,7 @@ class DashboardItem extends CommonDBTM
         echo "<th>" . __('Nome') . "</th>";
         echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Módulo', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Ativo') . "</th>";
+        echo "<th>" . __('Status') . "</th>";
         echo "<th>" . __('Pré-visualizar', 'analyticdesign') . "</th>";
         echo "</tr>";
         foreach ($imported as $item) {
@@ -400,11 +400,24 @@ class DashboardItem extends CommonDBTM
      */
     public static function showDashboardConfigurationSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
-        $imported = self::getForConnection($connectionsId);
-        [$available, $listError] = self::resolveAvailableDashboards($connection, $imported);
-
         echo "<div class='analyticdesign-manual-add mt-4'>";
         echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
+
+        // Checagem explícita ANTES de montar o formulário — sem isso, um
+        // usuário só com direito de leitura preenchia a tela inteira (Vendo o
+        // dropdown, Módulo, Visibilidade...) só para levar "Acesso negado" ao
+        // clicar em Importar/Adicionar (os ajax/*.php exigem UPDATE, mas a
+        // tela não avisava antes disso — achado ao investigar um relato de
+        // AccessDeniedHttpException em ajax/importselecteddashboard.php).
+        if (!$connection->can($connectionsId, UPDATE)) {
+            echo "<p class='alert alert-important alert-warning'>"
+                . htmlspecialchars(__('Você não tem direito de editar esta fonte de dados.', 'analyticdesign'), ENT_QUOTES)
+                . "</p></div>";
+            return;
+        }
+
+        $imported = self::getForConnection($connectionsId);
+        [$available, $listError] = self::resolveAvailableDashboards($connection, $imported);
 
         if ($listError === null) {
             echo "<p class='text-muted'>" . __('Escolha um dashboard disponível na fonte para importar e configurar módulo/visibilidade.', 'analyticdesign') . "</p>";
@@ -430,7 +443,7 @@ class DashboardItem extends CommonDBTM
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
 
         self::openFieldsRow();
-        self::openField('external_id', __('Dashboard', 'analyticdesign'), 'analyticdesign_select_dashboard', true);
+        self::openField('external_id', __('Dashboard', 'analyticdesign'), 'analyticdesign_select_dashboard');
         $options = [];
         foreach ($available as $dash) {
             $options[$dash['external_id']] = $dash['name'];
@@ -440,9 +453,10 @@ class DashboardItem extends CommonDBTM
             'required'            => true,
         ]);
         self::closeField();
-        self::closeFieldsRow();
 
         self::showModuleField('');
+        self::closeFieldsRow();
+
         self::showVisibilityField(false, self::emptyVisibilityRights());
 
         echo "<div class='mt-2'>";
@@ -471,9 +485,9 @@ class DashboardItem extends CommonDBTM
         echo Html::input('name', ['id' => 'analyticdesign_manual_name', 'value' => '']);
         echo "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>";
         self::closeField();
-        self::closeFieldsRow();
 
         self::showModuleField('');
+        self::closeFieldsRow();
 
         self::openFieldsRow();
         self::openField('embed_url', __('URL de embed', 'analyticdesign'), 'analyticdesign_manual_embed_url', true);
@@ -504,11 +518,14 @@ class DashboardItem extends CommonDBTM
      * tem relação com "Substituir dashboard do módulo" (ModuleDashboard),
      * que é uma funcionalidade separada e mais restrita (exige
      * visibilidade restrita configurada) — ver showVisibilityField().
+     *
+     * NÃO gerencia a própria linha (sem openFieldsRow()/closeFieldsRow()) —
+     * pedido para ficar lado a lado com o campo anterior (Dashboard/Nome),
+     * então quem chama é responsável por abrir/fechar a linha em volta.
      */
     private static function showModuleField(string $currentValue): void
     {
-        self::openFieldsRow();
-        self::openField('category', __('Módulo', 'analyticdesign'), 'analyticdesign_module_field', true);
+        self::openField('category', __('Módulo', 'analyticdesign'), 'analyticdesign_module_field');
         Dropdown::showFromArray('category', self::moduleOptions(), [
             'value' => $currentValue !== '' ? $currentValue : 0,
         ]);
@@ -516,7 +533,6 @@ class DashboardItem extends CommonDBTM
             . __('Agrupa este card no catálogo de widgets do dashboard nativo do GLPI.', 'analyticdesign')
             . "</div>";
         self::closeField();
-        self::closeFieldsRow();
     }
 
     /** @return array<class-string, int[]> todas as regras vazias — item novo, nada configurado ainda. */
@@ -625,7 +641,7 @@ class DashboardItem extends CommonDBTM
         self::closeFieldsRow();
 
         self::openFieldsRow();
-        self::openField('is_active', __('Ativo'), 'analyticdesign_item_is_active');
+        self::openField('is_active', __('Status'), 'analyticdesign_item_is_active');
         echo self::renderCheckbox('is_active', (int)($this->fields['is_active'] ?? 0) === 1);
         self::closeField();
         self::closeFieldsRow();
