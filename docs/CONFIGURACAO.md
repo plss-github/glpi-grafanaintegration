@@ -63,10 +63,10 @@ administra as fontes, ou um perfil que só deve visualizar):
 
 ## 3. Cadastrar uma fonte Grafana
 
-O cadastro é em dois passos: primeiro o básico (nome/ferramenta/ativo), depois
-as específicações da ferramenta escolhida numa aba própria — a URL e as
-credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
-é um Grafana.
+O cadastro é em dois passos, na **mesma aba "Fonte de dados"**: primeiro o
+básico (nome/ferramenta/ativo); depois de salvar, a URL e o token do Grafana
+aparecem logo abaixo, na mesma tela — não fazia sentido perguntá-los antes de
+saber que a fonte é um Grafana.
 
 1. **Administração > Análise de Dados > Fontes de dados > Adicionar novo
    item**.
@@ -76,13 +76,16 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
    - **Ferramenta**: `Grafana`. O dropdown nasce vazio ("-----") — é
      obrigatório escolher explicitamente antes de salvar.
    - **Ativo**: `Sim` ou `Não` (nasce em `Não`).
-3. Salvar — a tela recarrega já na fonte criada, agora com abas.
-4. Abrir a aba **"Características"** e preencher:
+3. Salvar — a tela recarrega já na fonte criada, agora com abas, e a aba
+   **"Fonte de dados"** já mostra dois campos novos:
    - **URL base**: a URL da instância, ex. `https://grafana.suaempresa.com`
      (sem barra no final).
    - **API Token / Service account token**: um *service account token* do
      Grafana com permissão de leitura de dashboards (Grafana > Administration
-     > Service accounts).
+     > Service accounts). O campo tem o mesmo visual "revelável" da chave de
+     licença do GLPI Network (segurar o ícone de olho mostra o valor em
+     texto puro; o de clipe copia). O botão **"Testar conexão"** só aparece
+     depois que algo é digitado aqui — testar sem token não faz sentido.
 
 > ⚠️ **Importante — esse token não dá acesso aos usuários do GLPI ao
 > dashboard embedado.** Ele só autentica as chamadas do *backend* do plugin
@@ -108,7 +111,7 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
 > `allow_embedding: true` (abaixo) só permite que o Grafana seja carregado
 > dentro de um `<iframe>` (cabeçalho `X-Frame-Options`) — não resolve, sozinho,
 > a questão de autenticação acima.
-5. Salvar (botão **Salvar** da própria aba) e clicar em **Testar conexão**,
+5. Salvar (botão **Salvar** da própria tela) e clicar em **Testar conexão**,
    ao lado (chama `GET /api/health` no Grafana) — deve responder "Conexão
    bem-sucedida.". Se falhar, os campos de configuração somem e só a
    mensagem de erro fica visível — clicar em **"Editar configuração"** para
@@ -126,27 +129,35 @@ credenciais do Grafana não fazem sentido perguntar antes de saber que a fonte
 
 ## 4. Importar dashboards do Grafana
 
-Na aba **"Dashboards"** do registro salvo (aparece assim que a Connection é
-criada):
+Na aba **"Configurações"** do registro salvo (aparece assim que a Connection
+é criada), seção **"Configurações do dashboard"**:
 
-1. A seção **"Dashboards disponíveis na fonte"** lista automaticamente os
-   dashboards encontrados via API do Grafana (`GET /api/search?type=dash-db`).
-2. Marcar os que devem virar cards, opcionalmente preencher uma **Categoria**
-   por linha (ex.: "Ativos", "Indicadores gerais" — vira o agrupamento do
-   card no catálogo de widgets do dashboard nativo).
-3. Clicar em **Importar selecionados**.
-4. Os itens aparecem em **"Dashboards importados"**, onde dá para ajustar
-   categoria/ativo depois e salvar.
+1. O dropdown **"Dashboard"** lista automaticamente os dashboards
+   encontrados via API do Grafana (`GET /api/search?type=dash-db`) que ainda
+   não foram importados.
+2. Escolher um, opcionalmente escolher um **Módulo** (agrupamento do card no
+   catálogo de widgets do dashboard nativo) e configurar **Visibilidade**
+   (seção 8) se necessário.
+3. Clicar em **Importar**.
+4. O item aparece na aba **"Pré-Visualização"**, em "Dashboards importados",
+   onde dá para ajustar módulo/ativo depois e salvar — e pré-visualizar o
+   card antes de decidir onde posicioná-lo.
 
-Se a listagem falhar (fonte fora do ar, token errado), a tela mostra apenas o
-aviso — resolva a conexão na aba "Características" (passo 5 acima) e volte
-aqui.
+Repita para cada dashboard — é sempre um por vez, junto com sua própria
+configuração de módulo/visibilidade.
 
-> A aba **"Dashboards"** é só um pré-visualizador: lista o que já foi
-> importado (com um botão **"Ver"** por linha, que abre o card renderizado
-> numa aba nova) e o que está disponível para importar na fonte. Cadastro
-> manual, visibilidade e substituição de módulo (seções 6, 8 e 9) ficam na
-> aba **"Características"**, em **"Configurações do dashboard"**.
+Se a listagem falhar (fonte fora do ar, token errado), a tela mostra o
+formulário manual (nome + URL de embed colados à mão) em vez do dropdown —
+resolva a conexão na aba "Fonte de dados" (passo 5 acima) e volte aqui.
+
+> A aba **"Pré-Visualização"** (antiga "Dashboards expostos") é só um
+> pré-visualizador: lista o que já foi importado, com um botão **"Ver"** por
+> linha que abre o card renderizado numa aba nova — essa pré-visualização
+> **ignora deliberadamente** a regra de visibilidade configurada (seção 8):
+> quem chega até essa aba já tem direito de administrar a fonte, então não
+> faz sentido a própria pessoa que configurou o card ficar bloqueada de
+> vê-lo. Escolher o que importar, módulo, visibilidade e substituição de
+> módulo (seções 6, 8 e 9) ficam todos na aba **"Configurações"**.
 
 ## 5. Cadastrar uma fonte Power BI — modo "Embed seguro"
 
@@ -174,14 +185,18 @@ do workspace para uso em produção.
    vazio, escolha obrigatória) e **Ativo** (nasce `Não`), e salvar (o modo de
    embed já nasce como "Embed seguro" por padrão para uma fonte Power BI
    nova — ajustável na aba seguinte).
-4. Na fonte recém-criada, abrir a aba **"Características"**:
+4. Na fonte recém-criada, abrir a aba **"Configurações"** (URL/credenciais
+   do Power BI continuam nessa aba, diferente do Grafana — ver nota no
+   passo 3 da seção 3):
    - **Modo de embed**: confirmar `Embed seguro — Entra ID / Premium (Power BI)`.
    - Preencher Tenant ID, Client ID, Client secret e Workspace ID.
 5. Salvar e clicar em **Testar conexão** (autentica no Entra ID e chama
    `GET /v1.0/myorg/groups` para verificar acesso ao workspace).
-6. Aba **"Dashboards"**: os relatórios do workspace aparecem em "Dashboards
-   disponíveis na fonte" (`GET /v1.0/myorg/groups/{id}/reports`) — importar
-   normalmente.
+6. Na mesma aba **"Configurações"**, seção "Configurações do dashboard": os
+   relatórios do workspace aparecem no dropdown **"Dashboard"**
+   (`GET /v1.0/myorg/groups/{id}/reports`) — escolher um, configurar
+   módulo/visibilidade e clicar em **Importar** (seção 4, mesmo fluxo do
+   Grafana).
 7. Ao adicionar o card num dashboard do GLPI, o container
    `.analyticdesign-powerbi-secure` é hidratado pelo `powerbi-client`
    (`public/js/analyticdesign-powerbi.js`) usando um embed token gerado no
@@ -208,15 +223,16 @@ escondê-lo.
 1. No Power BI (Desktop ou serviço): **Arquivo > Publicar na Web**, copiar a
    URL pública gerada para o relatório desejado.
 2. Numa fonte Power BI (nova ou já existente), abrir a aba
-   **"Características"** e trocar **Modo de embed** para `Publish to web —
+   **"Configurações"** e trocar **Modo de embed** para `Publish to web —
    URL pública (Power BI)` — o aviso vermelho aparece imediatamente, antes
    mesmo de salvar. Este modo não usa nenhuma credencial (os campos de
    Tenant/Client/Workspace somem).
 3. Salvar. Como a API do Power BI **não expõe** as URLs de publish-to-web,
-   não há listagem automática — usar, na própria aba **"Características"**,
-   a seção **"Configurações do dashboard"**:
+   a listagem automática (dropdown) não funciona — a seção "Configurações do
+   dashboard", na própria aba **"Configurações"**, cai automaticamente no
+   formulário manual:
    - **Nome**: nome livre para o card.
-   - **Categoria**: opcional, define o agrupamento no catálogo de widgets.
+   - **Módulo**: opcional, define o agrupamento no catálogo de widgets.
    - **URL de embed**: a URL pública copiada do Power BI.
    - **Visibilidade**: opcional — ver seção 8 abaixo para restringir quem
      pode ver este card especificamente.
@@ -232,8 +248,8 @@ plugin.
 2. Entrar no modo de edição do dashboard (ícone de lápis/engrenagem, conforme
    a versão).
 3. Abrir o catálogo de widgets e localizar os cards do plugin — aparecem
-   agrupados pela **Categoria** definida na importação (ou em "Analytic
-   Design", se a categoria ficou em branco).
+   agrupados pelo **Módulo** definido na importação (ou em "Analytic
+   Design", se ficou em "Nenhum").
 4. Arrastar o card para a grade, posicionar/redimensionar como qualquer outro
    widget do GLPI.
 5. Sair do modo de edição — o card deve renderizar o iframe do dashboard
@@ -254,7 +270,7 @@ tenham o direito geral do plugin):
 
 1. Abrir o card já importado — **Administração > Análise de Dados >
    Dashboards expostos** na busca geral, clicar no nome do item — ou
-   configurar já na criação, na aba **"Características" > "Configurações do
+   configurar já na importação, na aba **"Configurações" > "Configurações do
    dashboard"**.
 2. No campo **Visibilidade**, trocar de **"Todos com acesso ao módulo"**
    (padrão) para **"Restrito a..."**.
@@ -290,6 +306,12 @@ Módulos suportados: **Ativos**, **Assistência**, **Gerência**,
 **Ferramentas** e **Administração**. O módulo **Configurar** não é oferecido
 — não é um módulo com uma tela de dashboard.
 
+> Não confundir com o campo **"Módulo"** da seção 4 (era "Categoria"): aquele
+> só agrupa o card no catálogo de widgets — cosmético, não exige nada. Este
+> aqui, **"Substituir dashboard do módulo"**, troca de fato a tela
+> "Dashboard" do módulo escolhido para quem casar com a visibilidade — por
+> isso exige "Restrito a..." com pelo menos um alvo.
+
 > **Ativos** e **Assistência** já têm uma tela "Dashboard" nativa no GLPI —
 > a substituição troca o que aparece nela. **Gerência**, **Ferramentas** e
 > **Administração** não têm essa tela por padrão; o plugin cria uma e só
@@ -300,8 +322,8 @@ Módulos suportados: **Ativos**, **Assistência**, **Gerência**,
 Para configurar:
 
 1. Abrir o card (**Administração > Análise de Dados > Dashboards expostos**,
-   ou a aba **"Características" > "Configurações do dashboard"** ao
-   cadastrar um novo).
+   ou a aba **"Configurações" > "Configurações do dashboard"** ao
+   importar/cadastrar um novo).
 2. Marcar **Visibilidade** como **"Restrito a..."** e adicionar ao menos um
    Perfil/Grupo/Usuário/Entidade (seção 8) — **obrigatório**: só é possível
    substituir o dashboard de um módulo para um público explícito e restrito,
@@ -352,6 +374,15 @@ Decisões relevantes para quem for manter ou estender o plugin:
   vive) e por que a visibilidade precisa ser explícita (só um conjunto
   enumerável de Perfil/Grupo/Usuário/Entidade pode ser espelhado; "todos com
   acesso ao módulo" não é um conjunto enumerável).
+- **Cache de JS/CSS do plugin é por versão, não por conteúdo.** O `?v=` que
+  o GLPI anexa a `public/js/analyticdesign.js`/`public/css/analyticdesign.css`
+  (`Html::script()`/`Html::css()` → `Plugin::getPluginFilesVersion()`) é
+  derivado só de `PLUGIN_ANALYTICDESIGN_VERSION` — editar esses arquivos
+  sem bump de versão faz o navegador de quem já visitou a página continuar
+  servindo a cópia antiga do cache, indefinidamente, mesmo com o arquivo já
+  atualizado no servidor. Sempre bump a versão (mesmo um patch) ao mexer em
+  JS/CSS; se um comportamento de UI "não aparece" só para alguns usuários,
+  suspeitar de cache de navegador antes de suspeitar do código.
 - **Direitos do plugin na tela de Perfis:** a matriz "nativa" de direitos de
   um perfil não tem ponto de extensão para plugins, então o plugin usa
   `Plugin::registerClass(ProfileRights::class, ['addtabon' =>
@@ -395,7 +426,11 @@ Decisões relevantes para quem for manter ou estender o plugin:
   através da `Connection` pai. O render do card
   (`DashboardItem::isVisibleForCurrentUser()`) aplica quatro camadas, todas
   obrigatórias: `is_active`, direito de leitura do módulo, escopo de
-  entidade da `Connection` dona e, se privado, `ItemVisibility`.
+  entidade da `Connection` dona e, se privado, `ItemVisibility`. A
+  pré-visualização (aba "Pré-Visualização", `isPreviewableByCurrentUser()`)
+  usa só as três primeiras — ignora `ItemVisibility` de propósito (ver
+  seção 4) —, então nunca vaza um card fora da entidade/direito do módulo,
+  só relaxa a regra fina de "para quem" o card foi restrito.
 - **Visibilidade restrita por card (`is_private`):** além do direito geral
   do módulo, cada `DashboardItem` pode ser restrito a Perfil/Grupo/Usuário/
   Entidade específicos (seção 8) — mesmo modelo de compartilhamento que o
@@ -449,12 +484,15 @@ Decisões relevantes para quem for manter ou estender o plugin:
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
 | Menu/telas do plugin não aparecem, ou "Acesso negado" | Direito não concedido ao perfil (perfis diferentes do Super-Admin não recebem acesso automático) | Ver passo 2 acima (aba "Análise de Dados" dentro do perfil); sair e entrar de novo depois de salvar |
-| "Testar conexão" falha e os campos da aba "Características" somem | Comportamento esperado (não é erro) — a falha esconde os campos e mostra só a mensagem | Clicar em "Editar configuração" para reabrir os campos e corrigir; confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
+| "Testar conexão" falha e os campos de credenciais somem | Comportamento esperado (não é erro) — a falha esconde os campos e mostra só a mensagem | Clicar em "Editar configuração" para reabrir os campos e corrigir; confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
+| Botão "Testar conexão" (Grafana) não aparece na aba "Fonte de dados" | Comportamento esperado — só aparece depois que algo é digitado no campo de API Token | Digitar/colar o token no campo antes de procurar o botão |
+| Um ajuste de JS/CSS do plugin não parece ter efeito para alguns usuários | Cache do navegador — o `?v=` do arquivo é baseado na versão do plugin, não no conteúdo (ver seção 10) | Pedir para a pessoa recarregar a página com cache limpo (Ctrl+F5); confirmar que o plugin está na versão esperada |
 | Card aparece vazio/quebrado no dashboard | Política de CSP da instância GLPI, ou `X-Frame-Options`/CSP do Grafana/Power BI bloqueando ser enquadrado por outra origem | Verificar `allow_embedding` no Grafana; checar CSP da instância GLPI (fora do controle do plugin) |
 | Card do Grafana pede login em vez de mostrar o dashboard | Comportamento esperado — o service account token só autentica as chamadas de API do backend, não o `<iframe>` do navegador (ver seção 4) | Habilitar `auth.anonymous` no Grafana, converter o dashboard para "Shared/Public dashboard", ou usar um Grafana com SSO/sessão já compartilhada |
+| Dropdown "Dashboard" na aba "Configurações" aparece vazio ou some (cai no formulário manual) | A fonte não respondeu à listagem, ou todos os dashboards já foram importados | Testar a conexão na aba "Fonte de dados"/"Configurações"; se já importou tudo, é o comportamento esperado |
 | Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |
 | Card configurado como "Restrito a..." não aparece para ninguém | Nenhum alvo (Perfil/Grupo/Usuário/Entidade) foi adicionado — comportamento esperado, nega por padrão | Editar o card (seção 8) e adicionar ao menos um alvo de visibilidade |
 | "Publish to web" com aviso vermelho | Comportamento esperado, não é erro | Não usar esse modo para dados confidenciais |
 | Campo "Substituir dashboard do módulo" volta para "Não substituir" ao salvar | Visibilidade não estava em "Restrito a..." ou não tinha nenhum alvo adicionado (seção 9) | Marcar "Restrito a..." e adicionar ao menos um alvo antes de escolher o módulo |
 | "Dashboard" de um módulo não mudou depois de configurar a substituição | A sobreposição é aplicada uma vez por sessão (seção 9) | Sair e entrar de novo |
-| Botão "Ver" (pré-visualizar) na aba "Dashboards" não mostra nada / dá acesso negado | O card está inativo, ou o usuário logado não passa em `isVisibleForCurrentUser()` (mesma checagem do render real) | Confirmar **Ativo** = `Sim` e, se restrito, que o usuário atual casa com algum alvo de visibilidade |
+| Botão "Ver" (pré-visualizar) na aba "Pré-Visualização" não mostra nada / dá acesso negado | O card está inativo, ou o usuário logado não tem o direito/escopo de entidade do módulo (a visibilidade fina é ignorada de propósito nessa aba — ver seção 4) | Confirmar **Ativo** = `Sim` e que o usuário atual tem o direito do plugin na entidade da Connection |

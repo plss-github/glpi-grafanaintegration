@@ -4,9 +4,15 @@
  * Analytic Design
  * -----------------------------------------------------------------------------
  * Pré-visualização de um dashboard exposto (ver "Pré-visualizar" na aba
- * "Dashboards" da Connection — DashboardItem::showImportedSection()). Página
- * mínima, sem o menu/cabeçalho padrão do GLPI: só o embed em si, do jeito
- * que apareceria dentro de um card do dashboard nativo.
+ * "Pré-Visualização" da Connection — DashboardItem::showImportedSection()).
+ * Página mínima, sem o menu/cabeçalho padrão do GLPI: só o embed em si, do
+ * jeito que apareceria dentro de um card do dashboard nativo.
+ *
+ * Usa isPreviewableByCurrentUser() (não isVisibleForCurrentUser()): a
+ * pré-visualização ignora deliberadamente a regra de visibilidade
+ * (Perfil/Grupo/Usuário/Entidade) configurada na aba "Configurações" — quem
+ * chega até aqui já tem direito de UPDATE na Connection dona, então não faz
+ * sentido bloquear a própria pessoa que configurou o card de vê-lo.
  */
 
 include('../../../inc/includes.php');
@@ -17,7 +23,7 @@ use GlpiPlugin\Analyticdesign\Source\SourceFactory;
 $id = (int)($_GET['id'] ?? 0);
 
 $item = new DashboardItem();
-if ($id <= 0 || !$item->getFromDB($id) || !$item->isVisibleForCurrentUser()) {
+if ($id <= 0 || !$item->getFromDB($id) || !$item->isPreviewableByCurrentUser()) {
     Html::displayRightError();
 }
 

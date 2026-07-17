@@ -108,14 +108,14 @@ msgid ""
 msgstr ""
 
 #: src/ConnectionCharacteristics.php
-msgid "Características"
+msgid "Configurações"
 msgstr ""
 
-#: src/ConnectionCharacteristics.php
+#: src/ConnectionCharacteristics.php src/Connection.php
 msgid "Testar conexão"
 msgstr ""
 
-#: src/ConnectionCharacteristics.php
+#: src/ConnectionCharacteristics.php src/Connection.php
 msgid "Editar configuração"
 msgstr ""
 
@@ -125,12 +125,16 @@ msgid_plural "Dashboards expostos"
 msgstr[0] ""
 msgstr[1] ""
 
+#: src/DashboardItem.php
+msgid "Pré-Visualização"
+msgstr ""
+
 #: src/DashboardItem.php src/Connection.php
 msgid "ID externo"
 msgstr ""
 
-#: src/DashboardItem.php src/Connection.php
-msgid "Categoria"
+#: src/DashboardItem.php
+msgid "Módulo"
 msgstr ""
 
 #: src/DashboardItem.php
@@ -218,7 +222,11 @@ msgid "Ver"
 msgstr ""
 
 #: src/DashboardItem.php
-msgid "Dashboards disponíveis na fonte"
+msgid "Configurações do dashboard"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Escolha um dashboard disponível na fonte para importar e configurar módulo/visibilidade."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -228,11 +236,18 @@ msgid ""
 msgstr ""
 
 #: src/DashboardItem.php
-msgid "Importar selecionados"
+msgid "Dashboard"
 msgstr ""
 
 #: src/DashboardItem.php
-msgid "Configurações do dashboard"
+msgid "Importar"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid ""
+"Cadastre aqui um dashboard manualmente — necessário quando a fonte não "
+"permite listar automaticamente (ex.: Power BI em modo \"publish to "
+"web\")."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -240,10 +255,11 @@ msgid "Adicionar"
 msgstr ""
 
 #: src/DashboardItem.php
-msgid ""
-"Cadastre aqui um dashboard manualmente — necessário quando a fonte não "
-"permite listar automaticamente (ex.: Power BI em modo \"publish to "
-"web\"), ou para configurar visibilidade/substituição de módulo."
+msgid "Nenhum"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Agrupa este card no catálogo de widgets do dashboard nativo do GLPI."
 msgstr ""
 
 #: src/DashboardItem.php

@@ -80,8 +80,14 @@ class Dashboard
             }
 
             $id       = (int)$item->fields['id'];
+            // `category` guarda a chave do módulo ('assets', 'helpdesk'...)
+            // desde que o campo virou um dropdown fixo (era texto livre) —
+            // ver DashboardItem::showModuleField(). Traduz pro rótulo
+            // legível; mantém o valor bruto como fallback para itens
+            // antigos, cadastrados antes dessa mudança, que ainda tenham uma
+            // categoria em texto livre salva.
             $category = $item->fields['category'] !== ''
-                ? $item->fields['category']
+                ? (ModuleDashboard::MODULES[$item->fields['category']] ?? $item->fields['category'])
                 : __('Analytic Design', 'analyticdesign');
 
             $cards["analyticdesign_item_{$id}"] = [

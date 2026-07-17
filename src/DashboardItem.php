@@ -100,6 +100,33 @@ class DashboardItem extends CommonDBTM
      */
     public function isVisibleForCurrentUser(): bool
     {
+        if (!$this->passesActiveRightAndEntityChecks()) {
+            return false;
+        }
+
+        if (!(bool)((int)($this->fields['is_private'] ?? 0))) {
+            return true;
+        }
+        return ItemVisibility::isVisibleForCurrentUser((int)$this->fields['id']);
+    }
+
+    /**
+     * Mesmas camadas 1-3 de isVisibleForCurrentUser() (is_active, direito do
+     * módulo, escopo de entidade), mas SEM a camada 4 (ItemVisibility) — usado
+     * só pelo botão "Pré-visualizar" da aba "Pré-Visualização"
+     * (front/previewdashboarditem.php): o pedido explícito foi que a
+     * pré-visualização ignore a regra de visibilidade configurada em
+     * "Configurações", já que é uma ferramenta de administração (quem chega
+     * até essa aba já tem direito de UPDATE na Connection dona), não uma
+     * simulação de "o que o usuário final veria".
+     */
+    public function isPreviewableByCurrentUser(): bool
+    {
+        return $this->passesActiveRightAndEntityChecks();
+    }
+
+    private function passesActiveRightAndEntityChecks(): bool
+    {
         if ((int)($this->fields['is_active'] ?? 0) !== 1) {
             return false;
         }
@@ -111,14 +138,7 @@ class DashboardItem extends CommonDBTM
         if ($connection === null) {
             return false;
         }
-        if (!Session::haveAccessToEntity((int)$connection->fields['entities_id'], (bool)$connection->fields['is_recursive'])) {
-            return false;
-        }
-
-        if (!(bool)((int)($this->fields['is_private'] ?? 0))) {
-            return true;
-        }
-        return ItemVisibility::isVisibleForCurrentUser((int)$this->fields['id']);
+        return Session::haveAccessToEntity((int)$connection->fields['entities_id'], (bool)$connection->fields['is_recursive']);
     }
 
     /** @return DashboardItem[] todos os itens ativos, para o hook de cards. */
@@ -182,8 +202,8 @@ class DashboardItem extends CommonDBTM
             'id'       => '12',
             'table'    => self::getTable(),
             'field'    => 'category',
-            'name'     => __('Categoria', 'analyticdesign'),
-            'datatype' => 'string',
+            'name'     => __('Módulo', 'analyticdesign'),
+            'datatype' => 'specific',
         ];
         $tab[] = [
             'id'       => '13',
@@ -212,10 +232,23 @@ class DashboardItem extends CommonDBTM
             'table'    => self::getTable(),
             'field'    => 'replaces_module',
             'name'     => __('Substitui dashboard do módulo', 'analyticdesign'),
-            'datatype' => 'string',
+            'datatype' => 'specific',
         ];
 
         return $tab;
+    }
+
+    /** Traduz a chave de módulo ('assets', 'helpdesk'...) salva em `category`/`replaces_module` para o rótulo legível. */
+    public static function getSpecificValueToDisplay($field, $values, array $options = [])
+    {
+        if (!is_array($values)) {
+            $values = [$field => $values];
+        }
+        if ($field === 'category' || $field === 'replaces_module') {
+            $value = $values[$field];
+            return $value !== '' ? (ModuleDashboard::MODULES[$value] ?? $value) : '';
+        }
+        return parent::getSpecificValueToDisplay($field, $values, $options);
     }
 
     /**
@@ -232,7 +265,10 @@ class DashboardItem extends CommonDBTM
     {
         if ($item instanceof Connection && $item->fields['id'] > 0) {
             $count = count(self::getForConnection((int)$item->fields['id']));
-            return self::createTabEntry(self::getTypeName(2), $count);
+            // Rótulo próprio da aba (não getTypeName()): essa aba virou um
+            // pré-visualizador — o nome geral do tipo ("Dashboard(s)
+            // exposto(s)"), usado na busca/menu, continua o mesmo.
+            return self::createTabEntry(__('Pré-Visualização', 'analyticdesign'), $count);
         }
         return '';
     }
@@ -246,16 +282,13 @@ class DashboardItem extends CommonDBTM
     }
 
     /**
-     * Renderiza a aba "Dashboards" da Connection — um PRÉ-VISUALIZADOR: só
-     * lista os dashboards já importados (com pré-visualização e edição
-     * inline de categoria/ativo) e os disponíveis na fonte, prontos para
-     * importar. A configuração de fato (nome/categoria/URL/visibilidade/
-     * substituição de módulo) fica na aba "Características" — ver
-     * ConnectionCharacteristics::displayTabContentForItem(), que reaproveita
-     * DashboardItem::showManualAddSection() de lá.
-     *
-     * A listagem ao vivo (testConnection/listDashboards) é best-effort: se a
-     * fonte não responder, mostramos apenas o que já foi importado.
+     * Renderiza a aba "Pré-Visualização" da Connection — EXCLUSIVAMENTE um
+     * pré-visualizador: lista os dashboards já importados, com preview e
+     * edição inline de módulo/ativo. Nenhuma configuração acontece aqui
+     * (nome/módulo/visibilidade/substituição/seleção do que importar ficam
+     * na aba "Configurações" — ver
+     * ConnectionCharacteristics::displayTabContentForItem() e
+     * DashboardItem::showDashboardConfigurationSection()).
      *
      * Renderizado em PHP/HTML puro (mesma decisão de Connection::showForm()) —
      * sem depender de templates Twig cuja integração exata com o GLPI 11 não
@@ -265,11 +298,7 @@ class DashboardItem extends CommonDBTM
     {
         $connectionsId = (int)$connection->fields['id'];
         $imported = self::getForConnection($connectionsId);
-        [$available, $listError] = self::resolveAvailableDashboards($connection, $imported);
-        $ajaxRoot = self::ajaxRoot();
-
-        self::showImportedSection($connectionsId, $imported, $ajaxRoot);
-        self::showAvailableSection($connectionsId, $available, $listError, $ajaxRoot);
+        self::showImportedSection($connectionsId, $imported, self::ajaxRoot());
     }
 
     public static function ajaxRoot(): string
@@ -325,7 +354,7 @@ class DashboardItem extends CommonDBTM
         echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
         echo "<th>" . __('Nome') . "</th>";
         echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Categoria', 'analyticdesign') . "</th>";
+        echo "<th>" . __('Módulo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Ativo') . "</th>";
         echo "<th>" . __('Pré-visualizar', 'analyticdesign') . "</th>";
         echo "</tr>";
@@ -334,7 +363,11 @@ class DashboardItem extends CommonDBTM
             echo "<tr class='tab_bg_1'>";
             echo "<td>" . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "</td>";
             echo "<td>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
-            echo "<td>" . Html::input("items[{$id}][category]", ['value' => $item->fields['category']]) . "</td>";
+            echo "<td>" . Dropdown::showFromArray("items[{$id}][category]", self::moduleOptions(), [
+                'value'    => $item->fields['category'] !== '' ? $item->fields['category'] : 0,
+                'display_emptychoice' => false,
+                'display'  => false,
+            ]) . "</td>";
             echo "<td>" . self::renderCheckbox("items[{$id}][is_active]", (int)$item->fields['is_active'] === 1) . "</td>";
             echo "<td><a class='btn btn-sm btn-outline-secondary' target='_blank' rel='noopener' href='"
                 . htmlspecialchars($previewRoot . '?id=' . $id, ENT_QUOTES) . "'>"
@@ -349,75 +382,77 @@ class DashboardItem extends CommonDBTM
         echo "</div>";
     }
 
-    /** @param array<int, array{external_id:string, name:string, embed_url:?string}> $available */
-    private static function showAvailableSection(int $connectionsId, array $available, ?string $listError, string $ajaxRoot): void
+    /**
+     * "Configurações do dashboard" — chamado a partir da aba "Configurações"
+     * da Connection (ver ConnectionCharacteristics::displayTabContentForItem()),
+     * não mais da aba "Pré-Visualização" (ver DashboardItem::showForConnection()).
+     *
+     * Duas variantes, conforme a fonte suporta listagem ao vivo ou não:
+     *  - Suporta (Grafana, Power BI modo secure): dropdown com os dashboards
+     *    disponíveis na fonte — escolhido um, nome/URL de embed são
+     *    resolvidos no servidor a partir da própria listagem (nunca
+     *    confiando em nome/URL vindos do POST do navegador).
+     *  - Não suporta (Power BI modo publish_to_web — a API não expõe essas
+     *    URLs): formulário manual (nome + URL de embed colada à mão), único
+     *    jeito possível nesse caso.
+     * Em ambas, módulo/visibilidade/substituição de módulo são configurados
+     * junto, na mesma submissão.
+     */
+    public static function showDashboardConfigurationSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
-        echo "<div class='analyticdesign-available mt-4'>";
-        echo "<h3>" . __('Dashboards disponíveis na fonte', 'analyticdesign') . "</h3>";
+        $imported = self::getForConnection($connectionsId);
+        [$available, $listError] = self::resolveAvailableDashboards($connection, $imported);
 
-        if ($listError !== null) {
-            echo "<p class='alert alert-important alert-warning'>" . htmlspecialchars($listError, ENT_QUOTES) . "</p>";
-            echo "</div>";
-            return;
-        }
-        if (empty($available)) {
-            echo "<p class='text-muted'>" . __('Nada novo para importar — todos os dashboards já foram importados, ou a fonte não retornou nenhum.', 'analyticdesign') . "</p>";
-            echo "</div>";
-            return;
+        echo "<div class='analyticdesign-manual-add mt-4'>";
+        echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
+
+        if ($listError === null) {
+            echo "<p class='text-muted'>" . __('Escolha um dashboard disponível na fonte para importar e configurar módulo/visibilidade.', 'analyticdesign') . "</p>";
+            self::showDropdownImportForm($connectionsId, $available, $ajaxRoot);
+        } else {
+            echo "<p class='text-muted'>" . __('Cadastre aqui um dashboard manualmente — necessário quando a fonte não permite listar automaticamente (ex.: Power BI em modo "publish to web").', 'analyticdesign') . "</p>";
+            self::showManualAddForm($connection, $connectionsId, $ajaxRoot);
         }
 
-        echo "<form name='analyticdesign_import_items' method='post' action='"
-            . htmlspecialchars($ajaxRoot . '/importdashboards.php', ENT_QUOTES) . "'>";
-        echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
-        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
-        echo "<th>" . __('Importar') . "</th>";
-        echo "<th>" . __('Nome') . "</th>";
-        echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Categoria', 'analyticdesign') . "</th>";
-        echo "</tr>";
-        foreach ($available as $i => $dash) {
-            $extId = htmlspecialchars($dash['external_id'], ENT_QUOTES);
-            $name  = htmlspecialchars($dash['name'], ENT_QUOTES);
-            $embed = htmlspecialchars($dash['embed_url'] ?? '', ENT_QUOTES);
-            echo "<tr class='tab_bg_1'>";
-            echo "<td><input type='checkbox' name='import[{$i}][selected]' value='1'></td>";
-            echo "<td>{$name}"
-                . "<input type='hidden' name='import[{$i}][name]' value='{$name}'>"
-                . "<input type='hidden' name='import[{$i}][external_id]' value='{$extId}'>"
-                . "<input type='hidden' name='import[{$i}][embed_url]' value='{$embed}'>"
-                . "</td>";
-            echo "<td>{$extId}</td>";
-            echo "<td>" . Html::input("import[{$i}][category]", ['value' => '']) . "</td>";
-            echo "</tr>";
-        }
-        echo "</table>";
-        echo "<div class='mt-2'>";
-        echo "<button type='submit' name='import' class='btn btn-primary'>"
-            . __('Importar selecionados', 'analyticdesign') . "</button>";
-        echo "</div>";
-        Html::closeForm();
         echo "</div>";
     }
 
-    /**
-     * "Configurações do dashboard" — cadastro manual de um dashboard exposto
-     * (nome/categoria/URL de embed/visibilidade/substituição de módulo).
-     * Chamado a partir da aba "Características" da Connection (ver
-     * ConnectionCharacteristics::displayTabContentForItem()), não mais da
-     * aba "Dashboards" (que virou um pré-visualizador — ver
-     * DashboardItem::showForConnection()).
-     *
-     * É a única forma de cadastrar um dashboard no modo publish_to_web (a
-     * API do Power BI não expõe essas URLs — ver
-     * PowerBiSource::listDashboards()); serve também para configurar
-     * visibilidade/substituição de módulo em qualquer outro tipo de fonte.
-     */
-    public static function showManualAddSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
+    /** @param array<int, array{external_id:string, name:string, embed_url:?string}> $available */
+    private static function showDropdownImportForm(int $connectionsId, array $available, string $ajaxRoot): void
     {
-        echo "<div class='analyticdesign-manual-add mt-4'>";
-        echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
-        echo "<p class='text-muted'>" . __('Cadastre aqui um dashboard manualmente — necessário quando a fonte não permite listar automaticamente (ex.: Power BI em modo "publish to web"), ou para configurar visibilidade/substituição de módulo.', 'analyticdesign') . "</p>";
+        if (empty($available)) {
+            echo "<p class='text-muted'>" . __('Nada novo para importar — todos os dashboards já foram importados, ou a fonte não retornou nenhum.', 'analyticdesign') . "</p>";
+            return;
+        }
 
+        echo "<form name='analyticdesign_import_selected' method='post' action='"
+            . htmlspecialchars($ajaxRoot . '/importselecteddashboard.php', ENT_QUOTES) . "'>";
+        echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
+
+        self::openFieldsRow();
+        self::openField('external_id', __('Dashboard', 'analyticdesign'), 'analyticdesign_select_dashboard', true);
+        $options = [];
+        foreach ($available as $dash) {
+            $options[$dash['external_id']] = $dash['name'];
+        }
+        Dropdown::showFromArray('external_id', $options, [
+            'display_emptychoice' => true,
+            'required'            => true,
+        ]);
+        self::closeField();
+        self::closeFieldsRow();
+
+        self::showModuleField('');
+        self::showVisibilityField(false, self::emptyVisibilityRights());
+
+        echo "<div class='mt-2'>";
+        echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Importar', 'analyticdesign') . "</button>";
+        echo "</div>";
+        Html::closeForm();
+    }
+
+    private static function showManualAddForm(Connection $connection, int $connectionsId, string $ajaxRoot): void
+    {
         $isPublishToWeb = $connection->fields['type'] === PowerBiSource::getType()
             && ($connection->fields['embed_mode'] ?? '') === DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB;
         if ($isPublishToWeb) {
@@ -436,12 +471,9 @@ class DashboardItem extends CommonDBTM
         echo Html::input('name', ['id' => 'analyticdesign_manual_name', 'value' => '']);
         echo "<div class='form-text text-muted'>" . __('Ex.: Indicadores de chamados', 'analyticdesign') . "</div>";
         self::closeField();
-
-        self::openField('category', __('Categoria', 'analyticdesign'), 'analyticdesign_manual_category');
-        echo Html::input('category', ['id' => 'analyticdesign_manual_category', 'value' => '']);
-        echo "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>";
-        self::closeField();
         self::closeFieldsRow();
+
+        self::showModuleField('');
 
         self::openFieldsRow();
         self::openField('embed_url', __('URL de embed', 'analyticdesign'), 'analyticdesign_manual_embed_url', true);
@@ -456,7 +488,35 @@ class DashboardItem extends CommonDBTM
         echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Adicionar', 'analyticdesign') . "</button>";
         echo "</div>";
         Html::closeForm();
-        echo "</div>";
+    }
+
+    /** @return array<int|string, string> opções do dropdown de módulo: "Nenhum" + módulos (exceto Configurar). */
+    private static function moduleOptions(): array
+    {
+        return [0 => __('Nenhum', 'analyticdesign')] + ModuleDashboard::MODULES;
+    }
+
+    /**
+     * Campo "Módulo" (era "Categoria" — texto livre; agora uma lista fixa
+     * dos módulos do GLPI, exceto Configurar). Continua sendo só o
+     * agrupamento do card no catálogo de widgets do dashboard nativo
+     * (`Dashboard::getCards()` usa o valor salvo aqui como `group`) — não
+     * tem relação com "Substituir dashboard do módulo" (ModuleDashboard),
+     * que é uma funcionalidade separada e mais restrita (exige
+     * visibilidade restrita configurada) — ver showVisibilityField().
+     */
+    private static function showModuleField(string $currentValue): void
+    {
+        self::openFieldsRow();
+        self::openField('category', __('Módulo', 'analyticdesign'), 'analyticdesign_module_field', true);
+        Dropdown::showFromArray('category', self::moduleOptions(), [
+            'value' => $currentValue !== '' ? $currentValue : 0,
+        ]);
+        echo "<div class='form-text text-muted'>"
+            . __('Agrupa este card no catálogo de widgets do dashboard nativo do GLPI.', 'analyticdesign')
+            . "</div>";
+        self::closeField();
+        self::closeFieldsRow();
     }
 
     /** @return array<class-string, int[]> todas as regras vazias — item novo, nada configurado ainda. */
@@ -549,9 +609,10 @@ class DashboardItem extends CommonDBTM
             . htmlspecialchars($this->fields['external_id'], ENT_QUOTES) . "</span>";
         self::closeField();
 
-        self::openField('category', __('Categoria', 'analyticdesign'), 'analyticdesign_item_category');
-        echo Html::input('category', ['id' => 'analyticdesign_item_category', 'value' => $this->fields['category']]);
-        echo "<div class='form-text text-muted'>" . __('Ex.: Infraestrutura de TI', 'analyticdesign') . "</div>";
+        self::openField('category', __('Módulo', 'analyticdesign'), 'analyticdesign_item_category');
+        Dropdown::showFromArray('category', self::moduleOptions(), [
+            'value' => $this->fields['category'] !== '' ? $this->fields['category'] : 0,
+        ]);
         self::closeField();
 
         self::closeFieldsRow();
@@ -582,12 +643,10 @@ class DashboardItem extends CommonDBTM
     }
 
     /**
-     * Cria os DashboardItem selecionados pelo admin na tela de importação.
-     *
-     * `is_private`/`visibility` são opcionais: a listagem em lote não tem UI
-     * para configurá-los por linha (ver showAvailableSection()) — nascem
-     * "Todos" e ficam editáveis depois via showForm(). O fluxo de adição
-     * manual (ver addmanualdashboard.php) já informa os dois desde a criação.
+     * Cria os DashboardItem selecionados pelo admin — a partir do dropdown
+     * de importação (ver showDropdownImportForm()/ajax/importselecteddashboard.php)
+     * ou do formulário manual (ver showManualAddForm()/ajax/addmanualdashboard.php),
+     * ambos já informando módulo/visibilidade/substituição desde a criação.
      *
      * `visibility`, quando informado, é o array "achatado" que o
      * AbstractRightsDropdown posta (ex.: `['profiles_id-3', 'groups_id-1']`)
@@ -624,12 +683,27 @@ class DashboardItem extends CommonDBTM
 
     public function prepareInputForAdd($input)
     {
-        return $this->validateModuleReplacement($input);
+        return $this->normalizeCategoryInput($this->validateModuleReplacement($input));
     }
 
     public function prepareInputForUpdate($input)
     {
-        return $this->validateModuleReplacement($input);
+        return $this->normalizeCategoryInput($this->validateModuleReplacement($input));
+    }
+
+    /**
+     * O dropdown "Módulo" (showModuleField()) usa `0` como valor do
+     * placeholder "Nenhum" (mesmo padrão de `replaces_module`/"Não
+     * substituir") — normaliza pra string vazia antes de gravar, mantendo a
+     * coluna `category` limpa (usada como `group` do card no catálogo de
+     * widgets — ver Dashboard::getCards()).
+     */
+    private function normalizeCategoryInput(array $input): array
+    {
+        if (($input['category'] ?? null) === '0') {
+            $input['category'] = '';
+        }
+        return $input;
     }
 
     /**

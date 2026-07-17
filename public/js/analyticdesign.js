@@ -7,7 +7,11 @@
  *  - alerta quando o modo de embed "publish to web" é escolhido;
  *  - botão "Testar conexão" via fetch, sem recarregar a página; quando a
  *    conexão falha, esconde os campos e mostra só o erro (com um botão para
- *    reabrir os campos e corrigir a configuração).
+ *    reabrir os campos e corrigir a configuração);
+ *  - no Grafana, "Testar conexão" (agora na aba "Fonte de dados") só aparece
+ *    depois que algo é digitado no token de API;
+ *  - mostra o seletor de Perfil/Grupo/Usuário/Entidade só quando a
+ *    visibilidade é "Restrito a..." (aba "Configurações").
  *
  * Tudo via *event delegation* em `document` (nada de
  * `document.querySelector(...).addEventListener(...)` direto): o GLPI carrega
@@ -30,6 +34,13 @@ document.addEventListener('change', function (event) {
     var visibilitySelect = event.target.closest('select[name="is_private"]');
     if (visibilitySelect) {
         toggleVisibilityTargets(visibilitySelect);
+    }
+});
+
+document.addEventListener('input', function (event) {
+    var apiTokenInput = event.target.closest('input[name="api_token"]');
+    if (apiTokenInput) {
+        toggleTestButtonVisibility(apiTokenInput);
     }
 });
 
@@ -57,6 +68,19 @@ function toggleEmbedModeFields(embedModeSelect) {
     var warning = container.querySelector('.analyticdesign-publish-warning');
     if (warning) {
         warning.style.display = (selectedEmbedMode === 'publish_to_web') ? '' : 'none';
+    }
+}
+
+/**
+ * Só mostra "Testar conexão" depois que algo é digitado no token de API —
+ * testar uma fonte sem token não faz sentido (ver
+ * Connection::showGrafanaCredentialsSection()).
+ */
+function toggleTestButtonVisibility(apiTokenInput) {
+    var container = apiTokenInput.closest('.analyticdesign-characteristics') || document;
+    var testBtn = container.querySelector('.analyticdesign-test-connection');
+    if (testBtn) {
+        testBtn.style.display = apiTokenInput.value.trim() !== '' ? '' : 'none';
     }
 }
 

@@ -67,4 +67,33 @@ trait HasFormFieldLayout
     {
         echo "</div></div>";
     }
+
+    /**
+     * Campo de senha "revelável" — mesmo padrão que o GLPI usa para a chave
+     * de licença do GLPI Network (`fields.passwordField(..., {is_disclosable:
+     * true})` em fields_macros.html.twig, que por baixo chama o macro
+     * `input()` de basic_inputs_macros.html.twig com `is_disclosable`/
+     * `is_copyable`): segurar o botão do olho mostra o valor em texto puro
+     * (`showDisclosablePasswordField()`/`hideDisclosablePasswordField()`), e
+     * um botão de copiar manda pra área de transferência
+     * (`copyDisclosablePasswordFieldToClipboard()`) — as três já existem em
+     * `public/js/common.js` do core, carregado globalmente; não precisamos
+     * declarar nada em JS próprio para isso funcionar.
+     */
+    private static function showDisclosablePasswordInput(string $name, string $id, string $value = ''): void
+    {
+        echo "<div class='btn-group btn-group-sm d-flex'>";
+        echo "<input type='password' id='" . htmlspecialchars($id, ENT_QUOTES) . "'"
+            . " class='form-control rounded-end-0' name='" . htmlspecialchars($name, ENT_QUOTES) . "'"
+            . " value='" . htmlspecialchars($value, ENT_QUOTES) . "' />";
+        echo "<button type='button' class='btn btn-outline-secondary'"
+            . " onmousedown=\"showDisclosablePasswordField('" . htmlspecialchars($id, ENT_QUOTES) . "')\""
+            . " onmouseup=\"hideDisclosablePasswordField('" . htmlspecialchars($id, ENT_QUOTES) . "')\""
+            . " onmouseout=\"hideDisclosablePasswordField('" . htmlspecialchars($id, ENT_QUOTES) . "')\">"
+            . "<i class='ti ti-eye disclose'></i></button>";
+        echo "<button type='button' class='btn btn-outline-secondary'"
+            . " onclick=\"copyDisclosablePasswordFieldToClipboard('" . htmlspecialchars($id, ENT_QUOTES) . "')\">"
+            . "<i class='ti ti-clipboard-copy disclose'></i></button>";
+        echo "</div>";
+    }
 }

@@ -13,6 +13,7 @@ use CommonDBTM;
 use Dropdown;
 use GLPIKey;
 use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
+use GlpiPlugin\Analyticdesign\Source\GrafanaSource;
 use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
 use GlpiPlugin\Analyticdesign\Source\SourceFactory;
 use GlpiPlugin\Analyticdesign\Traits\HasFormFieldLayout;
@@ -174,6 +175,10 @@ class Connection extends CommonDBTM
         $this->showNameAndToolFields();
         $this->showActiveField();
 
+        if ((int)$this->fields['id'] > 0 && $this->fields['type'] === GrafanaSource::getType()) {
+            $this->showGrafanaCredentialsSection();
+        }
+
         echo "</td></tr>";
         $this->showFormButtons($options);
 
@@ -226,6 +231,77 @@ class Connection extends CommonDBTM
         Dropdown::showYesNo('is_active', $isActive, -1, ['rand' => 2]);
         self::closeField();
         self::closeFieldsRow();
+    }
+
+    /**
+     * URL base + API token do Grafana, direto na aba "Fonte de dados" (não
+     * mais na aba "Configurações") — só depois que a fonte já existe e o
+     * tipo é Grafana. Reaproveita as mesmas classes/JS de
+     * `ConnectionCharacteristics` (`.analyticdesign-characteristics` +
+     * `.analyticdesign-error`/`.analyticdesign-fields-wrapper`) para o
+     * "Testar conexão" e o tratamento de falha funcionarem sem duplicar JS.
+     *
+     * O campo de API token usa o mesmo padrão "revelável" que o GLPI usa
+     * para a chave de licença do GLPI Network (ver
+     * HasFormFieldLayout::showDisclosablePasswordInput()) — pedido
+     * explicitamente para ficar visualmente igual.
+     *
+     * O botão "Testar conexão" nasce escondido: só aparece depois que algo é
+     * digitado no campo de API token (ver toggleTestButtonVisibility() em
+     * public/js/analyticdesign.js) — testar uma fonte sem token não faz
+     * sentido, e um token já salvo nunca é reexibido aqui (mesma convenção
+     * de "deixe em branco para manter o valor salvo").
+     */
+    private function showGrafanaCredentialsSection(): void
+    {
+        $fieldsForType = SourceFactory::getConfigFieldsFor(GrafanaSource::getType());
+
+        echo "<div class='analyticdesign-characteristics'>";
+        echo "<div class='analyticdesign-error alert alert-important alert-danger' style='display:none;'>";
+        echo "<i class='ti ti-plug-x'></i> <span class='analyticdesign-error-message'></span>";
+        echo " <button type='button' class='btn btn-sm btn-outline-danger analyticdesign-reopen-fields'>"
+            . __('Editar configuração', 'analyticdesign') . "</button>";
+        echo "</div>";
+
+        echo "<div class='analyticdesign-fields-wrapper'>";
+
+        self::openFieldsRow();
+        self::openField('base_url', __('URL base', 'analyticdesign'), 'analyticdesign_grafana_base_url', true);
+        echo Html::input('base_url', ['id' => 'analyticdesign_grafana_base_url', 'value' => $this->fields['base_url']]);
+        echo "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>";
+        self::closeField();
+        self::closeFieldsRow();
+
+        foreach ($fieldsForType as $field) {
+            $fieldId = 'analyticdesign_grafana_' . $field['name'];
+            self::openFieldsRow();
+            self::openField($field['name'], htmlspecialchars($field['label'], ENT_QUOTES), $fieldId, true);
+            if (($field['type'] ?? '') === 'password') {
+                self::showDisclosablePasswordInput($field['name'], $fieldId, '');
+            } else {
+                echo Html::input($field['name'], ['id' => $fieldId, 'value' => '']);
+            }
+            if (!empty($field['help'])) {
+                echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
+            }
+            self::closeField();
+            self::closeFieldsRow();
+        }
+        if (!empty($fieldsForType)) {
+            echo "<p class='text-muted fst-italic'>"
+                . __('Deixe os campos de credenciais em branco para manter os valores já salvos.', 'analyticdesign')
+                . "</p>";
+        }
+
+        echo "<div class='mt-2'>";
+        echo "<button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' style='display:none;' data-id='"
+            . (int)$this->fields['id'] . "'>"
+            . "<i class='ti ti-plug'></i> " . __('Testar conexão', 'analyticdesign')
+            . "</button> <span class='analyticdesign-test-result ms-2'></span>";
+        echo "</div>";
+
+        echo "</div>"; // .analyticdesign-fields-wrapper
+        echo "</div>"; // .analyticdesign-characteristics
     }
 
     /**

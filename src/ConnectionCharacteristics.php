@@ -3,17 +3,18 @@
 /**
  * Analytic Design
  * -----------------------------------------------------------------------------
- * Aba "Características" no formulário da Connection: URL base, modo de
- * embed e credenciais específicas do tipo de fonte já escolhido.
+ * Aba "Configurações" no formulário da Connection (rótulo — a classe/tabela
+ * de abas internamente continua "ConnectionCharacteristics" por
+ * continuidade de código/histórico).
  *
- * Separada do formulário principal (Connection::showForm()) a pedido: a
- * criação de uma fonte deve pedir só Nome/Ferramenta/Ativo; as
- * especificações de cada ferramenta só fazem sentido depois que o tipo já
- * está salvo. Como o tipo não muda mais nesta aba, os campos são resolvidos
- * no servidor a partir de `$item->fields['type']` — sem precisar de JS para
- * alternar entre "campos do Grafana" e "campos do Power BI" (só o modo de
- * embed do Power BI, que pode ser trocado aqui mesmo antes de salvar,
- * continua com toggle em JS — ver public/js/analyticdesign.js).
+ * Para Power BI: URL base, modo de embed e credenciais específicas do tipo
+ * já escolhido — igual desde sempre, nada mudou aqui.
+ *
+ * Para Grafana: URL base e API token saíram daqui e foram para a aba "Fonte
+ * de dados" (ver Connection::showGrafanaCredentialsSection()) — esta aba
+ * mostra só a configuração de dashboards (seleção/importação, módulo,
+ * visibilidade, substituição de módulo), delegada a
+ * DashboardItem::showDashboardConfigurationSection().
  *
  * Não é uma entidade de banco (extends CommonGLPI, sem tabela própria) — só
  * pluga no sistema de abas do GLPI sobre `Connection`, via
@@ -39,7 +40,7 @@ class ConnectionCharacteristics extends CommonGLPI
 
     public static function getTypeName($nb = 0)
     {
-        return __('Características', 'analyticdesign');
+        return __('Configurações', 'analyticdesign');
     }
 
     public static function getIcon()
@@ -61,10 +62,24 @@ class ConnectionCharacteristics extends CommonGLPI
             return false;
         }
 
+        echo "<div class='analyticdesign-characteristics'>";
+
+        if ($item->fields['type'] === PowerBiSource::getType()) {
+            self::showPowerBiFieldsBlock($item);
+        }
+
+        DashboardItem::showDashboardConfigurationSection($item, (int)$item->fields['id'], DashboardItem::ajaxRoot());
+
+        echo "</div>"; // .analyticdesign-characteristics
+
+        return true;
+    }
+
+    /** URL base, modo de embed e credenciais do Power BI — inalterado desde sempre. */
+    private static function showPowerBiFieldsBlock(Connection $item): void
+    {
         global $CFG_GLPI;
         $formUrl = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/connection.form.php';
-
-        echo "<div class='analyticdesign-characteristics'>";
 
         // Substitui os campos quando "Testar conexão" falha (ver
         // public/js/analyticdesign.js) — a mensagem real vem do JSON do
@@ -93,15 +108,6 @@ class ConnectionCharacteristics extends CommonGLPI
         echo "</div>";
         Html::closeForm();
         echo "</div>"; // .analyticdesign-fields-wrapper
-
-        // "Configurações do dashboard" (cadastro manual + visibilidade +
-        // substituição de módulo) mora aqui, não na aba "Dashboards" (que é
-        // só um pré-visualizador — ver DashboardItem::showForConnection()).
-        DashboardItem::showManualAddSection($item, (int)$item->fields['id'], DashboardItem::ajaxRoot());
-
-        echo "</div>"; // .analyticdesign-characteristics
-
-        return true;
     }
 
     private static function showBaseUrlField(Connection $item): void

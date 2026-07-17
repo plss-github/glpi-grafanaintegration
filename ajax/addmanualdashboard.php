@@ -3,9 +3,12 @@
 /**
  * Analytic Design
  * -----------------------------------------------------------------------------
- * Adiciona um DashboardItem manualmente (nome + URL de embed + categoria),
+ * Adiciona um DashboardItem manualmente (nome + URL de embed + módulo),
  * usado quando a fonte não permite listar dashboards automaticamente — caso
- * do Power BI em modo publish_to_web (ver DashboardItem::showForConnection()).
+ * do Power BI em modo publish_to_web (ver
+ * DashboardItem::showDashboardConfigurationSection()/showManualAddForm()).
+ * Quando a fonte suporta listagem, o fluxo é o dropdown — ver
+ * ajax/importselecteddashboard.php.
  */
 
 include('../../../inc/includes.php');
@@ -20,8 +23,8 @@ $connectionsId = (int)($_POST['connections_id'] ?? 0);
 // loadAuthorized() garante direito de UPDATE *e* escopo de entidade (ver
 // notas de segurança no README) antes de aceitar a criação.
 // Html::displayRightError() está deprecated no 11.0.8 mas ainda funcional —
-// ver comentário equivalente em ajax/importdashboards.php sobre por que não
-// trocamos pela exceção crua num front/ajax clássico.
+// ver comentário equivalente em ajax/importselecteddashboard.php sobre por
+// que não trocamos pela exceção crua num front/ajax clássico.
 $connection = Connection::loadAuthorized($connectionsId, UPDATE);
 if ($connection === null) {
     Html::displayRightError();
