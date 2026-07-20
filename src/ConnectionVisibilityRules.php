@@ -18,6 +18,7 @@
 namespace GlpiPlugin\Analyticdesign;
 
 use CommonGLPI;
+use Html;
 
 class ConnectionVisibilityRules extends CommonGLPI
 {
@@ -71,7 +72,7 @@ class ConnectionVisibilityRules extends CommonGLPI
             echo "<input type='hidden' name='action' value='add_rule'>";
             echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
             echo "<button type='submit' class='btn btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar regra', 'analyticdesign') . "</button>";
-            echo "</form>";
+            Html::closeForm();
         }
 
         echo "</div>";

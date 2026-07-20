@@ -21,6 +21,15 @@ use GlpiPlugin\Analyticdesign\VisibilityRule;
 // front/connection.form.php (o kernel do GLPI 11 já valida e consome o
 // token antes deste script rodar).
 
+// Este script só processa POST (ver docblock) — um GET aqui só pode vir de
+// um link/aba em cache de antes da aba "Visibilidade" virar 100% inline
+// (versões anteriores tinham uma página própria de exibição neste mesmo
+// arquivo). Redireciona pra lista de fontes em vez de um erro cru, já que
+// não há mais nenhum `id` de Connection conhecido nesse cenário.
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    Html::redirect(Connection::getSearchURL());
+}
+
 function analyticdesign_redirect_to_visibilidade(int $connectionsId): void
 {
     Html::redirect(

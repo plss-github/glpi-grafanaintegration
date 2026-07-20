@@ -42,6 +42,7 @@ use CommonDBTM;
 use Dropdown;
 use Entity;
 use Group;
+use Html;
 use Profile;
 use Session;
 use User;
@@ -430,14 +431,14 @@ class VisibilityRule extends CommonDBTM
                 'width'    => 'auto',
                 'on_change' => 'this.form.submit()',
             ]);
-            echo "</form>";
+            Html::closeForm();
 
             echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='mb-0'"
                 . " onsubmit=\"return confirm('" . htmlspecialchars(__('Remover esta regra? Essa ação não pode ser desfeita.', 'analyticdesign'), ENT_QUOTES) . "');\">";
             echo "<input type='hidden' name='action' value='delete_rule'>";
             echo "<input type='hidden' name='id' value='{$ruleId}'>";
             echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-trash'></i> " . __('Remover regra', 'analyticdesign') . "</button>";
-            echo "</form>";
+            Html::closeForm();
         } else {
             echo "<span>" . __('Combinar critérios com', 'analyticdesign') . ": "
                 . (($rule->fields['match'] ?? 'AND') === 'OR' ? __('OU', 'analyticdesign') : __('E', 'analyticdesign')) . "</span>";
@@ -492,7 +493,7 @@ class VisibilityRule extends CommonDBTM
                     echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
                     echo "<input type='hidden' name='criterion_id' value='{$criterion['id']}'>";
                     echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-x'></i></button>";
-                    echo "</form>";
+                    Html::closeForm();
                     echo "</td>";
                 }
                 echo "</tr>";
@@ -554,7 +555,7 @@ class VisibilityRule extends CommonDBTM
         echo "<input type='text' name='value_text' class='form-control form-control-sm'></div>";
 
         echo "<button type='submit' class='btn btn-sm btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";
-        echo "</form>";
+        Html::closeForm();
     }
 
     /** Tabela das Ações já salvas + linha de "adicionar" (Alvo/Valor dinâmico) — ver docblock da classe. */
@@ -589,7 +590,7 @@ class VisibilityRule extends CommonDBTM
                     echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
                     echo "<input type='hidden' name='action_id' value='{$row['id']}'>";
                     echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-x'></i></button>";
-                    echo "</form>";
+                    Html::closeForm();
                     echo "</td>";
                 }
                 echo "</tr>";
@@ -630,7 +631,7 @@ class VisibilityRule extends CommonDBTM
         echo "</div>";
 
         echo "<button type='submit' class='btn btn-sm btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";
-        echo "</form>";
+        Html::closeForm();
     }
 
     /** Resumo legível dos critérios, para a listagem (ex.: "Dashboard é '[TV] Kali'"). */
