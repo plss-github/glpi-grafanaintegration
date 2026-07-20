@@ -3,8 +3,11 @@
 /**
  * Analytic Design
  * -----------------------------------------------------------------------------
- * Salva em lote a edição inline (categoria/ativo) dos dashboards já importados,
- * feita na aba "Dashboards" da Connection.
+ * Salva em lote a edição inline (módulo/status/substituição de módulo) dos
+ * dashboards já importados, feita na aba "Configurações" da Connection —
+ * ver DashboardItem::showImportedManagementSection(). A validação de
+ * elegibilidade de `replaces_module` (precisa de uma regra de visibilidade
+ * com alvo enumerável) acontece em DashboardItem::validateModuleReplacement().
  */
 
 include('../../../inc/includes.php');
@@ -32,9 +35,10 @@ foreach ($_POST['items'] ?? [] as $id => $row) {
     }
 
     $item->update([
-        'id'        => (int)$id,
-        'category'  => $row['category'] ?? '',
-        'is_active' => !empty($row['is_active']) ? 1 : 0,
+        'id'              => (int)$id,
+        'category'        => $row['category'] ?? '',
+        'is_active'       => !empty($row['is_active']) ? 1 : 0,
+        'replaces_module' => $row['replaces_module'] ?? '',
     ]);
 }
 

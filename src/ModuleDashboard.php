@@ -5,9 +5,10 @@
  * -----------------------------------------------------------------------------
  * Substitui o Dashboard nativo de um módulo do GLPI (Ativos, Assistência,
  * Gerência, Ferramentas) pelo embed de BI de um DashboardItem específico —
- * só para os usuários que baterem com a regra de visibilidade daquele item
- * (ver ItemVisibility). "Configurar" fica de fora (não cabe um dashboard
- * ali); "Administração" também, a pedido.
+ * só para os usuários que baterem com uma regra de visibilidade que aponte
+ * pra aquele item (ver VisibilityRule, aba "Visibilidade"). "Configurar"
+ * fica de fora (não cabe um dashboard ali); "Administração" também, a
+ * pedido.
  *
  * Não existe um hook de "primeira classe" do GLPI pra isso — o mecanismo foi
  * montado a partir de 3 peças confirmadas lendo o código-fonte do GLPI
@@ -40,13 +41,14 @@
  *    direito (`glpi_profilerights` — só Super-Admin tem, testando contra uma
  *    instância viva). Em vez disso, o dashboard auto-provisionado é
  *    compartilhado via `Glpi\Dashboard\Right` (o mecanismo nativo de
- *    "compartilhar dashboard" do GLPI) com EXATAMENTE os mesmos alvos
- *    (Perfil/Grupo/Usuário/Entidade) da regra de ItemVisibility do item —
- *    por isso a substituição de módulo só é permitida quando o item já está
- *    `is_private=1` com pelo menos uma regra configurada (ver
- *    DashboardItem::showModuleReplacementField()) — sem isso não haveria
- *    como conceder acesso nativo a "todo mundo com o direito do plugin", já
- *    que esse conjunto não é enumerável como linhas de compartilhamento.
+ *    "compartilhar dashboard" do GLPI) com EXATAMENTE os alvos enumeráveis
+ *    (Perfil/Grupo/Usuário/Entidade) das regras de VisibilityRule que casam
+ *    com o item — por isso a substituição de módulo só é permitida quando o
+ *    item já tem uma regra assim configurada (ver
+ *    DashboardItem::validateModuleReplacement()) — sem isso não haveria como
+ *    conceder acesso nativo a "todo mundo com o direito do plugin" (ou a
+ *    "Todos" via a Ação especial da regra), já que nenhum dos dois é
+ *    enumerável como linhas de compartilhamento.
  *
  * O dashboard nativo em si nunca aparece em nenhum seletor/catálogo do
  * GLPI: usa um `context` só do plugin (`analyticdesign`), que nenhuma tela
@@ -133,9 +135,10 @@ class ModuleDashboard
         $dashboard->getFromDB($key);
         $dashboard->saveTitle(__('Analytic Design', 'analyticdesign') . ' — ' . $item->fields['name']);
 
-        // Espelha a mesma regra de ItemVisibility como compartilhamento
-        // nativo do dashboard — ver docblock da classe (item 3).
-        $rights = ItemVisibility::getForItem($itemId);
+        // Espelha os alvos enumeráveis das regras de VisibilityRule que casam
+        // com este item como compartilhamento nativo do dashboard — ver
+        // docblock da classe (item 3).
+        $rights = VisibilityRule::getConcreteGrantsForItem($item);
         $nativeRights = [];
         foreach ($rights as $itemtype => $ids) {
             if (!empty($ids)) {
@@ -144,7 +147,7 @@ class ModuleDashboard
         }
         // Right::addForDashboard() só faz INSERT (sem delete antes) — chamar
         // de novo a cada sincronização acumularia linhas duplicadas; limpa
-        // primeiro pra manter só o espelho atual do ItemVisibility.
+        // primeiro pra manter só o espelho atual das regras.
         global $DB;
         $DB->delete(GlpiDashboardRight::getTable(), ['dashboards_dashboards_id' => (int)$dashboard->fields['id']]);
         GlpiDashboardRight::addForDashboard((int)$dashboard->fields['id'], $nativeRights);

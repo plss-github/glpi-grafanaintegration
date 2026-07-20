@@ -3,52 +3,138 @@
 /**
  * Analytic Design
  * -----------------------------------------------------------------------------
- * Cadastro/edição de UMA regra de visibilidade (Critérios | Ação) de uma
- * Connection. Página independente (não carregada via AJAX de aba, ao
- * contrário do resto do plugin): o layout de duas colunas (Critérios/Ação)
- * mais os dropdowns dinâmicos (VisibilityDropdown/select2) tornariam frágil
- * encaixar isso no mecanismo de abas via query string fixa do GLPI — ver
- * docblock de VisibilityRule.
- *
- * Chegada: pelo botão "Adicionar regra" ou pelo link "Editar" na aba
- * "Visibilidade" da Connection (ver ConnectionVisibilityRules).
+ * Processa os POSTs da aba "Visibilidade" (adicionar/remover regra, critério
+ * ou ação) e SEMPRE redireciona de volta para a mesma aba, na Connection dona
+ * — nunca uma página própria (ver docblock de VisibilityRule/
+ * ConnectionVisibilityRules). Cada ação já checa o direito de UPDATE na
+ * Connection antes de mexer em qualquer coisa.
  */
 
 include('../../../inc/includes.php');
 
 use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\Menu;
+use GlpiPlugin\Analyticdesign\ConnectionVisibilityRules;
+use GlpiPlugin\Analyticdesign\DashboardItem;
 use GlpiPlugin\Analyticdesign\VisibilityRule;
-
-$item = new VisibilityRule();
 
 // Sem Session::checkCSRF() explícito — ver comentário equivalente em
 // front/connection.form.php (o kernel do GLPI 11 já valida e consome o
 // token antes deste script rodar).
-if (isset($_POST['add'])) {
-    $item->check(-1, CREATE, $_POST);
-    $item->add($_POST);
-    Html::redirect(Connection::getFormURLWithID((int)$_POST['connections_id']));
-} elseif (isset($_POST['update'])) {
-    $item->check($_POST['id'], UPDATE);
-    $item->update($_POST);
-    Html::back();
-} elseif (isset($_POST['purge'])) {
-    $item->check($_POST['id'], PURGE);
-    $connectionsId = (int)$item->fields['connections_id'];
-    $item->delete($_POST);
-    Html::redirect(Connection::getFormURLWithID($connectionsId));
-} else {
-    $id = (int)($_GET['id'] ?? -1);
-    $connectionsId = (int)($_GET['connections_id'] ?? 0);
-    // UPDATE (não READ) mesmo para abrir em modo leitura: só quem já edita a
-    // Connection acessa esta tela — não existe um modo "só visualizar regra"
-    // separado, mesma decisão de escopo de DashboardItem::showForm().
-    Session::checkRight(Connection::RIGHTNAME, UPDATE);
 
-    Html::header(VisibilityRule::getTypeName(2), $_SERVER['PHP_SELF'], 'admin', Menu::class, 'connection');
+function analyticdesign_redirect_to_visibilidade(int $connectionsId): void
+{
+    Html::redirect(
+        Connection::getFormURLWithID($connectionsId)
+        . '&forcetab=' . rawurlencode(ConnectionVisibilityRules::class . '$1')
+    );
+}
 
-    $item->display(['id' => $id, 'connections_id' => $connectionsId]);
+/** Carrega a regra e garante direito de UPDATE na Connection dona — ou lança 403/404. */
+function analyticdesign_load_authorized_rule(int $ruleId): VisibilityRule
+{
+    $rule = new VisibilityRule();
+    if ($ruleId <= 0 || !$rule->getFromDB($ruleId)) {
+        throw new \Glpi\Exception\Http\NotFoundHttpException();
+    }
+    if (Connection::loadAuthorized((int)$rule->fields['connections_id'], UPDATE) === null) {
+        throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+    }
+    return $rule;
+}
 
-    Html::footer();
+/** Resolve o valor de UM critério a partir do POST — dropdown de dashboard/módulo quando aplicável, texto livre senão. */
+function analyticdesign_resolve_criterion_value(string $field, string $condition, array $post): string
+{
+    if ($field === 'name' && $condition === 'equals') {
+        $dashboard = new DashboardItem();
+        return $dashboard->getFromDB((int)($post['value_dashboard'] ?? 0)) ? $dashboard->fields['name'] : '';
+    }
+    if ($field === 'category' && $condition === 'equals') {
+        return (string)($post['value_module'] ?? '');
+    }
+    return (string)($post['value_text'] ?? '');
+}
+
+/** Resolve o ID do alvo de UMA ação a partir do POST, conforme o itemtype escolhido. */
+function analyticdesign_resolve_action_items_id(string $itemtype, array $post): int
+{
+    return match ($itemtype) {
+        \Profile::class => (int)($post['value_profile'] ?? 0),
+        \Group::class   => (int)($post['value_group'] ?? 0),
+        \User::class    => (int)($post['value_user'] ?? 0),
+        \Entity::class  => (int)($post['value_entity'] ?? 0),
+        default         => 0,
+    };
+}
+
+$action = $_POST['action'] ?? '';
+
+switch ($action) {
+    case 'add_rule':
+        $connectionsId = (int)($_POST['connections_id'] ?? 0);
+        if (Connection::loadAuthorized($connectionsId, UPDATE) === null) {
+            throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+        }
+        $rule = new VisibilityRule();
+        $rule->add(['connections_id' => $connectionsId, 'match' => 'AND']);
+        VisibilityRule::resyncAffectedItems($connectionsId);
+        analyticdesign_redirect_to_visibilidade($connectionsId);
+        break;
+
+    case 'delete_rule':
+        $rule = analyticdesign_load_authorized_rule((int)($_POST['id'] ?? 0));
+        $connectionsId = (int)$rule->fields['connections_id'];
+        $rule->delete(['id' => $rule->fields['id']]);
+        VisibilityRule::resyncAffectedItems($connectionsId);
+        analyticdesign_redirect_to_visibilidade($connectionsId);
+        break;
+
+    case 'update_match':
+        $rule = analyticdesign_load_authorized_rule((int)($_POST['id'] ?? 0));
+        $connectionsId = (int)$rule->fields['connections_id'];
+        $match = in_array($_POST['match'] ?? '', ['AND', 'OR'], true) ? $_POST['match'] : 'AND';
+        $rule->update(['id' => $rule->fields['id'], 'match' => $match]);
+        VisibilityRule::resyncAffectedItems($connectionsId);
+        analyticdesign_redirect_to_visibilidade($connectionsId);
+        break;
+
+    case 'add_criterion':
+        $rule = analyticdesign_load_authorized_rule((int)($_POST['rule_id'] ?? 0));
+        $connectionsId = (int)$rule->fields['connections_id'];
+        $field = (string)($_POST['field'] ?? '');
+        $condition = (string)($_POST['condition'] ?? 'equals');
+        $value = analyticdesign_resolve_criterion_value($field, $condition, $_POST);
+        VisibilityRule::addCriterion((int)$rule->fields['id'], $field, $condition, $value);
+        VisibilityRule::resyncAffectedItems($connectionsId);
+        analyticdesign_redirect_to_visibilidade($connectionsId);
+        break;
+
+    case 'delete_criterion':
+        $rule = analyticdesign_load_authorized_rule((int)($_POST['rule_id'] ?? 0));
+        $connectionsId = (int)$rule->fields['connections_id'];
+        VisibilityRule::deleteCriterion((int)($_POST['criterion_id'] ?? 0), (int)$rule->fields['id']);
+        VisibilityRule::resyncAffectedItems($connectionsId);
+        analyticdesign_redirect_to_visibilidade($connectionsId);
+        break;
+
+    case 'add_action':
+        $rule = analyticdesign_load_authorized_rule((int)($_POST['rule_id'] ?? 0));
+        $connectionsId = (int)$rule->fields['connections_id'];
+        $itemtype = (string)($_POST['itemtype'] ?? '');
+        $itemsId = analyticdesign_resolve_action_items_id($itemtype, $_POST);
+        VisibilityRule::addAction((int)$rule->fields['id'], $itemtype, $itemsId);
+        VisibilityRule::resyncAffectedItems($connectionsId);
+        analyticdesign_redirect_to_visibilidade($connectionsId);
+        break;
+
+    case 'delete_action':
+        $rule = analyticdesign_load_authorized_rule((int)($_POST['rule_id'] ?? 0));
+        $connectionsId = (int)$rule->fields['connections_id'];
+        VisibilityRule::deleteAction((int)($_POST['action_id'] ?? 0), (int)$rule->fields['id']);
+        VisibilityRule::resyncAffectedItems($connectionsId);
+        analyticdesign_redirect_to_visibilidade($connectionsId);
+        break;
+
+    default:
+        throw new \Glpi\Exception\Http\BadRequestHttpException();
 }

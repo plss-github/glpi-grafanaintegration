@@ -44,27 +44,24 @@ analyticdesign/
 │   ├── connection.php         # listagem (Search::show) de fontes
 │   ├── connection.form.php    # add/edit/delete de fonte (CommonDBTM padrão)
 │   ├── dashboarditem.php      # listagem geral de dashboards expostos
-│   ├── dashboarditem.form.php # edição pontual (visibilidade/substituição de módulo)
+│   ├── dashboarditem.form.php # edição pontual (nome/módulo/URL/status)
 │   ├── previewdashboarditem.php  # pré-visualização isolada de um card (aba "Pré-Visualização")
-│   ├── visibilityrule.form.php   # add/edit/delete de UMA regra de visibilidade (aba "Visibilidade")
+│   ├── visibilityrule.form.php   # processa os POSTs da aba "Visibilidade" (add/remover regra, critério, ação) — sem GET/display próprio, sempre redireciona de volta pra aba
 │   ├── dashboard_management.php  # "Dashboard" de Gerência, quando há substituição ativa
 │   └── dashboard_tools.php       # idem, Ferramentas
 ├── ajax/
 │   ├── testconnection.php        # testa a conexão de uma fonte salva (JSON)
 │   ├── importselecteddashboard.php # cria DashboardItem a partir do dropdown de dashboards disponíveis
 │   ├── addmanualdashboard.php    # cria DashboardItem a partir de URL colada manualmente (fallback sem listagem)
-│   ├── updatedashboarditems.php  # salva edição em lote (módulo/ativo)
-│   ├── deletedashboarditem.php   # remove por completo um dashboard exposto (JSON, fetch())
-│   └── getvisibilitydropdownvalue.php # endpoint do AbstractRightsDropdown (Perfil/Grupo/Usuário/Entidade)
+│   ├── updatedashboarditems.php  # salva edição em lote (módulo/ativo/substituição de módulo)
+│   └── deletedashboarditem.php   # remove por completo um dashboard exposto (JSON, fetch())
 ├── src/
 │   ├── Connection.php        # CommonDBTM: fontes cadastradas + showForm() (Nome/Ferramenta/Status + Comentários + URL/token do Grafana)
 │   ├── ConnectionCharacteristics.php # aba "Configurações" (Power BI: URL/embed_mode/credenciais; ambos: config. do dashboard)
 │   ├── DashboardItem.php     # CommonDBTM: dashboards expostos + aba "Pré-Visualização" (somente-leitura) na Connection
 │   ├── Dashboard.php         # hooks getTypes/getCards + provider + render do widget
-│   ├── ItemVisibility.php    # regras de visibilidade (Perfil/Grupo/Usuário/Entidade) por DashboardItem
-│   ├── VisibilityDropdown.php # UI do seletor de visibilidade (reaproveita AbstractRightsDropdown do GLPI)
-│   ├── VisibilityRule.php    # CommonDBTM: regras de Critérios/Ação por Connection (aba "Visibilidade", ver seção 10 do guia)
-│   ├── ConnectionVisibilityRules.php # aba "Visibilidade": lista as regras + link para cadastrar/editar
+│   ├── VisibilityRule.php    # CommonDBTM: regras de Critérios/Ação por Connection (aba "Visibilidade", ver seção 10 do guia) — `is_private` do DashboardItem é recalculado a partir daqui
+│   ├── ConnectionVisibilityRules.php # aba "Visibilidade": lista as regras, cada uma renderizada inline (Critérios/Ação editáveis na própria aba)
 │   ├── ModuleDashboard.php   # substituição do Dashboard nativo de um módulo (ver seção 9 do guia)
 │   ├── Menu.php              # entrada em Administração
 │   ├── ProfileRights.php     # aba "Análise de Dados" em Administração > Perfis

@@ -12,10 +12,13 @@
  *    de Dados") aparece quando já existe token salvo ou algo é digitado no
  *    campo;
  *  - esconde a seção de URL/API do Grafana quando o Status da fonte é "Não";
- *  - mostra o seletor de Perfil/Grupo/Usuário/Entidade só quando a
- *    visibilidade é "Restrito a..." (aba "Configurações");
  *  - botão "Remover" de um dashboard já importado (aba "Configurações"), com
- *    confirmação, via fetch — some da tabela sem recarregar a página.
+ *    confirmação, via fetch — some da tabela sem recarregar a página;
+ *  - aba "Visibilidade": mostra o widget de Valor certo (dropdown de
+ *    dashboards/módulos, ou texto livre) conforme Campo/Condição
+ *    selecionados na linha de "adicionar critério"; mostra o dropdown de
+ *    Perfil/Grupo/Usuário/Entidade certo (ou nenhum, para "Todos") conforme
+ *    o alvo selecionado na linha de "adicionar ação".
  *
  * Tudo via *event delegation* em `document` (nada de
  * `document.querySelector(...).addEventListener(...)` direto): o GLPI carrega
@@ -35,15 +38,21 @@ document.addEventListener('change', function (event) {
         return;
     }
 
-    var visibilitySelect = event.target.closest('select[name="is_private"]');
-    if (visibilitySelect) {
-        toggleVisibilityTargets(visibilitySelect);
-        return;
-    }
-
     var statusSelect = event.target.closest('select[name="is_active"]');
     if (statusSelect) {
         toggleGrafanaSectionVisibility(statusSelect);
+        return;
+    }
+
+    var criterionSelect = event.target.closest('.analyticdesign-criterion-field, .analyticdesign-criterion-condition');
+    if (criterionSelect) {
+        toggleCriterionValueWidget(criterionSelect);
+        return;
+    }
+
+    var actionItemtypeSelect = event.target.closest('.analyticdesign-action-itemtype');
+    if (actionItemtypeSelect) {
+        toggleActionValueWidget(actionItemtypeSelect);
     }
 });
 
@@ -115,13 +124,62 @@ function toggleGrafanaSectionVisibility(statusSelect) {
     });
 }
 
-/** Mostra o seletor de Perfil/Grupo/Usuário/Entidade só quando "Restrito a..." está selecionado. */
-function toggleVisibilityTargets(visibilitySelect) {
-    var container = visibilitySelect.closest('.field-container') || visibilitySelect.parentElement;
-    var targets = container.querySelector('.analyticdesign-visibility-targets');
-    if (targets) {
-        targets.style.display = (visibilitySelect.value === '1') ? '' : 'none';
+/**
+ * Aba "Visibilidade" — linha de "adicionar critério": mostra o widget de
+ * Valor certo conforme Campo+Condição selecionados (dropdown de dashboards
+ * importados quando Campo=Dashboard e Condição=é; dropdown de módulos
+ * quando Campo=Módulo e Condição=é; texto livre nos demais casos, ex.:
+ * "contém") — ver VisibilityRule::showCriteriaSection().
+ */
+function toggleCriterionValueWidget(selectEl) {
+    var form = selectEl.closest('.analyticdesign-add-criterion');
+    if (!form) {
+        return;
     }
+
+    var fieldSelect = form.querySelector('.analyticdesign-criterion-field');
+    var conditionSelect = form.querySelector('.analyticdesign-criterion-condition');
+    if (!fieldSelect || !conditionSelect) {
+        return;
+    }
+
+    var showDashboard = fieldSelect.value === 'name' && conditionSelect.value === 'equals';
+    var showModule = fieldSelect.value === 'category' && conditionSelect.value === 'equals';
+
+    var widgets = {
+        dashboard: form.querySelector('.analyticdesign-criterion-value-dashboard'),
+        module: form.querySelector('.analyticdesign-criterion-value-module'),
+        text: form.querySelector('.analyticdesign-criterion-value-text'),
+    };
+    if (widgets.dashboard) { widgets.dashboard.style.display = showDashboard ? '' : 'none'; }
+    if (widgets.module) { widgets.module.style.display = showModule ? '' : 'none'; }
+    if (widgets.text) { widgets.text.style.display = (!showDashboard && !showModule) ? '' : 'none'; }
+}
+
+/**
+ * Aba "Visibilidade" — linha de "adicionar ação": mostra o dropdown de
+ * Perfil/Grupo/Usuário/Entidade que corresponde ao alvo escolhido (nenhum
+ * widget para "Todos os usuários", que não precisa de um ID específico) —
+ * ver VisibilityRule::showActionsSection().
+ */
+function toggleActionValueWidget(selectEl) {
+    var form = selectEl.closest('.analyticdesign-add-action');
+    if (!form) {
+        return;
+    }
+
+    var widgetsByItemtype = {
+        Profile: form.querySelector('.analyticdesign-action-value-profile'),
+        Group: form.querySelector('.analyticdesign-action-value-group'),
+        User: form.querySelector('.analyticdesign-action-value-user'),
+        Entity: form.querySelector('.analyticdesign-action-value-entity'),
+    };
+    Object.keys(widgetsByItemtype).forEach(function (itemtype) {
+        var widget = widgetsByItemtype[itemtype];
+        if (widget) {
+            widget.style.display = (itemtype === selectEl.value) ? '' : 'none';
+        }
+    });
 }
 
 function testConnection(testBtn) {

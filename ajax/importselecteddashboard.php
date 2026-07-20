@@ -7,7 +7,9 @@
  * DashboardItem::showDashboardConfigurationSection()/showDropdownImportForm())
  * e cria o DashboardItem correspondente. Substitui o antigo fluxo de
  * checkboxes em lote (ajax/importdashboards.php, removido) — agora é sempre
- * um dashboard por vez, junto com módulo/visibilidade/substituição.
+ * um dashboard por vez, junto com o módulo. Visibilidade e substituição de
+ * módulo são configuradas depois (aba "Visibilidade" e a tabela de
+ * gerenciamento em Configurações).
  *
  * Nome e URL de embed são resolvidos aqui, a partir da listagem ao vivo da
  * fonte — nunca confiando em valores vindos do POST do navegador (o
@@ -44,16 +46,10 @@ if ($externalId !== '') {
 
     if ($match !== null) {
         DashboardItem::importSelection($connection, [[
-            'external_id'      => $match['external_id'],
-            'name'             => $match['name'],
-            'embed_url'        => $match['embed_url'] ?? '',
-            'category'         => trim((string)($_POST['category'] ?? '')),
-            'is_private'       => !empty($_POST['is_private']),
-            // Array "achatado" (ex.: ['profiles_id-3', 'groups_id-1']) tal
-            // como o AbstractRightsDropdown posta — ver comentário
-            // equivalente em ajax/addmanualdashboard.php.
-            'visibility'       => $_POST['visibility'] ?? [],
-            'replaces_module'  => trim((string)($_POST['replaces_module'] ?? '')),
+            'external_id' => $match['external_id'],
+            'name'        => $match['name'],
+            'embed_url'   => $match['embed_url'] ?? '',
+            'category'    => trim((string)($_POST['category'] ?? '')),
         ]]);
     }
 }

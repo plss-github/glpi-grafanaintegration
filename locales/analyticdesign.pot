@@ -156,20 +156,8 @@ msgstr ""
 msgid "Substitui dashboard do módulo"
 msgstr ""
 
-#: src/DashboardItem.php src/ConnectionVisibilityRules.php
+#: src/ConnectionVisibilityRules.php
 msgid "Visibilidade"
-msgstr ""
-
-#: src/DashboardItem.php
-msgid "Todos com acesso ao módulo"
-msgstr ""
-
-#: src/DashboardItem.php
-msgid "Restrito a..."
-msgstr ""
-
-#: src/DashboardItem.php
-msgid "Além de quem já tem o direito de leitura do módulo, restringe este card a perfis/grupos/usuários/entidades específicos."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -182,22 +170,24 @@ msgstr ""
 
 #: src/DashboardItem.php
 msgid ""
-"Os alvos de visibilidade acima passam a ser exatamente quem vê a tela "
-"\"Dashboard\" desse módulo no lugar da nativa do GLPI — ver documentação."
+"Para substituir o dashboard de um módulo, configure uma regra na aba "
+"\"Visibilidade\" com pelo menos um perfil/grupo/usuário/entidade."
 msgstr ""
 
 #: src/DashboardItem.php
-msgid ""
-"Para substituir o dashboard de um módulo, marque \"Restrito a...\" e "
-"adicione pelo menos um perfil/grupo/usuário/entidade."
+msgid "Configure uma regra na aba \"Visibilidade\" com pelo menos um perfil/grupo/usuário/entidade para habilitar."
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Indisponível"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Configurar visibilidade na aba \"Visibilidade\" da fonte"
 msgstr ""
 
 #: src/DashboardItem.php
 msgid "Ex.: Indicadores de chamados"
-msgstr ""
-
-#: src/DashboardItem.php
-msgid "Ex.: Infraestrutura de TI"
 msgstr ""
 
 #: src/DashboardItem.php
@@ -241,7 +231,7 @@ msgid "Você não tem direito de editar esta fonte de dados."
 msgstr ""
 
 #: src/DashboardItem.php
-msgid "Escolha um dashboard disponível na fonte para importar e configurar módulo/visibilidade."
+msgid "Escolha um dashboard disponível na fonte para importar e configurar o módulo."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -250,7 +240,7 @@ msgid ""
 "fonte não retornou nenhum."
 msgstr ""
 
-#: src/DashboardItem.php
+#: src/DashboardItem.php src/VisibilityRule.php
 msgid "Dashboard"
 msgstr ""
 
@@ -365,19 +355,31 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/VisibilityRule.php
-msgid "Ex.: Suporte N1 vê o dashboard de Chamados"
-msgstr ""
-
-#: src/VisibilityRule.php
 msgid "Combinar critérios com"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "E (todos os critérios)"
+msgid "E (todos)"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "OU (qualquer critério)"
+msgid "OU (qualquer um)"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Remover esta regra? Essa ação não pode ser desfeita."
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Remover regra"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "E"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "OU"
 msgstr ""
 
 #: src/ConnectionVisibilityRules.php src/VisibilityRule.php
@@ -385,19 +387,15 @@ msgid "Critérios"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "Quais dashboards esta regra alcança. Linhas em branco (sem valor) são ignoradas."
-msgstr ""
-
-#: src/ConnectionVisibilityRules.php src/VisibilityRule.php
-msgid "Ação"
+msgid "Campo"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "Quem ganha acesso quando os critérios ao lado forem satisfeitos."
+msgid "Condição"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "Dashboard (nome)"
+msgid "Remover este critério?"
 msgstr ""
 
 #: src/VisibilityRule.php
@@ -413,15 +411,39 @@ msgid "Valor"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "ou"
-msgstr ""
-
-#: src/VisibilityRule.php
-msgid "e"
-msgstr ""
-
-#: src/VisibilityRule.php
 msgid "(nenhum critério — nunca casa)"
+msgstr ""
+
+#: src/ConnectionVisibilityRules.php src/VisibilityRule.php
+msgid "Ação"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Conceder acesso a"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Remover esta ação?"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Perfil"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Grupo"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Usuário"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Entidade"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "Todos os usuários"
 msgstr ""
 
 #: src/VisibilityRule.php
@@ -429,31 +451,22 @@ msgid "(nenhuma ação)"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "Regra sem nome"
+msgid "ou"
+msgstr ""
+
+#: src/VisibilityRule.php
+msgid "e"
 msgstr ""
 
 #: src/ConnectionVisibilityRules.php
 msgid ""
-"Regras adicionais de acesso restrito, combinando Critérios (quais "
-"dashboards) e Ação (quem ganha acesso). Só valem para dashboards com "
-"Visibilidade \"Restrito a...\", como complemento ao ajuste feito "
-"diretamente no card."
+"Regras de acesso restrito: de um lado Critérios (quais dashboards), do "
+"outro Ação (quem ganha acesso). Um dashboard sem nenhuma regra apontando "
+"pra ele fica visível a todos com o direito de leitura do módulo."
 msgstr ""
 
 #: src/ConnectionVisibilityRules.php
 msgid "Nenhuma regra de visibilidade cadastrada ainda."
-msgstr ""
-
-#: src/ConnectionVisibilityRules.php
-msgid "Combinar com"
-msgstr ""
-
-#: src/ConnectionVisibilityRules.php
-msgid "E"
-msgstr ""
-
-#: src/ConnectionVisibilityRules.php
-msgid "OU"
 msgstr ""
 
 #: src/ConnectionVisibilityRules.php

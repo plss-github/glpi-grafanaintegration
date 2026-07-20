@@ -48,10 +48,11 @@ class Connection extends CommonDBTM
     }
 
     /**
-     * Abas "Características" (URL/credenciais específicas do tipo já
-     * escolhido) e "Dashboards" (DashboardItem), exibidas no formulário da
-     * conexão. Só aparecem para uma Connection já salva — CommonGLPI só
-     * chama addStandardTab() para itens não-novos (ver
+     * Abas "Configurações" (URL/credenciais específicas do tipo já escolhido
+     * + importação de dashboards), "Visibilidade" (regras de Critérios/Ação)
+     * e "Pré-Visualização" (dashboards já importados, somente leitura),
+     * exibidas no formulário da conexão. Só aparecem para uma Connection já
+     * salva — CommonGLPI só chama addStandardTab() para itens não-novos (ver
      * CommonGLPI::defineAllTabs()), então nenhuma lógica extra é necessária
      * aqui para escondê-las na tela de criação.
      */
@@ -60,8 +61,8 @@ class Connection extends CommonDBTM
         $tabs = [];
         $this->addDefaultFormTab($tabs);
         $this->addStandardTab(ConnectionCharacteristics::class, $tabs, $options);
-        $this->addStandardTab(DashboardItem::class, $tabs, $options);
         $this->addStandardTab(ConnectionVisibilityRules::class, $tabs, $options);
+        $this->addStandardTab(DashboardItem::class, $tabs, $options);
         $this->addStandardTab('Log', $tabs, $options);
         return $tabs;
     }

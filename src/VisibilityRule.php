@@ -3,37 +3,37 @@
 /**
  * Analytic Design
  * -----------------------------------------------------------------------------
- * Regra de visibilidade baseada em critério/ação, pedida como alternativa ao
- * ajuste manual por card (ItemVisibility): de um lado **Critérios** (que
- * dashboards a regra alcança, combinados por E/OU), do outro **Ação**
- * (quem ganha acesso) — mesmo modelo conceitual das Regras de negócio
- * nativas do GLPI, mas uma implementação própria e simples do plugin (não
- * uma subclasse de `Rule`/`RuleCollection` do core — decisão explícita para
+ * Regra de visibilidade baseada em critério/ação: de um lado **Critérios**
+ * (quais dashboards a regra alcança, combinados por E/OU), do outro **Ação**
+ * (quem ganha acesso) — mesmo modelo conceitual das Regras de negócio nativas
+ * do GLPI, mas uma implementação própria e simples do plugin (não uma
+ * subclasse de `Rule`/`RuleCollection` do core — decisão explícita para
  * manter esta primeira versão pequena e totalmente sob controle do plugin).
  *
  * Escopada por Connection (uma regra vale só para os dashboards daquela
- * fonte) — vira uma 4ª aba no formulário da Connection (ver
- * ConnectionVisibilityRules).
+ * fonte) — vira uma aba no formulário da Connection (ver
+ * ConnectionVisibilityRules), renderizada **inteiramente dentro da própria
+ * aba** (lista de regras + tabela de Critérios/Ações com uma linha de
+ * "adicionar" no rodapé, ao estilo das Regras de negócio do GLPI) — sem
+ * página própria: front/visibilityrule.form.php só processa os POSTs
+ * (adicionar/remover regra, critério ou ação) e redireciona de volta para a
+ * mesma aba via `forcetab`.
  *
- * "Ação" reaproveita o MESMO widget de ItemVisibility (VisibilityDropdown —
- * Perfil/Grupo/Usuário/Entidade, várias seleções combinadas com OU já por
- * natureza do componente) em vez de uma UI nova: uma regra com 3 ações
- * "atribuir visibilidade a X" é exatamente "casar com qualquer uma das 3",
- * que é como ItemVisibility já funciona.
+ * Sem campo "Nome" nem "Status" por regra: uma regra é identificada pelos
+ * próprios Critérios (que já é sempre sobre "qual Dashboard"), e existir já
+ * significa estar ativa — remover a regra é a forma de "desativá-la".
  *
- * "Critérios" é a parte genuinamente nova: até
- * self::CRITERIA_ROWS linhas fixas (Campo/Condição/Valor) por regra — linhas
- * com Valor vazio são ignoradas ao salvar. Optou-se por linhas fixas em vez
- * de adicionar/remover dinâmico via JS para manter a primeira versão simples;
- * se algum dia precisar de mais que `CRITERIA_ROWS` critérios por regra, dá
- * pra salvar e editar de novo (as linhas já preenchidas continuam lá) ou
- * aumentar a constante.
+ * Uma regra sem nenhum Critério nunca casa com nada (nega por padrão).
  *
- * Uma regra só é avaliada quando o card está com Visibilidade "Restrito a..."
- * (`is_private=1`) — ver DashboardItem::isVisibleForCurrentUser(): serve como
- * uma segunda forma (além do ItemVisibility direto no card) de satisfazer
- * essa restrição, nunca para abrir um card que já está "Todos com acesso ao
- * módulo" (`is_private=0`), que já é público por natureza.
+ * **`is_private` de um DashboardItem agora é somente calculado**, nunca mais
+ * digitado em formulário: sempre que uma regra (ou seus Critérios/Ações)
+ * muda, `resyncAffectedItems()` recalcula `is_private` de cada item da
+ * Connection (1 = pelo menos uma regra casa com o item) — ver
+ * DashboardItem::isVisibleForCurrentUser(). Um item sem nenhuma regra
+ * apontando pra ele fica público (visível a quem já tem o direito de leitura
+ * do módulo); uma regra com Ação "Todos os usuários" (`GRANT_ALL`) também
+ * libera geral, mas por dentro da própria regra (útil para "restrinja
+ * Critérios sem restringir quem vê").
  */
 
 namespace GlpiPlugin\Analyticdesign;
@@ -41,21 +41,22 @@ namespace GlpiPlugin\Analyticdesign;
 use CommonDBTM;
 use Dropdown;
 use Entity;
-use GlpiPlugin\Analyticdesign\Traits\HasFormFieldLayout;
 use Group;
-use Html;
 use Profile;
 use Session;
 use User;
 
 class VisibilityRule extends CommonDBTM
 {
-    use HasFormFieldLayout;
-
     public static $rightname = Connection::RIGHTNAME;
 
-    /** Quantas linhas de critério renderizar/aceitar por regra — ver docblock da classe. */
-    public const CRITERIA_ROWS = 5;
+    /**
+     * Itemtypes suportados como alvo "enumerável" de uma Ação (além do alvo
+     * especial GRANT_ALL) — única fonte de verdade (era `ItemVisibility::
+     * TARGET_TYPES`, retirada junto com o resto daquela classe quando a
+     * visibilidade por card foi substituída por regras).
+     */
+    public const TARGET_TYPES = [Profile::class, Group::class, User::class, Entity::class];
 
     /**
      * Chaves válidas de campo/condição — usadas para validar o que vem do
@@ -63,14 +64,29 @@ class VisibilityRule extends CommonDBTM
      * conditionLabels()), não aqui: uma constante de classe não pode chamar
      * __() (não é uma expressão constante em tempo de compilação).
      */
-    private const FIELD_KEYS = ['name', 'category'];
-    private const CONDITION_KEYS = ['equals', 'contains'];
+    public const FIELD_KEYS = ['name', 'category'];
+    public const CONDITION_KEYS = ['equals', 'contains'];
 
-    /** @return array<string, string> campo => rótulo, dos itemtypes que podem ser critério. */
+    /**
+     * "Alvo" especial de Ação — concede acesso a todo mundo que já tem o
+     * direito de leitura do módulo, sem precisar listar Perfil/Grupo/
+     * Usuário/Entidade um por um. Guardado como uma linha comum na tabela de
+     * ações (`itemtype='All'`, `items_id=0`) — nunca colide com um itemtype
+     * de verdade (todos são nomes de classe PHP reais).
+     */
+    public const GRANT_ALL = 'All';
+
+    /** @return array<class-string|self::GRANT_ALL, int[]> alvos possíveis de uma Ação, vazios. */
+    private static function emptyActionRights(): array
+    {
+        return array_fill_keys(array_merge(self::TARGET_TYPES, [self::GRANT_ALL]), []);
+    }
+
+    /** @return array<string, string> campo => rótulo, dos critérios possíveis. */
     public static function fieldLabels(): array
     {
         return [
-            'name'     => __('Dashboard (nome)', 'analyticdesign'),
+            'name'     => __('Dashboard', 'analyticdesign'),
             'category' => __('Módulo', 'analyticdesign'),
         ];
     }
@@ -84,6 +100,18 @@ class VisibilityRule extends CommonDBTM
         ];
     }
 
+    /** @return array<class-string|self::GRANT_ALL, string> alvo de ação => rótulo. */
+    public static function actionTypeLabels(): array
+    {
+        return [
+            Profile::class => __('Perfil', 'analyticdesign'),
+            Group::class   => __('Grupo', 'analyticdesign'),
+            User::class    => __('Usuário', 'analyticdesign'),
+            Entity::class  => __('Entidade', 'analyticdesign'),
+            self::GRANT_ALL => __('Todos os usuários', 'analyticdesign'),
+        ];
+    }
+
     public static function getTypeName($nb = 0)
     {
         return _n('Regra de visibilidade', 'Regras de visibilidade', $nb, 'analyticdesign');
@@ -94,125 +122,22 @@ class VisibilityRule extends CommonDBTM
         return 'ti ti-shield-check';
     }
 
-    /**
-     * Formulário de UMA regra — layout de duas colunas (Critérios | Ação),
-     * servido por front/visibilityrule.form.php (página independente, não
-     * uma aba — ver docblock da classe). `connections_id` chega tanto de um
-     * item novo (querystring `?connections_id=X`, mesclado em
-     * `$this->fields` por `CommonDBTM::can()` — ver
-     * `ConnectionVisibilityRules::displayTabContentForItem()`) quanto de um
-     * item existente (já salvo na própria linha).
-     */
-    public function showForm($ID, array $options = [])
-    {
-        $this->initForm($ID, $options);
-        $this->showFormHeader($options);
-        echo "</td></tr><tr><td colspan='4'>";
-
-        $connectionsId = (int)$this->fields['connections_id'];
-        $ruleId = (int)($this->fields['id'] ?? 0);
-        echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
-
-        self::openFieldsRow();
-        self::openField('name', __('Nome'), 'analyticdesign_rule_name', 'col-12 col-sm-6');
-        echo Html::input('name', ['id' => 'analyticdesign_rule_name', 'value' => $this->fields['name'] ?? '']);
-        echo "<div class='form-text text-muted'>" . __('Ex.: Suporte N1 vê o dashboard de Chamados', 'analyticdesign') . "</div>";
-        self::closeField();
-
-        self::openField('is_active', __('Status'), 'dropdown_is_active1', 'col-12 col-sm-3');
-        Dropdown::showYesNo('is_active', (int)($this->fields['is_active'] ?? 1), -1, ['rand' => 1]);
-        self::closeField();
-
-        self::openField('match', __('Combinar critérios com', 'analyticdesign'), 'dropdown_match2', 'col-12 col-sm-3');
-        Dropdown::showFromArray('match', [
-            'AND' => __('E (todos os critérios)', 'analyticdesign'),
-            'OR'  => __('OU (qualquer critério)', 'analyticdesign'),
-        ], ['value' => $this->fields['match'] ?? 'AND', 'rand' => 2]);
-        self::closeField();
-        self::closeFieldsRow();
-
-        echo "<div class='row mt-4'>";
-        echo "<div class='col-12 col-lg-6'>";
-        echo "<h3>" . __('Critérios', 'analyticdesign') . "</h3>";
-        echo "<p class='text-muted'>" . __('Quais dashboards esta regra alcança. Linhas em branco (sem valor) são ignoradas.', 'analyticdesign') . "</p>";
-        self::showCriteriaRows($ruleId);
-        echo "</div>";
-
-        echo "<div class='col-12 col-lg-6'>";
-        echo "<h3>" . __('Ação', 'analyticdesign') . "</h3>";
-        echo "<p class='text-muted'>" . __('Quem ganha acesso quando os critérios ao lado forem satisfeitos.', 'analyticdesign') . "</p>";
-        self::showActionField($ruleId);
-        echo "</div>";
-        echo "</div>";
-
-        echo "</td></tr>";
-        $this->showFormButtons($options);
-
-        return true;
-    }
-
-    /** @param int $ruleId 0 para um item novo (linhas em branco). */
-    private static function showCriteriaRows(int $ruleId): void
-    {
-        $existing = $ruleId > 0 ? self::getCriteria($ruleId) : [];
-        $fieldOptions = [0 => Dropdown::EMPTY_VALUE] + self::fieldLabels();
-        $conditionLabels = self::conditionLabels();
-
-        for ($i = 0; $i < self::CRITERIA_ROWS; $i++) {
-            $row = $existing[$i] ?? ['field' => '', 'condition' => 'equals', 'value' => ''];
-            echo "<div class='d-flex gap-2 mb-2'>";
-
-            echo "<div style='flex:2'>";
-            Dropdown::showFromArray("criteria[{$i}][field]", $fieldOptions, [
-                'value'               => $row['field'] !== '' ? $row['field'] : 0,
-                'display_emptychoice' => false,
-            ]);
-            echo "</div>";
-
-            echo "<div style='flex:1'>";
-            Dropdown::showFromArray("criteria[{$i}][condition]", $conditionLabels, ['value' => $row['condition']]);
-            echo "</div>";
-
-            echo "<div style='flex:2'>";
-            echo Html::input("criteria[{$i}][value]", [
-                'value'       => $row['value'],
-                'placeholder' => __('Valor', 'analyticdesign'),
-            ]);
-            echo "</div>";
-
-            echo "</div>";
-        }
-    }
-
-    /** @param int $ruleId 0 para um item novo (nada selecionado ainda). */
-    private static function showActionField(int $ruleId): void
-    {
-        $currentRights = $ruleId > 0 ? self::getActions($ruleId) : array_fill_keys(ItemVisibility::TARGET_TYPES, []);
-        $dropdownValues = [];
-        foreach ($currentRights as $itemtype => $ids) {
-            if (!empty($ids)) {
-                $dropdownValues[$itemtype::getForeignKeyField()] = $ids;
-            }
-        }
-        echo VisibilityDropdown::show('visibility', $dropdownValues);
-    }
-
     public static function getTable($classname = null)
     {
         return 'glpi_plugin_analyticdesign_visibilityrules';
     }
 
-    private static function criteriaTable(): string
+    public static function criteriaTable(): string
     {
         return 'glpi_plugin_analyticdesign_visibilityrules_criteria';
     }
 
-    private static function actionsTable(): string
+    public static function actionsTable(): string
     {
         return 'glpi_plugin_analyticdesign_visibilityrules_actions';
     }
 
-    /** @return self[] todas as regras (ativas ou não) de uma Connection. */
+    /** @return self[] todas as regras de uma Connection. */
     public static function getForConnection(int $connectionsId): array
     {
         global $DB;
@@ -220,7 +145,7 @@ class VisibilityRule extends CommonDBTM
         $it = $DB->request([
             'FROM'  => self::getTable(),
             'WHERE' => ['connections_id' => $connectionsId],
-            'ORDER' => ['name'],
+            'ORDER' => ['id'],
         ]);
         foreach ($it as $row) {
             $rule = new self();
@@ -230,24 +155,7 @@ class VisibilityRule extends CommonDBTM
         return $rules;
     }
 
-    /** @return self[] só as ativas — usadas na avaliação de visibilidade. */
-    private static function getActiveForConnection(int $connectionsId): array
-    {
-        global $DB;
-        $rules = [];
-        $it = $DB->request([
-            'FROM'  => self::getTable(),
-            'WHERE' => ['connections_id' => $connectionsId, 'is_active' => 1],
-        ]);
-        foreach ($it as $row) {
-            $rule = new self();
-            $rule->fields = $row;
-            $rules[] = $rule;
-        }
-        return $rules;
-    }
-
-    /** @return array<int, array{field:string, condition:string, value:string}> */
+    /** @return array<int, array{id:int, field:string, condition:string, value:string}> */
     public static function getCriteria(int $ruleId): array
     {
         global $DB;
@@ -258,66 +166,93 @@ class VisibilityRule extends CommonDBTM
             'ORDER' => ['id'],
         ]);
         foreach ($it as $row) {
-            $rows[] = ['field' => $row['field'], 'condition' => $row['condition'], 'value' => $row['value']];
+            $rows[] = [
+                'id'        => (int)$row['id'],
+                'field'     => $row['field'],
+                'condition' => $row['condition'],
+                'value'     => $row['value'],
+            ];
         }
         return $rows;
     }
 
-    /** @param array<int, array{field?:string, condition?:string, value?:string}> $rows */
-    public static function saveCriteria(int $ruleId, array $rows): void
+    /** Adiciona UM critério — ver docblock da classe (lista + linha de adicionar, não um formulário único). */
+    public static function addCriterion(int $ruleId, string $field, string $condition, string $value): void
     {
-        global $DB;
-        $DB->delete(self::criteriaTable(), ['plugin_analyticdesign_visibilityrules_id' => $ruleId]);
-        foreach ($rows as $row) {
-            $field = (string)($row['field'] ?? '');
-            $value = trim((string)($row['value'] ?? ''));
-            if ($value === '' || !in_array($field, self::FIELD_KEYS, true)) {
-                continue;
-            }
-            $condition = in_array($row['condition'] ?? '', self::CONDITION_KEYS, true) ? $row['condition'] : 'equals';
-            $DB->insert(self::criteriaTable(), [
-                'plugin_analyticdesign_visibilityrules_id' => $ruleId,
-                'field'     => $field,
-                'condition' => $condition,
-                'value'     => $value,
-            ]);
+        $value = trim($value);
+        if ($value === '' || !in_array($field, self::FIELD_KEYS, true)) {
+            return;
         }
+        $condition = in_array($condition, self::CONDITION_KEYS, true) ? $condition : 'equals';
+
+        global $DB;
+        $DB->insert(self::criteriaTable(), [
+            'plugin_analyticdesign_visibilityrules_id' => $ruleId,
+            'field'     => $field,
+            'condition' => $condition,
+            'value'     => $value,
+        ]);
     }
 
-    /** @return array<class-string, int[]> mesmo formato de ItemVisibility::getForItem(). */
-    public static function getActions(int $ruleId): array
+    public static function deleteCriterion(int $criterionId, int $ruleId): void
     {
         global $DB;
-        $rights = array_fill_keys(ItemVisibility::TARGET_TYPES, []);
+        $DB->delete(self::criteriaTable(), ['id' => $criterionId, 'plugin_analyticdesign_visibilityrules_id' => $ruleId]);
+    }
+
+    /** @return array<int, array{id:int, itemtype:string, items_id:int}> linhas cruas — usado pra renderizar a tabela de Ações. */
+    public static function getActionRows(int $ruleId): array
+    {
+        global $DB;
+        $rows = [];
         $it = $DB->request([
             'FROM'  => self::actionsTable(),
             'WHERE' => ['plugin_analyticdesign_visibilityrules_id' => $ruleId],
+            'ORDER' => ['id'],
         ]);
         foreach ($it as $row) {
+            $rows[] = ['id' => (int)$row['id'], 'itemtype' => $row['itemtype'], 'items_id' => (int)$row['items_id']];
+        }
+        return $rows;
+    }
+
+    /** @return array<class-string|self::GRANT_ALL, int[]> agrupado por alvo — usado na avaliação (grantsCurrentUser()) e no resumo. */
+    public static function getActions(int $ruleId): array
+    {
+        $rights = self::emptyActionRights();
+        foreach (self::getActionRows($ruleId) as $row) {
             if (isset($rights[$row['itemtype']])) {
-                $rights[$row['itemtype']][] = (int)$row['items_id'];
+                $rights[$row['itemtype']][] = $row['items_id'];
             }
         }
         return $rights;
     }
 
-    /** @param array<class-string, int[]> $rightsByItemtype */
-    public static function saveActions(int $ruleId, array $rightsByItemtype): void
+    /** Adiciona UMA ação — ver docblock da classe. `itemsId` é ignorado (gravado como 0) para GRANT_ALL. */
+    public static function addAction(int $ruleId, string $itemtype, int $itemsId): void
+    {
+        if (!isset(self::emptyActionRights()[$itemtype])) {
+            return;
+        }
+        if ($itemtype === self::GRANT_ALL) {
+            $itemsId = 0;
+        } elseif ($itemtype !== Entity::class && $itemsId <= 0) {
+            // Entidade 0 = raiz, um alvo válido; os demais exigem um ID real selecionado.
+            return;
+        }
+
+        global $DB;
+        $DB->insert(self::actionsTable(), [
+            'plugin_analyticdesign_visibilityrules_id' => $ruleId,
+            'itemtype' => $itemtype,
+            'items_id' => $itemsId,
+        ]);
+    }
+
+    public static function deleteAction(int $actionId, int $ruleId): void
     {
         global $DB;
-        $DB->delete(self::actionsTable(), ['plugin_analyticdesign_visibilityrules_id' => $ruleId]);
-        foreach ($rightsByItemtype as $itemtype => $ids) {
-            if (!in_array($itemtype, ItemVisibility::TARGET_TYPES, true)) {
-                continue;
-            }
-            foreach (array_unique(array_filter($ids, static fn ($v) => $v !== null && $v !== '')) as $targetId) {
-                $DB->insert(self::actionsTable(), [
-                    'plugin_analyticdesign_visibilityrules_id' => $ruleId,
-                    'itemtype' => $itemtype,
-                    'items_id' => (int)$targetId,
-                ]);
-            }
-        }
+        $DB->delete(self::actionsTable(), ['id' => $actionId, 'plugin_analyticdesign_visibilityrules_id' => $ruleId]);
     }
 
     /**
@@ -352,23 +287,39 @@ class VisibilityRule extends CommonDBTM
     }
 
     /**
-     * O usuário logado casa com pelo menos uma ação (Perfil/Grupo/Usuário/
-     * Entidade) desta regra? Mesma lógica de OR entre alvos que
-     * `ItemVisibility::isVisibleForCurrentUser()` já usa.
+     * O usuário logado casa com pelo menos uma ação (Todos, ou Perfil/Grupo/
+     * Usuário/Entidade) desta regra? OR entre todos os alvos configurados —
+     * basta casar com um deles.
      */
     public function grantsCurrentUser(): bool
     {
         $rights = self::getActions((int)$this->fields['id']);
+        if (!empty($rights[self::GRANT_ALL])) {
+            return true;
+        }
         return in_array((int)($_SESSION['glpiactiveprofile']['id'] ?? 0), $rights[Profile::class], true)
             || in_array((int)($_SESSION['glpiID'] ?? 0), $rights[User::class], true)
             || count(array_intersect($rights[Group::class], $_SESSION['glpigroups'] ?? [])) > 0
             || Session::haveAccessToOneOfEntities($rights[Entity::class], true);
     }
 
+    /** @return self[] regras da Connection dona do item que casam com ele (Critérios). */
+    private static function matchingRulesForItem(DashboardItem $item): array
+    {
+        $connectionsId = (int)($item->fields['connections_id'] ?? 0);
+        $matches = [];
+        foreach (self::getForConnection($connectionsId) as $rule) {
+            if ($rule->matchesItem($item)) {
+                $matches[] = $rule;
+            }
+        }
+        return $matches;
+    }
+
     /**
      * Ponto único usado por DashboardItem::isVisibleForCurrentUser(): alguma
-     * regra ATIVA da Connection dona deste item casa com ele E concede
-     * acesso ao usuário atual?
+     * regra da Connection dona deste item casa com ele E concede acesso ao
+     * usuário atual?
      */
     public static function isVisibleForCurrentUserViaRules(DashboardItem $item): bool
     {
@@ -376,16 +327,313 @@ class VisibilityRule extends CommonDBTM
             return false;
         }
 
-        $connectionsId = (int)($item->fields['connections_id'] ?? 0);
-        foreach (self::getActiveForConnection($connectionsId) as $rule) {
-            if ($rule->matchesItem($item) && $rule->grantsCurrentUser()) {
+        foreach (self::matchingRulesForItem($item) as $rule) {
+            if ($rule->grantsCurrentUser()) {
                 return true;
             }
         }
         return false;
     }
 
-    /** Resumo legível dos critérios, para a listagem (ex.: "Dashboard (nome) é 'X'"). */
+    /**
+     * Alguma regra que casa com este item concede um alvo ENUMERÁVEL
+     * (Perfil/Grupo/Usuário/Entidade — não "Todos")? Pré-requisito de
+     * "Substituir dashboard do módulo" (ver DashboardItem::
+     * validateModuleReplacement()): "todos com acesso ao módulo" (seja por
+     * não ter regra nenhuma, seja por uma regra com Ação "Todos") não é um
+     * conjunto enumerável de compartilhamento nativo do GLPI.
+     */
+    public static function hasConcreteGrantForItem(DashboardItem $item): bool
+    {
+        foreach (self::matchingRulesForItem($item) as $rule) {
+            $rights = self::getActions((int)$rule->fields['id']);
+            foreach (self::TARGET_TYPES as $itemtype) {
+                if (!empty($rights[$itemtype])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** @return array<class-string, int[]> união dos alvos enumeráveis de todas as regras que casam com o item — usado por ModuleDashboard::syncNativeDashboard(). */
+    public static function getConcreteGrantsForItem(DashboardItem $item): array
+    {
+        $result = array_fill_keys(self::TARGET_TYPES, []);
+        foreach (self::matchingRulesForItem($item) as $rule) {
+            $rights = self::getActions((int)$rule->fields['id']);
+            foreach (self::TARGET_TYPES as $itemtype) {
+                $result[$itemtype] = array_values(array_unique(array_merge($result[$itemtype], $rights[$itemtype])));
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Recalcula `is_private` de TODOS os itens da Connection (1 = pelo menos
+     * uma regra casa com o item) e re-sincroniza o dashboard nativo
+     * espelhado de quem usa "Substituir dashboard do módulo" — chamado
+     * sempre que uma regra (ou seus Critérios/Ações) muda. Escrita direta via
+     * query builder (não `CommonDBTM::update()`): evita disparar hooks
+     * não relacionados (ex.: `post_updateItem()` de DashboardItem) para uma
+     * atualização que é puramente derivada, não uma edição de verdade feita
+     * pelo usuário.
+     */
+    public static function resyncAffectedItems(int $connectionsId): void
+    {
+        global $DB;
+        foreach (DashboardItem::getForConnection($connectionsId) as $item) {
+            $hasConcreteGrant = self::hasConcreteGrantForItem($item);
+            $isPrivate = !empty(self::matchingRulesForItem($item)) ? 1 : 0;
+
+            $update = ['is_private' => $isPrivate];
+            if ((string)$item->fields['replaces_module'] !== '' && !$hasConcreteGrant) {
+                $update['replaces_module'] = '';
+            }
+            $DB->update(DashboardItem::getTable(), $update, ['id' => (int)$item->fields['id']]);
+
+            $item->fields['is_private'] = $isPrivate;
+            $item->fields['replaces_module'] = $update['replaces_module'] ?? $item->fields['replaces_module'];
+            if ($item->fields['replaces_module'] !== '') {
+                ModuleDashboard::syncNativeDashboard($item);
+            } else {
+                ModuleDashboard::deleteNativeDashboard((int)$item->fields['id']);
+            }
+        }
+    }
+
+    /**
+     * Renderiza UMA regra inteira (E/OU + Critérios | Ação), inline dentro da
+     * aba "Visibilidade" da Connection — ver docblock da classe. Tudo posta
+     * para `front/visibilityrule.form.php`, que redireciona de volta para a
+     * mesma aba (`forcetab`) — nunca uma página própria.
+     */
+    public static function showRuleBlock(self $rule, string $formUrl, bool $canEdit): void
+    {
+        $ruleId = (int)$rule->fields['id'];
+
+        echo "<div class='analyticdesign-visibility-rule card mb-3'>";
+        echo "<div class='card-body'>";
+
+        echo "<div class='d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3'>";
+        if ($canEdit) {
+            echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='d-flex align-items-center gap-2 mb-0'>";
+            echo "<input type='hidden' name='action' value='update_match'>";
+            echo "<input type='hidden' name='id' value='{$ruleId}'>";
+            echo "<label class='mb-0'>" . __('Combinar critérios com', 'analyticdesign') . "</label>";
+            Dropdown::showFromArray('match', [
+                'AND' => __('E (todos)', 'analyticdesign'),
+                'OR'  => __('OU (qualquer um)', 'analyticdesign'),
+            ], [
+                'value'    => $rule->fields['match'] ?? 'AND',
+                'rand'     => $ruleId,
+                'width'    => 'auto',
+                'on_change' => 'this.form.submit()',
+            ]);
+            echo "</form>";
+
+            echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='mb-0'"
+                . " onsubmit=\"return confirm('" . htmlspecialchars(__('Remover esta regra? Essa ação não pode ser desfeita.', 'analyticdesign'), ENT_QUOTES) . "');\">";
+            echo "<input type='hidden' name='action' value='delete_rule'>";
+            echo "<input type='hidden' name='id' value='{$ruleId}'>";
+            echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-trash'></i> " . __('Remover regra', 'analyticdesign') . "</button>";
+            echo "</form>";
+        } else {
+            echo "<span>" . __('Combinar critérios com', 'analyticdesign') . ": "
+                . (($rule->fields['match'] ?? 'AND') === 'OR' ? __('OU', 'analyticdesign') : __('E', 'analyticdesign')) . "</span>";
+        }
+        echo "</div>";
+
+        echo "<div class='row'>";
+        echo "<div class='col-12 col-lg-6'>";
+        echo "<h4>" . __('Critérios', 'analyticdesign') . "</h4>";
+        self::showCriteriaSection($rule, $formUrl, $canEdit);
+        echo "</div>";
+
+        echo "<div class='col-12 col-lg-6'>";
+        echo "<h4>" . __('Ação', 'analyticdesign') . "</h4>";
+        self::showActionsSection($rule, $formUrl, $canEdit);
+        echo "</div>";
+        echo "</div>";
+
+        echo "</div>"; // .card-body
+        echo "</div>"; // .analyticdesign-visibility-rule
+    }
+
+    /** Tabela dos Critérios já salvos + linha de "adicionar" (Campo/Condição/Valor dinâmico) — ver docblock da classe. */
+    private static function showCriteriaSection(self $rule, string $formUrl, bool $canEdit): void
+    {
+        $ruleId = (int)$rule->fields['id'];
+        $fieldLabels = self::fieldLabels();
+        $conditionLabels = self::conditionLabels();
+        $criteria = self::getCriteria($ruleId);
+
+        if (empty($criteria)) {
+            echo "<p class='text-muted'>" . __('(nenhum critério — nunca casa)', 'analyticdesign') . "</p>";
+        } else {
+            echo "<table class='table table-sm'><tr>";
+            echo "<th>" . __('Campo', 'analyticdesign') . "</th>";
+            echo "<th>" . __('Condição', 'analyticdesign') . "</th>";
+            echo "<th>" . __('Valor', 'analyticdesign') . "</th>";
+            if ($canEdit) {
+                echo "<th></th>";
+            }
+            echo "</tr>";
+            foreach ($criteria as $criterion) {
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($fieldLabels[$criterion['field']] ?? $criterion['field'], ENT_QUOTES) . "</td>";
+                echo "<td>" . htmlspecialchars($conditionLabels[$criterion['condition']] ?? $criterion['condition'], ENT_QUOTES) . "</td>";
+                echo "<td>" . htmlspecialchars($criterion['value'], ENT_QUOTES) . "</td>";
+                if ($canEdit) {
+                    echo "<td>";
+                    echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='d-inline'"
+                        . " onsubmit=\"return confirm('" . htmlspecialchars(__('Remover este critério?', 'analyticdesign'), ENT_QUOTES) . "');\">";
+                    echo "<input type='hidden' name='action' value='delete_criterion'>";
+                    echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
+                    echo "<input type='hidden' name='criterion_id' value='{$criterion['id']}'>";
+                    echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-x'></i></button>";
+                    echo "</form>";
+                    echo "</td>";
+                }
+                echo "</tr>";
+            }
+            echo "</table>";
+        }
+
+        if (!$canEdit) {
+            return;
+        }
+
+        $connectionsId = (int)$rule->fields['connections_id'];
+        $dashboardOptions = [];
+        foreach (DashboardItem::getForConnection($connectionsId) as $item) {
+            $dashboardOptions[(int)$item->fields['id']] = $item->fields['name'];
+        }
+
+        echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='analyticdesign-add-criterion d-flex gap-2 align-items-end flex-wrap mt-2'>";
+        echo "<input type='hidden' name='action' value='add_criterion'>";
+        echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
+
+        echo "<div><label class='form-label mb-0'>" . __('Campo', 'analyticdesign') . "</label>";
+        Dropdown::showFromArray('field', $fieldLabels, [
+            'value' => 'name',
+            'rand'  => $ruleId,
+            'class' => 'form-select form-select-sm analyticdesign-criterion-field',
+        ]);
+        echo "</div>";
+
+        echo "<div><label class='form-label mb-0'>" . __('Condição', 'analyticdesign') . "</label>";
+        Dropdown::showFromArray('condition', $conditionLabels, [
+            'value' => 'equals',
+            'rand'  => $ruleId,
+            'class' => 'form-select form-select-sm analyticdesign-criterion-condition',
+        ]);
+        echo "</div>";
+
+        echo "<div class='analyticdesign-criterion-value-dashboard'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        if (empty($dashboardOptions)) {
+            echo "<div class='form-text text-muted'>" . __('Nenhum dashboard importado ainda.', 'analyticdesign') . "</div>";
+        } else {
+            Dropdown::showFromArray('value_dashboard', $dashboardOptions, [
+                'rand'                => $ruleId,
+                'display_emptychoice' => true,
+                'class'               => 'form-select form-select-sm',
+            ]);
+        }
+        echo "</div>";
+
+        echo "<div class='analyticdesign-criterion-value-module' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::showFromArray('value_module', ModuleDashboard::MODULES, [
+            'rand'                => $ruleId,
+            'display_emptychoice' => true,
+            'class'               => 'form-select form-select-sm',
+        ]);
+        echo "</div>";
+
+        echo "<div class='analyticdesign-criterion-value-text' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        echo "<input type='text' name='value_text' class='form-control form-control-sm'></div>";
+
+        echo "<button type='submit' class='btn btn-sm btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";
+        echo "</form>";
+    }
+
+    /** Tabela das Ações já salvas + linha de "adicionar" (Alvo/Valor dinâmico) — ver docblock da classe. */
+    private static function showActionsSection(self $rule, string $formUrl, bool $canEdit): void
+    {
+        $ruleId = (int)$rule->fields['id'];
+        $actionTypeLabels = self::actionTypeLabels();
+        $rows = self::getActionRows($ruleId);
+
+        if (empty($rows)) {
+            echo "<p class='text-muted'>" . __('(nenhuma ação)', 'analyticdesign') . "</p>";
+        } else {
+            echo "<table class='table table-sm'><tr>";
+            echo "<th>" . __('Conceder acesso a', 'analyticdesign') . "</th>";
+            echo "<th>" . __('Valor', 'analyticdesign') . "</th>";
+            if ($canEdit) {
+                echo "<th></th>";
+            }
+            echo "</tr>";
+            foreach ($rows as $row) {
+                $itemtype = $row['itemtype'];
+                $label = $actionTypeLabels[$itemtype] ?? $itemtype;
+                $value = $itemtype === self::GRANT_ALL ? '-' : Dropdown::getDropdownName($itemtype::getTable(), $row['items_id']);
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($label, ENT_QUOTES) . "</td>";
+                echo "<td>" . htmlspecialchars($value, ENT_QUOTES) . "</td>";
+                if ($canEdit) {
+                    echo "<td>";
+                    echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='d-inline'"
+                        . " onsubmit=\"return confirm('" . htmlspecialchars(__('Remover esta ação?', 'analyticdesign'), ENT_QUOTES) . "');\">";
+                    echo "<input type='hidden' name='action' value='delete_action'>";
+                    echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
+                    echo "<input type='hidden' name='action_id' value='{$row['id']}'>";
+                    echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-x'></i></button>";
+                    echo "</form>";
+                    echo "</td>";
+                }
+                echo "</tr>";
+            }
+            echo "</table>";
+        }
+
+        if (!$canEdit) {
+            return;
+        }
+
+        echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='analyticdesign-add-action d-flex gap-2 align-items-end flex-wrap mt-2'>";
+        echo "<input type='hidden' name='action' value='add_action'>";
+        echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
+
+        echo "<div><label class='form-label mb-0'>" . __('Conceder acesso a', 'analyticdesign') . "</label>";
+        Dropdown::showFromArray('itemtype', $actionTypeLabels, [
+            'value' => Profile::class,
+            'rand'  => $ruleId,
+            'class' => 'form-select form-select-sm analyticdesign-action-itemtype',
+        ]);
+        echo "</div>";
+
+        echo "<div class='analyticdesign-action-value-profile'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(Profile::class, ['name' => 'value_profile', 'rand' => $ruleId]);
+        echo "</div>";
+
+        echo "<div class='analyticdesign-action-value-group' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(Group::class, ['name' => 'value_group', 'rand' => $ruleId]);
+        echo "</div>";
+
+        echo "<div class='analyticdesign-action-value-user' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(User::class, ['name' => 'value_user', 'rand' => $ruleId]);
+        echo "</div>";
+
+        echo "<div class='analyticdesign-action-value-entity' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(Entity::class, ['name' => 'value_entity', 'rand' => $ruleId]);
+        echo "</div>";
+
+        echo "<button type='submit' class='btn btn-sm btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";
+        echo "</form>";
+    }
+
+    /** Resumo legível dos critérios, para a listagem (ex.: "Dashboard é '[TV] Kali'"). */
     public static function summarizeCriteria(int $ruleId, string $match): string
     {
         $rows = self::getCriteria($ruleId);
@@ -408,9 +656,12 @@ class VisibilityRule extends CommonDBTM
     public static function summarizeActions(int $ruleId): string
     {
         $rights = self::getActions($ruleId);
+        if (!empty($rights[self::GRANT_ALL])) {
+            return __('Todos os usuários', 'analyticdesign');
+        }
         $parts = [];
-        foreach ($rights as $itemtype => $ids) {
-            foreach ($ids as $id) {
+        foreach (self::TARGET_TYPES as $itemtype) {
+            foreach ($rights[$itemtype] as $id) {
                 $parts[] = $itemtype::getTypeName(1) . ': ' . Dropdown::getDropdownName($itemtype::getTable(), $id);
             }
         }
@@ -419,9 +670,6 @@ class VisibilityRule extends CommonDBTM
 
     public function prepareInputForAdd($input)
     {
-        if (empty($input['name'])) {
-            $input['name'] = __('Regra sem nome', 'analyticdesign');
-        }
         if (!in_array($input['match'] ?? '', ['AND', 'OR'], true)) {
             $input['match'] = 'AND';
         }
@@ -434,40 +682,6 @@ class VisibilityRule extends CommonDBTM
             $input['match'] = 'AND';
         }
         return $input;
-    }
-
-    public function post_addItem()
-    {
-        parent::post_addItem();
-        $this->saveCriteriaAndActionsFromInput();
-    }
-
-    public function post_updateItem($history = true)
-    {
-        parent::post_updateItem($history);
-        $this->saveCriteriaAndActionsFromInput();
-    }
-
-    /**
-     * Critérios e ação são tabelas filhas próprias (não colunas de
-     * `glpi_plugin_analyticdesign_visibilityrules`) — persistidos aqui, à
-     * parte do add()/update() padrão, igual ao mesmo padrão já usado por
-     * DashboardItem::saveVisibilityFromInput().
-     */
-    private function saveCriteriaAndActionsFromInput(): void
-    {
-        $ruleId = (int)$this->fields['id'];
-
-        if (array_key_exists('criteria', $this->input)) {
-            self::saveCriteria($ruleId, (array)$this->input['criteria']);
-        }
-
-        $posted = $this->input['visibility'] ?? [];
-        $rights = [];
-        foreach (ItemVisibility::TARGET_TYPES as $itemtype) {
-            $rights[$itemtype] = VisibilityDropdown::getPostedIds($posted, $itemtype);
-        }
-        self::saveActions($ruleId, $rights);
     }
 
     public function post_purgeItem()
@@ -488,15 +702,22 @@ class VisibilityRule extends CommonDBTM
                 CREATE TABLE `{$table}` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                     `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
-                    `name` VARCHAR(255) NOT NULL DEFAULT '',
                     `match` VARCHAR(10) NOT NULL DEFAULT 'AND',
-                    `is_active` TINYINT NOT NULL DEFAULT 1,
                     `date_creation` TIMESTAMP NULL DEFAULT NULL,
                     `date_mod` TIMESTAMP NULL DEFAULT NULL,
                     PRIMARY KEY (`id`),
                     KEY `connections_id` (`connections_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
+        }
+        // `name`/`is_active` existiam na 0.8.0 — removidos: a regra passou a
+        // não precisar de nome (identificada pelos próprios Critérios) nem de
+        // status (existir já é estar ativa) — ver docblock da classe.
+        if ($DB->fieldExists($table, 'name')) {
+            $DB->doQuery("ALTER TABLE `{$table}` DROP COLUMN `name`");
+        }
+        if ($DB->fieldExists($table, 'is_active')) {
+            $DB->doQuery("ALTER TABLE `{$table}` DROP COLUMN `is_active`");
         }
 
         $criteriaTable = self::criteriaTable();

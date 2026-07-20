@@ -3,12 +3,12 @@
 /**
  * Analytic Design
  * -----------------------------------------------------------------------------
- * Aba "Visibilidade" no formulário da Connection: lista as regras
- * (Critérios | Ação) já cadastradas para os dashboards dessa fonte, com um
- * link para criar/editar cada uma na página independente
- * front/visibilityrule.form.php — ver docblock de VisibilityRule sobre por
- * que o formulário em si não é renderizado aqui dentro (nesta aba, carregada
- * via AJAX de common.tabs.php).
+ * Aba "Visibilidade" no formulário da Connection: TUDO inline (lista de
+ * regras, cada uma com sua tabela de Critérios e de Ação, mais uma linha de
+ * "adicionar" em cada — ver `VisibilityRule::showRuleBlock()`) e um botão
+ * "Adicionar regra" no rodapé. Nenhuma navegação para outra página —
+ * `front/visibilityrule.form.php` só processa os POSTs e redireciona de
+ * volta para esta mesma aba (`forcetab`).
  *
  * Não é uma entidade de banco (extends CommonGLPI, sem tabela própria) — só
  * pluga no sistema de abas do GLPI sobre `Connection`, igual a
@@ -54,61 +54,28 @@ class ConnectionVisibilityRules extends CommonGLPI
 
         echo "<div class='analyticdesign-visibility-rules'>";
         echo "<p class='text-muted'>"
-            . __('Regras adicionais de acesso restrito, combinando Critérios (quais dashboards) e Ação (quem ganha acesso). Só valem para dashboards com Visibilidade "Restrito a...", como complemento ao ajuste feito diretamente no card.', 'analyticdesign')
+            . __('Regras de acesso restrito: de um lado Critérios (quais dashboards), do outro Ação (quem ganha acesso). Um dashboard sem nenhuma regra apontando pra ele fica visível a todos com o direito de leitura do módulo.', 'analyticdesign')
             . "</p>";
 
-        self::showRulesTable(VisibilityRule::getForConnection($connectionsId), $formUrl, $canEdit);
+        $rules = VisibilityRule::getForConnection($connectionsId);
+        if (empty($rules)) {
+            echo "<p class='text-muted'>" . __('Nenhuma regra de visibilidade cadastrada ainda.', 'analyticdesign') . "</p>";
+        } else {
+            foreach ($rules as $rule) {
+                VisibilityRule::showRuleBlock($rule, $formUrl, $canEdit);
+            }
+        }
 
         if ($canEdit) {
-            echo "<div class='mt-3'>";
-            echo "<a class='btn btn-primary' href='"
-                . htmlspecialchars($formUrl . '?connections_id=' . $connectionsId, ENT_QUOTES) . "'>"
-                . "<i class='ti ti-plus'></i> " . __('Adicionar regra', 'analyticdesign') . "</a>";
-            echo "</div>";
+            echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "'>";
+            echo "<input type='hidden' name='action' value='add_rule'>";
+            echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
+            echo "<button type='submit' class='btn btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar regra', 'analyticdesign') . "</button>";
+            echo "</form>";
         }
 
         echo "</div>";
 
         return true;
-    }
-
-    /** @param VisibilityRule[] $rules */
-    private static function showRulesTable(array $rules, string $formUrl, bool $canEdit): void
-    {
-        if (empty($rules)) {
-            echo "<p class='text-muted'>" . __('Nenhuma regra de visibilidade cadastrada ainda.', 'analyticdesign') . "</p>";
-            return;
-        }
-
-        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
-        echo "<th>" . __('Nome') . "</th>";
-        echo "<th>" . __('Critérios', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Ação', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Combinar com', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Status') . "</th>";
-        if ($canEdit) {
-            echo "<th>" . __('Editar') . "</th>";
-        }
-        echo "</tr>";
-
-        foreach ($rules as $rule) {
-            $id = (int)$rule->fields['id'];
-            $match = (string)$rule->fields['match'];
-
-            echo "<tr class='tab_bg_1'>";
-            echo "<td>" . htmlspecialchars($rule->fields['name'], ENT_QUOTES) . "</td>";
-            echo "<td>" . htmlspecialchars(VisibilityRule::summarizeCriteria($id, $match), ENT_QUOTES) . "</td>";
-            echo "<td>" . htmlspecialchars(VisibilityRule::summarizeActions($id), ENT_QUOTES) . "</td>";
-            echo "<td>" . ($match === 'OR' ? __('OU', 'analyticdesign') : __('E', 'analyticdesign')) . "</td>";
-            echo "<td>" . ((int)$rule->fields['is_active'] === 1 ? __('Sim') : __('Não')) . "</td>";
-            if ($canEdit) {
-                echo "<td><a class='btn btn-sm btn-outline-secondary' href='"
-                    . htmlspecialchars($formUrl . '?id=' . $id, ENT_QUOTES) . "'>"
-                    . "<i class='ti ti-pencil'></i> " . __('Editar') . "</a></td>";
-            }
-            echo "</tr>";
-        }
-
-        echo "</table>";
     }
 }

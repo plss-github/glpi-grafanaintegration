@@ -142,22 +142,24 @@ fazia sentido perguntá-los antes de saber que a fonte é um Grafana.
 ## 4. Importar dashboards do Grafana
 
 Na aba **"Configurações"** do registro salvo (aparece assim que a Connection
-é criada), seção **"Configurações do dashboard"**:
+é criada), seção **"Configurações do dashboard"** (vem primeiro na aba, antes
+da tabela de itens já importados — ver abaixo):
 
 1. O dropdown **"Dashboard"** (lado a lado com **Módulo**) lista
    automaticamente os dashboards encontrados via API do Grafana
    (`GET /api/search?type=dash-db`) que ainda não foram importados.
-2. Escolher um, opcionalmente escolher um **Módulo** (agrupamento do card no
-   catálogo de widgets do dashboard nativo) e configurar **Visibilidade**
-   (seção 8) se necessário.
+2. Escolher um e, opcionalmente, um **Módulo** (agrupamento do card no
+   catálogo de widgets do dashboard nativo).
 3. Clicar em **Importar**.
-4. O item passa a aparecer na tabela "Dashboards importados", na própria
-   aba **"Configurações"** (onde dá para ajustar módulo/status depois,
-   salvar ou remover — ver abaixo), e na aba **"Pré-Visualização"**, de onde
-   dá para pré-visualizar o card antes de decidir onde posicioná-lo.
+4. O item passa a aparecer na tabela **"Dashboards importados"**, logo
+   abaixo (separada por uma linha divisória), onde dá para ajustar módulo/
+   status depois, e na aba **"Pré-Visualização"**, de onde dá para
+   pré-visualizar o card antes de decidir onde posicioná-lo.
 
-Repita para cada dashboard — é sempre um por vez, junto com sua própria
-configuração de módulo/visibilidade.
+Repita para cada dashboard — é sempre um por vez, junto com o módulo.
+**Visibilidade** (quem vê o card) é configurada depois, numa aba própria —
+ver seção 10 — já que uma regra sempre escolhe o dashboard a partir dos já
+importados.
 
 Se a listagem falhar (fonte fora do ar, token errado), a tela mostra o
 formulário manual (nome + URL de embed colados à mão) em vez do dropdown —
@@ -169,26 +171,33 @@ resolva a conexão na aba "Fonte de Dados" (passo 5 acima) e volte aqui.
 > formulário, para não deixar preencher tudo só para levar "Acesso negado"
 > ao clicar em Importar.
 
-A aba **"Configurações"** também mostra, acima do formulário de importação,
-uma **tabela "Dashboards importados"** com todos os itens já cadastrados
-naquela fonte — cada linha tem **Módulo** e **Status** editáveis direto na
-tabela (um botão **Salvar** grava todos de uma vez) e um botão **Remover**
-que apaga o item por completo (pede confirmação; some da tabela sem
-recarregar a página). Remover é definitivo — apaga também qualquer regra de
-visibilidade específica daquele card (seção 8) e, se ele estivesse
+Logo abaixo do formulário de importação (separada por uma linha divisória),
+a aba **"Configurações"** também mostra uma **tabela "Dashboards
+importados"** com todos os itens já cadastrados naquela fonte — cada linha
+tem **Módulo**, **Status** e **Substituir dashboard do módulo** (seção 9)
+editáveis direto na tabela (um botão **Salvar** grava todos de uma vez) e um
+botão **Remover** que apaga o item por completo (pede confirmação; some da
+tabela sem recarregar a página). Remover é definitivo — se o item estivesse
 substituindo o dashboard nativo de um módulo (seção 9), desfaz essa
-substituição também.
+substituição também (as regras de visibilidade da aba "Visibilidade", seção
+10, continuam existindo — elas não referenciam o item por ID, e sim pelo
+nome do dashboard, então removê-lo só faz a regra parar de casar com nada).
+
+> A coluna **"Substituir dashboard do módulo"** só fica editável quando o
+> item já tem uma regra na aba **"Visibilidade"** (seção 10) concedendo
+> acesso a pelo menos um Perfil/Grupo/Usuário/Entidade específico — sem
+> isso, mostra "Indisponível". Ver seção 9 para o motivo.
 
 > A aba **"Pré-Visualização"** (antiga "Dashboards expostos") é hoje **só**
 > um pré-visualizador somente-leitura: colunas Nome, ID externo, Módulo e
 > **Pré-visualizar** (um botão **"Ver"** por linha que abre o card
 > renderizado numa aba nova) — essa pré-visualização **ignora
-> deliberadamente** a regra de visibilidade
-> configurada (seção 8): quem chega até essa aba já tem direito de
-> administrar a fonte, então não faz sentido a própria pessoa que configurou
-> o card ficar bloqueada de vê-lo. Escolher o que importar, ajustar módulo/
-> status, remover, configurar visibilidade e substituição de módulo (seções
-> 8 e 9) ficam todos na aba **"Configurações"**.
+> deliberadamente** a regra de visibilidade configurada (seção 10): quem
+> chega até essa aba já tem direito de administrar a fonte, então não faz
+> sentido a própria pessoa que configurou o card ficar bloqueada de vê-lo.
+> Escolher o que importar, ajustar módulo/status, remover e substituição de
+> módulo ficam na aba **"Configurações"**; visibilidade (quem vê cada
+> dashboard) fica na aba **"Visibilidade"** (seção 10).
 
 ## 5. Cadastrar uma fonte Power BI — modo "Embed seguro"
 
@@ -295,34 +304,26 @@ plugin.
 ## 8. Restringir quem vê um dashboard específico (visibilidade)
 
 Por padrão, qualquer usuário com o direito de leitura do módulo (seção 2) vê
-todos os cards ativos. Para restringir um card específico (ex.: um dashboard
-financeiro que só o time Financeiro deve ver, mesmo que outros usuários
-tenham o direito geral do plugin):
+todos os cards ativos — um dashboard importado nasce público. Para
+restringir um card específico (ex.: um dashboard financeiro que só o time
+Financeiro deve ver, mesmo que outros usuários tenham o direito geral do
+plugin), cadastre uma **regra de visibilidade** na aba **"Visibilidade"** da
+fonte — ver seção 10 para o passo a passo completo.
 
-1. Abrir o card já importado — **Administração > Análise de Dados >
-   Dashboards expostos** na busca geral, clicar no nome do item — ou
-   configurar já na importação, na aba **"Configurações" > "Configurações do
-   dashboard"**.
-2. No campo **Visibilidade**, trocar de **"Todos com acesso ao módulo"**
-   (padrão) para **"Restrito a..."**.
-3. Um segundo campo aparece — buscar e adicionar **Perfil**, **Grupo**,
-   **Usuário** e/ou **Entidade** (pode combinar vários; basta casar com um
-   deles para ver o card — mesmo modelo de "compartilhamento" que o próprio
-   GLPI usa para seus dashboards nativos).
-4. Salvar.
-
-> Um card marcado "Restrito a..." sem nenhum alvo adicionado fica invisível
-> para todo mundo (inclusive quem tem o direito geral do plugin) — é o
-> comportamento esperado (nega por padrão), não um bug; adicione ao menos um
-> alvo para o card voltar a aparecer para alguém.
+Resumo: uma regra escolhe **qual(is) dashboard(s)** ela alcança (Critérios)
+e **quem** ganha acesso a eles (Ação — Perfil/Grupo/Usuário/Entidade
+específicos, ou "Todos os usuários"). Um dashboard sem nenhuma regra
+apontando pra ele continua público; assim que pelo menos uma regra o alcança,
+ele só fica visível para quem essa regra conceder acesso.
 
 A restrição vale tanto para o catálogo de widgets (o card nem aparece para
 adicionar) quanto para um card já posicionado num dashboard — desativar um
-card (**Status** = `Não`) também para de renderizá-lo imediatamente, mesmo
-que já esteja posicionado em algum dashboard.
+card (**Status** = `Não`, aba "Configurações") também para de renderizá-lo
+imediatamente, mesmo que já esteja posicionado em algum dashboard.
 
-Essa mesma restrição (Perfil/Grupo/Usuário/Entidade) é o pré-requisito para
-**substituir o Dashboard nativo de um módulo** por este card — ver seção 9.
+Ter pelo menos uma regra concedendo acesso a um Perfil/Grupo/Usuário/Entidade
+específico (não só "Todos os usuários") é o pré-requisito para **substituir
+o Dashboard nativo de um módulo** por este card — ver seção 9.
 
 ## 9. Substituir o dashboard nativo de um módulo
 
@@ -341,8 +342,10 @@ dashboard externo.
 > Não confundir com o campo **"Módulo"** da seção 4 (era "Categoria"): aquele
 > só agrupa o card no catálogo de widgets — cosmético, não exige nada. Este
 > aqui, **"Substituir dashboard do módulo"**, troca de fato a tela
-> "Dashboard" do módulo escolhido para quem casar com a visibilidade — por
-> isso exige "Restrito a..." com pelo menos um alvo.
+> "Dashboard" do módulo escolhido para quem a regra de visibilidade conceder
+> acesso — por isso exige uma regra com pelo menos um alvo explícito
+> (Perfil/Grupo/Usuário/Entidade — "Todos os usuários" não conta, ver seção
+> 10).
 
 > **Ativos** e **Assistência** já têm uma tela "Dashboard" nativa no GLPI —
 > a substituição troca o que aparece nela. **Gerência** e **Ferramentas**
@@ -353,18 +356,21 @@ dashboard externo.
 
 Para configurar:
 
-1. Abrir o card (**Administração > Análise de Dados > Dashboards expostos**,
-   ou a aba **"Configurações" > "Configurações do dashboard"** ao
-   importar/cadastrar um novo).
-2. Marcar **Visibilidade** como **"Restrito a..."** e adicionar ao menos um
-   Perfil/Grupo/Usuário/Entidade (seção 8) — **obrigatório**: só é possível
-   substituir o dashboard de um módulo para um público explícito e restrito,
-   nunca para "todos com acesso ao módulo em geral". Tentar salvar sem isso
-   reverte o campo abaixo para "Não substituir" e mostra uma mensagem
-   explicando o motivo.
-3. Em **"Substituir dashboard do módulo"**, escolher o módulo desejado (ou
-   "Não substituir" para desligar).
-4. Salvar.
+1. Na aba **"Visibilidade"** da fonte (seção 10), cadastrar (ou já ter) uma
+   regra cujo Critério seja este dashboard e cuja Ação conceda acesso a pelo
+   menos um Perfil/Grupo/Usuário/Entidade específico — **obrigatório**: só é
+   possível substituir o dashboard de um módulo para um público explícito,
+   nunca para "todos com acesso ao módulo em geral" nem para uma Ação
+   "Todos os usuários".
+2. Na aba **"Configurações"**, na tabela **"Dashboards importados"**, a
+   coluna **"Substituir dashboard do módulo"** desse item passa de
+   "Indisponível" para um dropdown de módulos — escolher o desejado (ou
+   "Não substituir" para desligar) e clicar em **Salvar**.
+
+> Se a regra que concedia o acesso explícito for removida ou perder seu
+> último alvo concreto depois, "Substituir dashboard do módulo" é desligado
+> automaticamente (volta pra "Não substituir") — não é preciso lembrar de
+> desfazer isso manualmente.
 
 > **A mudança só vale a partir do próximo login.** A checagem de qual
 > dashboard mostrar para cada usuário roda uma vez por sessão — quem já
@@ -378,59 +384,66 @@ Para configurar:
 
 ## 10. Restringir visibilidade por regras (aba "Visibilidade")
 
-Além do ajuste direto por card (seção 8 — "Restrito a..." + Perfil/Grupo/
-Usuário/Entidade daquele item específico), a aba **"Visibilidade"** da fonte
-permite cadastrar **regras** que casam **Critérios** (quais dashboards a
-regra alcança) com uma **Ação** (quem ganha acesso) — o mesmo modelo
-conceitual das Regras de negócio nativas do GLPI, mas uma implementação
-própria e simples do plugin (não uma subclasse de `Rule`/`RuleCollection`
-do core). Útil quando a mesma condição de acesso (ex.: "todo dashboard cujo
-nome contenha 'Financeiro' deve ser visto pelo Grupo Financeiro") deve valer
-para vários cards sem configurar cada um manualmente.
+A aba **"Visibilidade"** da fonte é o único lugar onde se configura quem vê
+cada dashboard. Por padrão (sem nenhuma regra), um dashboard importado é
+público — visível a qualquer usuário com o direito de leitura do módulo
+(seção 2). Cadastrar uma **regra** ali restringe um ou mais dashboards a um
+público específico: de um lado **Critérios** (quais dashboards a regra
+alcança), do outro **Ação** (quem ganha acesso) — o mesmo modelo conceitual
+das Regras de negócio nativas do GLPI (lista de critérios/ações com uma
+linha de "adicionar" no rodapé de cada), mas uma implementação própria e
+simples do plugin (não uma subclasse de `Rule`/`RuleCollection` do core).
+Útil quando a mesma condição de acesso (ex.: "todo dashboard cujo nome
+contenha 'Suporte' deve ser visto pelo Grupo Suporte N1") deve valer para
+vários cards sem configurar cada um manualmente.
+
+Tudo acontece **dentro da própria aba** — nenhuma navegação para uma tela
+separada; cada ação (adicionar/remover regra, critério ou ação) recarrega a
+página de volta nesta mesma aba.
 
 1. Abrir a fonte e ir à aba **"Visibilidade"** (existe em toda fonte, mesmo
    sem nenhuma regra cadastrada ainda).
-2. Clicar em **"Adicionar regra"** — abre uma tela própria com duas colunas:
-   - **Critérios** (até 5 linhas fixas): para cada linha, escolher **Campo**
-     (`Dashboard (nome)` ou `Módulo`), **Condição** (`é` ou `contém`) e um
-     **Valor** livre. Linhas sem Valor preenchido são ignoradas ao salvar.
-   - **Ação**: o mesmo seletor de Perfil/Grupo/Usuário/Entidade da seção 8
-     (pode combinar vários; basta casar com um deles para o critério de
-     acesso da regra ser satisfeito).
-   - No topo: **Nome** (livre, só para identificar a regra na listagem),
-     **Status** (`Sim`/`Não` — regra inativa nunca é avaliada) e
-     **"Combinar critérios com"**: `E` (todos os critérios preenchidos
-     precisam casar) ou `OU` (qualquer um já basta).
-3. Salvar.
+2. Clicar em **"Adicionar regra"** — cria uma regra vazia (sem nome nem
+   status: uma regra é identificada pelos próprios Critérios, e existir já
+   significa estar ativa — removê-la é a forma de "desligá-la").
+3. Em **Critérios**, na linha de "adicionar" no rodapé da lista: escolher
+   **Campo** (`Dashboard` ou `Módulo`), **Condição** (`é` ou `contém`) e um
+   **Valor** — quando Campo é `Dashboard` e Condição é `é`, o Valor vira um
+   **dropdown com os dashboards já importados daquela fonte** (em vez de
+   texto livre); para `contém` (ou Campo `Módulo` com `é`), o Valor
+   correspondente aparece no lugar. Clicar em **Adicionar** grava a linha —
+   repetir para mais critérios. Cada linha já salva tem um botão para
+   remover.
+4. Escolher **"Combinar critérios com"**: `E` (todos os critérios precisam
+   casar) ou `OU` (qualquer um já basta) — só importa com 2+ critérios.
+5. Em **Ação**, na linha de "adicionar" no rodapé: escolher **"Conceder
+   acesso a"** — `Perfil`, `Grupo`, `Usuário`, `Entidade` (um dropdown de
+   busca aparece para escolher qual) ou **"Todos os usuários"** (libera
+   geral para quem casar com os Critérios, sem precisar listar ninguém).
+   Clicar em **Adicionar** — repetir para mais ações (basta casar com uma
+   delas). Cada linha já salva tem um botão para remover.
 
-Exemplo (o mesmo do pedido original): Critério `Dashboard (nome)` `contém`
-`"Suporte"`, combinando com `E`/`OU` conforme o caso; Ação `Grupo` = "Suporte
-N1", `ou` `Entidade` = "Cliente X", `ou` `Perfil` = "Atendente" — qualquer
-usuário que pertença ao Grupo Suporte N1, **ou** esteja na Entidade Cliente
-X, **ou** tenha o Perfil Atendente, passa a ver qualquer dashboard daquela
-fonte cujo nome contenha "Suporte".
+Exemplo (o mesmo do pedido original): Critério `Dashboard` `é` `"[TV] Kali"`;
+Ação `Grupo` = "Suporte N1", `ou` `Entidade` = "Cliente X", `ou` `Perfil` =
+"Atendente" — qualquer usuário que pertença ao Grupo Suporte N1, **ou**
+esteja na Entidade Cliente X, **ou** tenha o Perfil Atendente, passa a ver
+esse dashboard.
 
-> **Uma regra sem nenhum Critério preenchido nunca casa com nada** (nega por
-> padrão) — não é um bug, é para evitar que uma regra "vazia" acidentalmente
-> libere acesso geral.
+> **Uma regra sem nenhum Critério nunca casa com nada** (nega por padrão) —
+> não é um bug, é para evitar que uma regra "vazia" acidentalmente libere
+> acesso geral a um dashboard não intencional.
 
-> **Regras só são avaliadas quando o card está com Visibilidade "Restrito
-> a..."** (seção 8, `is_private`) — igual ao ajuste direto por card, uma
-> regra nunca abre um card que já está "Todos com acesso ao módulo" (esse já
-> é público por natureza dentro do módulo). Quando o card é restrito, o
-> usuário o vê se **qualquer uma das duas formas** conceder acesso: o ajuste
-> direto (seção 8) **ou** uma regra ativa cujos Critérios casem com aquele
-> dashboard e cuja Ação inclua o usuário — combinadas por OU entre si, nunca
-> é preciso configurar as duas.
+> **`is_private` (se o card está restrito) nunca é digitado em formulário —
+> é sempre calculado.** Assim que uma regra é criada/alterada/removida, o
+> plugin recalcula automaticamente: um dashboard com pelo menos uma regra
+> cujos Critérios casem com ele fica restrito (só quem a Ação conceder o vê);
+> sem nenhuma regra apontando pra ele, fica público de novo. Se **mais de
+> uma** regra casar com o mesmo dashboard, basta **uma delas** conceder
+> acesso ao usuário (OR entre regras).
 
 > As regras ficam escopadas por fonte — uma regra cadastrada na aba
 > "Visibilidade" de uma Connection só é avaliada para os dashboards
 > **daquela mesma fonte**, nunca de outra.
-
-Para editar ou remover uma regra já cadastrada: clicar em **"Editar"** na
-listagem (mesma tela de cadastro, agora preenchida) — o botão padrão
-**"Excluir permanentemente"**, no rodapé do formulário, remove a regra
-(junto com seus Critérios e Ação) sem afetar os dashboards em si.
 
 ## 11. Arquitetura e riscos de integração
 
@@ -469,12 +482,13 @@ Decisões relevantes para quem for manter ou estender o plugin:
   três tabelas próprias (`..._visibilityrules`, `..._criteria`, `..._actions`)
   e uma avaliação simples em PHP (`VisibilityRule::matchesItem()`/
   `grantsCurrentUser()`) bastam para o caso de uso pedido (Critérios de
-  Dashboard/Módulo combinados por E/OU, Ação reaproveitando o mesmo
-  `VisibilityDropdown` de `ItemVisibility`). Se o motor nativo se mostrar
-  necessário no futuro (ex.: mais tipos de critério, ações mais ricas),
-  migrar para `Rule` é um passo isolado — a Ação já usa o mesmo modelo de
-  dados de `ItemVisibility` (itemtype + items_id), então a semântica de
-  "quem ganha acesso" não muda.
+  Dashboard/Módulo combinados por E/OU; Ação = Perfil/Grupo/Usuário/Entidade
+  — `Dropdown::show($itemtype, ...)`, o helper genérico "escolher 1 item de
+  um itemtype" do próprio core — ou o alvo especial `GRANT_ALL`, "Todos os
+  usuários"). `is_private` do `DashboardItem` não é mais um campo editável:
+  é recalculado (`VisibilityRule::resyncAffectedItems()`) sempre que uma
+  regra muda — 1 quando pelo menos uma regra casa com o item, 0 (público)
+  quando nenhuma casa.
 - **Cache de JS/CSS do plugin é por versão, não por conteúdo.** O `?v=` que
   o GLPI anexa a `public/js/analyticdesign.js`/`public/css/analyticdesign.css`
   (`Html::script()`/`Html::css()` → `Plugin::getPluginFilesVersion()`) é
@@ -527,22 +541,22 @@ Decisões relevantes para quem for manter ou estender o plugin:
   através da `Connection` pai. O render do card
   (`DashboardItem::isVisibleForCurrentUser()`) aplica quatro camadas, todas
   obrigatórias: `is_active`, direito de leitura do módulo, escopo de
-  entidade da `Connection` dona e, se privado, `ItemVisibility` **ou**
-  `VisibilityRule` (qualquer uma das duas já basta — seção 10). A
-  pré-visualização (aba "Pré-Visualização", `isPreviewableByCurrentUser()`)
-  usa só as três primeiras — ignora `ItemVisibility`/`VisibilityRule` de
-  propósito (ver seção 4) —, então nunca vaza um card fora da entidade/
-  direito do módulo, só relaxa a regra fina de "para quem" o card foi
-  restrito.
+  entidade da `Connection` dona e, se privado (`is_private` — sempre
+  calculado, nunca digitado, ver seção 10), casar com pelo menos uma regra
+  de `VisibilityRule` que conceda acesso ao usuário atual. A pré-visualização
+  (aba "Pré-Visualização", `isPreviewableByCurrentUser()`) usa só as três
+  primeiras — ignora `VisibilityRule` de propósito (ver seção 4) —, então
+  nunca vaza um card fora da entidade/direito do módulo, só relaxa a regra
+  fina de "para quem" o card foi restrito.
 - **Visibilidade restrita por card (`is_private`):** além do direito geral
-  do módulo, cada `DashboardItem` pode ser restrito a Perfil/Grupo/Usuário/
-  Entidade específicos (seção 8) — mesmo modelo de compartilhamento que o
-  GLPI usa nos próprios dashboards nativos
-  (`Glpi\Dashboard\Dashboard::checkRights()`). Sem nenhuma regra
-  configurada, um card marcado como restrito fica invisível para todo mundo
-  (nega por padrão, não abre por padrão). Regras de `VisibilityRule` (seção
-  10) são uma segunda forma, adicional (OR), de satisfazer essa restrição —
-  mesma semântica de "nega por padrão" quando não há Critério preenchido.
+  do módulo, cada `DashboardItem` pode ficar restrito a Perfil/Grupo/Usuário/
+  Entidade específicos, via uma regra de `VisibilityRule` (seção 10/8) — mesmo
+  modelo de compartilhamento que o GLPI usa nos próprios dashboards nativos
+  (`Glpi\Dashboard\Dashboard::checkRights()`). `is_private` é sempre
+  calculado (nunca digitado): um item sem nenhuma regra apontando pra ele é
+  público; uma regra que casa mas concede acesso a ninguém (nenhuma Ação, ou
+  uma Ação que não inclui o usuário atual) deixa o item invisível para essa
+  pessoa — nega por padrão, nunca abre por padrão.
 - **XSS:** toda saída passa por `htmlspecialchars(..., ENT_QUOTES)`;
   `buildIframe()` só renderiza URLs `http`/`https` (bloqueia `javascript:`/
   `data:` em `embed_url`); iframe usa `sandbox` e
@@ -594,17 +608,17 @@ Decisões relevantes para quem for manter ou estender o plugin:
 | Campo de API Token/credencial aparece vazio mesmo já configurado | Comportamento esperado — o valor real nunca é reenviado ao navegador por segurança | Olhar o placeholder: bolinhas (`••••••••••••`) indicam que já existe um valor salvo; deixar em branco para mantê-lo |
 | Seção de URL/API do Grafana sumiu da aba "Fonte de Dados" | Comportamento esperado — some quando o **Status** da fonte é "Não" | Mudar Status para "Sim" para reexibir a seção (os valores continuam salvos) |
 | Um ajuste de JS/CSS do plugin não parece ter efeito para alguns usuários | Cache do navegador — o `?v=` do arquivo é baseado na versão do plugin, não no conteúdo (ver seção 11) | Pedir para a pessoa recarregar a página com cache limpo (Ctrl+F5); confirmar que o plugin está na versão esperada |
-| Ao marcar "Restrito a..." (Visibilidade), o seletor de Perfil/Grupo/Usuário/Entidade não aparece | Quase sempre cache de navegador com uma cópia antiga de `public/js/analyticdesign.js` (ver linha acima) — o mecanismo foi testado e funciona com o JS atualizado | Confirmar que o plugin está na versão mais recente (reinstalar/reativar) e recarregar com Ctrl+F5 antes de reportar como bug |
+| Na aba "Visibilidade", ao trocar Campo/Condição na linha de "adicionar critério" o Valor não muda para o dropdown certo | Quase sempre cache de navegador com uma cópia antiga de `public/js/analyticdesign.js` (ver linha acima) — o mecanismo foi testado e funciona com o JS atualizado | Confirmar que o plugin está na versão mais recente (reinstalar/reativar) e recarregar com Ctrl+F5 antes de reportar como bug |
 | Card aparece vazio/quebrado no dashboard | Política de CSP da instância GLPI, ou `X-Frame-Options`/CSP do Grafana/Power BI bloqueando ser enquadrado por outra origem | Verificar `allow_embedding` no Grafana; checar CSP da instância GLPI (fora do controle do plugin) |
 | Card do Grafana (ou a pré-visualização) pede login em vez de mostrar o dashboard | Comportamento esperado — o service account token só autentica as chamadas de API do backend, não o `<iframe>` do navegador (ver seção 4); a tela de pré-visualização já mostra esse aviso quando a fonte é Grafana | Habilitar `auth.anonymous` no Grafana, converter o dashboard para "Shared/Public dashboard", ou usar um Grafana com SSO/sessão já compartilhada |
 | Dropdown "Dashboard" na aba "Configurações" aparece vazio ou some (cai no formulário manual) | A fonte não respondeu à listagem, ou todos os dashboards já foram importados | Testar a conexão na aba "Fonte de Dados"/"Configurações"; se já importou tudo, é o comportamento esperado |
 | Botão "Remover" (aba "Configurações") não aparece, ou o item continua na lista depois de confirmar | Sem direito de **Atualizar** no plugin, o botão nem aparece; se aparece mas falha, checar erro de rede no console do navegador | Confirmar direito de Atualizar (seção 2); tentar de novo — a remoção é via `fetch()`, sem recarregar a página |
 | Aba "Visibilidade" da fonte não aparece, ou aparece vazia | Comportamento esperado se nenhuma regra foi cadastrada ainda — a aba sempre existe, só a lista fica vazia | Clicar em "Adicionar regra" para cadastrar a primeira |
-| Regra em "Visibilidade" não parece ter efeito | A regra só é avaliada quando o card está com Visibilidade "Restrito a..." (`is_private`) — regras nunca abrem um card público (seção 8); ou a regra está com Status "Não" | Conferir Status da regra e que o card alvo está marcado "Restrito a..."; conferir se os Critérios realmente casam com o dashboard (nome/módulo) |
+| Regra em "Visibilidade" não parece ter efeito | Os Critérios da regra não casam com o dashboard esperado (nome/módulo digitado diferente do real), ou a Ação não inclui o usuário que está testando (Perfil/Grupo/Usuário/Entidade errado — "Todos os usuários" libera geral) | Conferir os Critérios (o dropdown de Dashboard só mostra os já importados) e a Ação da regra (seção 10) |
 | Seção "Configurações do dashboard" mostra só um aviso de "sem direito" | O perfil atual só tem **Ler**, não **Atualizar**, no direito do plugin (seção 2) | Pedir para um perfil com direito de Atualizar conceder/ajustar o direito, ou logar com um usuário que já tenha |
 | Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |
-| Card configurado como "Restrito a..." não aparece para ninguém | Nenhum alvo (Perfil/Grupo/Usuário/Entidade) foi adicionado — comportamento esperado, nega por padrão | Editar o card (seção 8) e adicionar ao menos um alvo de visibilidade |
+| Um dashboard restrito por regra não aparece para ninguém | A regra que casa com ele não tem nenhuma Ação adicionada (ou nenhuma que inclua o usuário) — comportamento esperado, nega por padrão | Editar a regra (aba "Visibilidade", seção 10) e adicionar ao menos uma Ação |
 | "Publish to web" com aviso vermelho | Comportamento esperado, não é erro | Não usar esse modo para dados confidenciais |
-| Campo "Substituir dashboard do módulo" volta para "Não substituir" ao salvar | Visibilidade não estava em "Restrito a..." ou não tinha nenhum alvo adicionado (seção 9) | Marcar "Restrito a..." e adicionar ao menos um alvo antes de escolher o módulo |
+| Campo "Substituir dashboard do módulo" volta para "Não substituir" ao salvar, ou aparece "Indisponível" | O item não tem nenhuma regra na aba "Visibilidade" concedendo acesso a um Perfil/Grupo/Usuário/Entidade específico (seção 9) — "Todos os usuários" não conta | Cadastrar (ou ajustar) uma regra com esse dashboard como Critério e uma Ação concreta antes de escolher o módulo |
 | "Dashboard" de um módulo não mudou depois de configurar a substituição | A sobreposição é aplicada uma vez por sessão (seção 9) | Sair e entrar de novo |
 | Botão "Ver" (pré-visualizar) na aba "Pré-Visualização" não mostra nada / dá acesso negado | O card está com Status "Não", ou o usuário logado não tem o direito/escopo de entidade do módulo (a visibilidade fina é ignorada de propósito nessa aba — ver seção 4) | Confirmar **Status** = `Sim` e que o usuário atual tem o direito do plugin na entidade da Connection |
