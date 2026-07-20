@@ -163,32 +163,52 @@ function toggleCriterionValueWidget(selectEl) {
 }
 
 /**
- * Aba "Visibilidade" — linha de "adicionar ação": mostra o dropdown de
- * Perfil/Grupo/Usuário/Entidade que corresponde ao alvo escolhido (nenhum
- * widget para "Todos os usuários", que não precisa de um ID específico) —
- * ver VisibilityRule::showActionsSection().
+ * Aba "Visibilidade" — linha de "adicionar ação": busca via fetch() o
+ * dropdown de Valor certo (Perfil/Grupo/Usuário/Entidade) para o alvo
+ * escolhido em "Conceder acesso a" (nada pra "Todos os usuários", que não
+ * precisa de um ID específico) — ver ajax/getvisibilityactionvalue.php.
+ *
+ * Buscado sob demanda em vez de pré-renderizar os 4 e trocar via CSS
+ * (tentativa anterior): um combo do select2 iniciado dentro de um container
+ * `display:none` calcula largura 0 e não se recupera sozinho depois, mesmo
+ * reexibindo o container — nem forçando `width` explícito nem disparando um
+ * 'resize' corrige de forma confiável. Buscando HTML novo a cada troca, o
+ * combo sempre nasce dentro de um container já visível.
  */
 function toggleActionValueWidget(selectEl) {
     var form = selectEl.closest('.analyticdesign-add-action');
     if (!form) {
         return;
     }
+    var container = form.querySelector('.analyticdesign-action-value-container');
+    if (!container) {
+        return;
+    }
 
-    var widgetsByItemtype = {
-        Profile: form.querySelector('.analyticdesign-action-value-profile'),
-        Group: form.querySelector('.analyticdesign-action-value-group'),
-        User: form.querySelector('.analyticdesign-action-value-user'),
-        Entity: form.querySelector('.analyticdesign-action-value-entity'),
-    };
-    Object.keys(widgetsByItemtype).forEach(function (itemtype) {
-        var widget = widgetsByItemtype[itemtype];
-        if (widget) {
-            widget.style.display = (itemtype === selectEl.value) ? '' : 'none';
-        }
-    });
+    var itemtype = selectEl.value;
+    if (itemtype === 'All') {
+        container.innerHTML = '<span class="text-muted">Nenhum valor necessário para "Todos os usuários".</span>';
+        return;
+    }
 
-    // Ver comentário equivalente em toggleCriterionValueWidget().
-    window.dispatchEvent(new Event('resize'));
+    container.innerHTML = '<span class="text-muted">Carregando...</span>';
+    fetch('../ajax/getvisibilityactionvalue.php?itemtype=' + encodeURIComponent(itemtype), {
+        credentials: 'same-origin',
+    })
+        .then(function (resp) { return resp.text(); })
+        .then(function (html) {
+            // innerHTML puro não executa os <script> do select2 embutidos na
+            // resposta — jQuery.fn.html() executa, e jQuery já é garantido
+            // aqui (select2/Dropdown::show() já dependem dele).
+            if (window.jQuery) {
+                window.jQuery(container).html(html);
+            } else {
+                container.innerHTML = html;
+            }
+        })
+        .catch(function () {
+            container.innerHTML = '<span class="text-danger">Erro ao carregar.</span>';
+        });
 }
 
 function testConnection(testBtn) {

@@ -54,7 +54,8 @@ analyticdesign/
 │   ├── importselecteddashboard.php # cria DashboardItem a partir do dropdown de dashboards disponíveis
 │   ├── addmanualdashboard.php    # cria DashboardItem a partir de URL colada manualmente (fallback sem listagem)
 │   ├── updatedashboarditems.php  # salva edição em lote (módulo/ativo/substituição de módulo)
-│   └── deletedashboarditem.php   # remove por completo um dashboard exposto (JSON, fetch())
+│   ├── deletedashboarditem.php   # remove por completo um dashboard exposto (JSON, fetch())
+│   └── getvisibilityactionvalue.php # devolve o dropdown de Valor (Perfil/Grupo/Usuário/Entidade) sob demanda, aba "Visibilidade"
 ├── src/
 │   ├── Connection.php        # CommonDBTM: fontes cadastradas + showForm() (Nome/Ferramenta/Status + Comentários + URL/token do Grafana)
 │   ├── ConnectionCharacteristics.php # aba "Configurações" (Power BI: URL/embed_mode/credenciais; ambos: config. do dashboard)

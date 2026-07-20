@@ -64,18 +64,6 @@ function analyticdesign_resolve_criterion_value(string $field, string $condition
     return (string)($post['value_text'] ?? '');
 }
 
-/** Resolve o ID do alvo de UMA ação a partir do POST, conforme o itemtype escolhido. */
-function analyticdesign_resolve_action_items_id(string $itemtype, array $post): int
-{
-    return match ($itemtype) {
-        \Profile::class => (int)($post['value_profile'] ?? 0),
-        \Group::class   => (int)($post['value_group'] ?? 0),
-        \User::class    => (int)($post['value_user'] ?? 0),
-        \Entity::class  => (int)($post['value_entity'] ?? 0),
-        default         => 0,
-    };
-}
-
 $action = $_POST['action'] ?? '';
 
 switch ($action) {
@@ -130,7 +118,9 @@ switch ($action) {
         $rule = analyticdesign_load_authorized_rule((int)($_POST['rule_id'] ?? 0));
         $connectionsId = (int)$rule->fields['connections_id'];
         $itemtype = (string)($_POST['itemtype'] ?? '');
-        $itemsId = analyticdesign_resolve_action_items_id($itemtype, $_POST);
+        // Um único campo (`value_item_id`) serve pra Perfil/Grupo/Usuário/
+        // Entidade — ver docblock de VisibilityRule::showActionsSection().
+        $itemsId = (int)($_POST['value_item_id'] ?? 0);
         VisibilityRule::addAction((int)$rule->fields['id'], $itemtype, $itemsId);
         VisibilityRule::resyncAffectedItems($connectionsId);
         analyticdesign_redirect_to_visibilidade($connectionsId);

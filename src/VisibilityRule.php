@@ -417,7 +417,7 @@ class VisibilityRule extends CommonDBTM
 
         echo "<div class='card-header d-flex justify-content-between align-items-center flex-wrap gap-2'>";
         echo "<span class='card-title mb-0 d-flex align-items-center gap-2'><i class='ti ti-shield-check'></i> "
-            . sprintf(__('Regra #%d', 'analyticdesign'), $ruleId) . "</span>";
+            . __('Regra', 'analyticdesign') . "</span>";
 
         if ($canEdit) {
             echo "<div class='d-flex align-items-center flex-wrap gap-3'>";
@@ -632,20 +632,19 @@ class VisibilityRule extends CommonDBTM
         ]);
         echo "</div>";
 
-        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-profile'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(Profile::class, ['name' => 'value_profile', 'rand' => $ruleId, 'width' => '100%']);
+        // Só o widget do tipo já selecionado (Perfil, por padrão) é renderizado
+        // aqui — os demais são buscados sob demanda via fetch() quando o tipo
+        // muda (ver toggleActionValueWidget() em analyticdesign.js e
+        // ajax/getvisibilityactionvalue.php). Pré-renderizar os 4 de uma vez
+        // (versão anterior) e só trocar a visibilidade via CSS parecia mais
+        // simples, mas esbarra num bug real do select2: um combo iniciado
+        // dentro de um container `display:none` calcula largura 0 e nunca se
+        // recupera sozinho depois — mesmo escondendo/reexibindo o container.
+        echo "<div class='analyticdesign-field analyticdesign-field-value'>";
+        echo "<label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        echo "<div class='analyticdesign-action-value-container'>";
+        Dropdown::show(Profile::class, ['name' => 'value_item_id', 'width' => '100%']);
         echo "</div>";
-
-        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-group' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(Group::class, ['name' => 'value_group', 'rand' => $ruleId, 'width' => '100%']);
-        echo "</div>";
-
-        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-user' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(User::class, ['name' => 'value_user', 'rand' => $ruleId, 'width' => '100%']);
-        echo "</div>";
-
-        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-entity' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(Entity::class, ['name' => 'value_entity', 'rand' => $ruleId, 'width' => '100%']);
         echo "</div>";
 
         echo "<button type='submit' class='btn btn-sm btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";

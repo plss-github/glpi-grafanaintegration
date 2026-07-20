@@ -419,7 +419,7 @@ msgid "Ação"
 msgstr ""
 
 #: src/VisibilityRule.php
-msgid "Regra #%d"
+msgid "Regra"
 msgstr ""
 
 #: src/VisibilityRule.php
