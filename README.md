@@ -13,8 +13,11 @@ para um público restrito (Perfil/Grupo/Usuário/Entidade).
 📘 **Guia de configuração passo a passo:** [docs/CONFIGURACAO.md](docs/CONFIGURACAO.md).
 As decisões de arquitetura, riscos de integração com o GLPI e o modelo de
 segurança completo (antes descritos aqui) foram movidos para lá — ver
-[seção "Arquitetura e riscos de integração"](docs/CONFIGURACAO.md#10-arquitetura-e-riscos-de-integração)
-e [seção "Segurança"](docs/CONFIGURACAO.md#11-segurança).
+[seção "Arquitetura e riscos de integração"](docs/CONFIGURACAO.md#11-arquitetura-e-riscos-de-integração)
+e [seção "Segurança"](docs/CONFIGURACAO.md#12-segurança). A aba
+**"Visibilidade"** (regras de Critérios/Ação, alternativa ao ajuste direto
+por card) está documentada na
+[seção 10](docs/CONFIGURACAO.md#10-restringir-visibilidade-por-regras-aba-visibilidade).
 
 ## Arquitetura
 
@@ -43,22 +46,25 @@ analyticdesign/
 │   ├── dashboarditem.php      # listagem geral de dashboards expostos
 │   ├── dashboarditem.form.php # edição pontual (visibilidade/substituição de módulo)
 │   ├── previewdashboarditem.php  # pré-visualização isolada de um card (aba "Pré-Visualização")
+│   ├── visibilityrule.form.php   # add/edit/delete de UMA regra de visibilidade (aba "Visibilidade")
 │   ├── dashboard_management.php  # "Dashboard" de Gerência, quando há substituição ativa
-│   ├── dashboard_tools.php       # idem, Ferramentas
-│   └── dashboard_admin.php       # idem, Administração
+│   └── dashboard_tools.php       # idem, Ferramentas
 ├── ajax/
 │   ├── testconnection.php        # testa a conexão de uma fonte salva (JSON)
 │   ├── importselecteddashboard.php # cria DashboardItem a partir do dropdown de dashboards disponíveis
 │   ├── addmanualdashboard.php    # cria DashboardItem a partir de URL colada manualmente (fallback sem listagem)
 │   ├── updatedashboarditems.php  # salva edição em lote (módulo/ativo)
+│   ├── deletedashboarditem.php   # remove por completo um dashboard exposto (JSON, fetch())
 │   └── getvisibilitydropdownvalue.php # endpoint do AbstractRightsDropdown (Perfil/Grupo/Usuário/Entidade)
 ├── src/
 │   ├── Connection.php        # CommonDBTM: fontes cadastradas + showForm() (Nome/Ferramenta/Status + Comentários + URL/token do Grafana)
 │   ├── ConnectionCharacteristics.php # aba "Configurações" (Power BI: URL/embed_mode/credenciais; ambos: config. do dashboard)
-│   ├── DashboardItem.php     # CommonDBTM: dashboards expostos + aba "Pré-Visualização" na Connection
+│   ├── DashboardItem.php     # CommonDBTM: dashboards expostos + aba "Pré-Visualização" (somente-leitura) na Connection
 │   ├── Dashboard.php         # hooks getTypes/getCards + provider + render do widget
 │   ├── ItemVisibility.php    # regras de visibilidade (Perfil/Grupo/Usuário/Entidade) por DashboardItem
 │   ├── VisibilityDropdown.php # UI do seletor de visibilidade (reaproveita AbstractRightsDropdown do GLPI)
+│   ├── VisibilityRule.php    # CommonDBTM: regras de Critérios/Ação por Connection (aba "Visibilidade", ver seção 10 do guia)
+│   ├── ConnectionVisibilityRules.php # aba "Visibilidade": lista as regras + link para cadastrar/editar
 │   ├── ModuleDashboard.php   # substituição do Dashboard nativo de um módulo (ver seção 9 do guia)
 │   ├── Menu.php              # entrada em Administração
 │   ├── ProfileRights.php     # aba "Análise de Dados" em Administração > Perfis

@@ -39,7 +39,7 @@ class Connection extends CommonDBTM
 
     public static function getTypeName($nb = 0)
     {
-        return _n('Fonte de dados', 'Fontes de dados', $nb, 'analyticdesign');
+        return _n('Fonte de Dados', 'Fontes de Dados', $nb, 'analyticdesign');
     }
 
     public static function getIcon()
@@ -61,6 +61,7 @@ class Connection extends CommonDBTM
         $this->addDefaultFormTab($tabs);
         $this->addStandardTab(ConnectionCharacteristics::class, $tabs, $options);
         $this->addStandardTab(DashboardItem::class, $tabs, $options);
+        $this->addStandardTab(ConnectionVisibilityRules::class, $tabs, $options);
         $this->addStandardTab('Log', $tabs, $options);
         return $tabs;
     }
@@ -176,11 +177,31 @@ class Connection extends CommonDBTM
         $this->showNameToolAndStatusFields();
         $this->showCommentField();
 
-        if ((int)$this->fields['id'] > 0 && $this->fields['type'] === GrafanaSource::getType()) {
+        $isGrafana = (int)$this->fields['id'] > 0 && $this->fields['type'] === GrafanaSource::getType();
+        if ($isGrafana) {
             $this->showGrafanaCredentialsSection();
         }
 
         echo "</td></tr>";
+
+        // "Testar conexão" pedido na MESMA linha dos botões padrão
+        // (Salvar/Excluir) — usa o mecanismo nativo `addbuttons` de
+        // showFormButtons() (components/form/buttons.html.twig) em vez de um
+        // botão solto dentro da seção de credenciais.
+        if ($isGrafana) {
+            $hasToken = !empty($this->getDecryptedCredentials()['api_token'] ?? '');
+            $options['addbuttons']['analyticdesign_test_connection'] = [
+                'type'        => 'button',
+                'text'        => __('Testar conexão', 'analyticdesign'),
+                'icon'        => 'ti ti-plug',
+                'add_class'   => 'analyticdesign-test-connection',
+                'add_attribs' => [
+                    'data-id'              => (int)$this->fields['id'],
+                    'data-has-credentials' => $hasToken ? '1' : '0',
+                    'style'                => $hasToken ? '' : 'display:none;',
+                ],
+            ];
+        }
         $this->showFormButtons($options);
 
         return true;
@@ -236,8 +257,8 @@ class Connection extends CommonDBTM
     private function showCommentField(): void
     {
         self::openFieldsRow();
-        self::openField('comment', __('Comentários'), 'analyticdesign_comment', true);
-        echo "<textarea name='comment' id='analyticdesign_comment' class='form-control' rows='3'>"
+        self::openField('comment', __('Comentários'), 'analyticdesign_comment');
+        echo "<textarea name='comment' id='analyticdesign_comment' class='form-control' rows='2'>"
             . htmlspecialchars($this->fields['comment'] ?? '', ENT_QUOTES) . "</textarea>";
         self::closeField();
         self::closeFieldsRow();
@@ -269,7 +290,6 @@ class Connection extends CommonDBTM
     {
         $fieldsForType = SourceFactory::getConfigFieldsFor(GrafanaSource::getType());
         $credentials = $this->getDecryptedCredentials();
-        $hasToken = !empty($credentials['api_token'] ?? '');
         $isActive = (int)($this->fields['is_active'] ?? 0) === 1;
 
         // Escondida quando a fonte está desativada — volta ao ativar de novo
@@ -314,16 +334,10 @@ class Connection extends CommonDBTM
                 . "</p>";
         }
 
-        echo "<div class='mt-2'>";
-        // Visível desde o início se já existe token salvo (não fica escondido
-        // de novo só porque o campo, por segurança, nasce vazio na tela — ver
-        // toggleTestButtonVisibility() em public/js/analyticdesign.js).
-        echo "<button type='button' class='btn btn-outline-secondary analyticdesign-test-connection' style='"
-            . ($hasToken ? '' : 'display:none;') . "' data-has-credentials='" . ($hasToken ? '1' : '0') . "' data-id='"
-            . (int)$this->fields['id'] . "'>"
-            . "<i class='ti ti-plug'></i> " . __('Testar conexão', 'analyticdesign')
-            . "</button> <span class='analyticdesign-test-result ms-2'></span>";
-        echo "</div>";
+        // O botão "Testar conexão" em si fica na linha dos botões padrão
+        // (Salvar/Excluir) — ver showForm(), opção `addbuttons`. Só o
+        // resultado do teste (sucesso/erro) continua aqui.
+        echo "<div class='mt-2'><span class='analyticdesign-test-result'></span></div>";
 
         echo "</div>"; // .analyticdesign-fields-wrapper
         echo "</div>"; // .analyticdesign-characteristics

@@ -8,11 +8,14 @@
  *  - botão "Testar conexão" via fetch, sem recarregar a página; quando a
  *    conexão falha, esconde os campos e mostra só o erro (com um botão para
  *    reabrir os campos e corrigir a configuração);
- *  - no Grafana, "Testar conexão" (agora na aba "Fonte de dados") aparece
- *    quando já existe token salvo ou algo é digitado no campo;
+ *  - no Grafana, "Testar conexão" (na linha de Salvar/Excluir da aba "Fonte
+ *    de Dados") aparece quando já existe token salvo ou algo é digitado no
+ *    campo;
  *  - esconde a seção de URL/API do Grafana quando o Status da fonte é "Não";
  *  - mostra o seletor de Perfil/Grupo/Usuário/Entidade só quando a
- *    visibilidade é "Restrito a..." (aba "Configurações").
+ *    visibilidade é "Restrito a..." (aba "Configurações");
+ *  - botão "Remover" de um dashboard já importado (aba "Configurações"), com
+ *    confirmação, via fetch — some da tabela sem recarregar a página.
  *
  * Tudo via *event delegation* em `document` (nada de
  * `document.querySelector(...).addEventListener(...)` direto): o GLPI carrega
@@ -61,6 +64,12 @@ document.addEventListener('click', function (event) {
     var reopenBtn = event.target.closest('.analyticdesign-reopen-fields');
     if (reopenBtn) {
         showCharacteristicsFields(reopenBtn.closest('.analyticdesign-characteristics'));
+        return;
+    }
+
+    var deleteBtn = event.target.closest('.analyticdesign-delete-item');
+    if (deleteBtn) {
+        deleteDashboardItem(deleteBtn);
     }
 });
 
@@ -86,8 +95,12 @@ function toggleEmbedModeFields(embedModeSelect) {
  * Connection::showGrafanaCredentialsSection()).
  */
 function toggleTestButtonVisibility(apiTokenInput) {
-    var container = apiTokenInput.closest('.analyticdesign-characteristics') || document;
-    var testBtn = container.querySelector('.analyticdesign-test-connection');
+    // Busca global (não escopada por closest()): o botão agora fica na
+    // linha de botões padrão (Salvar/Excluir), fora de
+    // .analyticdesign-characteristics — ver Connection::showForm(). Só
+    // existe um desses por carregamento de página, então a busca global é
+    // segura.
+    var testBtn = document.querySelector('.analyticdesign-test-connection');
     if (testBtn) {
         var hasCredentials = testBtn.dataset.hasCredentials === '1';
         var hasTyped = apiTokenInput.value.trim() !== '';
@@ -112,8 +125,11 @@ function toggleVisibilityTargets(visibilitySelect) {
 }
 
 function testConnection(testBtn) {
-    var resultEl = testBtn.parentElement.querySelector('.analyticdesign-test-result');
-    var container = testBtn.closest('.analyticdesign-characteristics');
+    // Também global: no Grafana o botão (linha de Salvar/Excluir) e o
+    // resultado/erro (dentro de .analyticdesign-characteristics) não são
+    // mais parente/filho um do outro — ver toggleTestButtonVisibility().
+    var resultEl = document.querySelector('.analyticdesign-test-result');
+    var container = document.querySelector('.analyticdesign-characteristics');
     var id = testBtn.dataset.id;
     var csrfInput = testBtn.closest('form')
         ? testBtn.closest('form').querySelector('input[name="_glpi_csrf_token"]')
@@ -151,6 +167,51 @@ function testConnection(testBtn) {
         })
         .finally(function () {
             testBtn.disabled = false;
+        });
+}
+
+/**
+ * Remove por completo um dashboard exposto (aba "Configurações" — ver
+ * ajax/deletedashboarditem.php). Pede confirmação antes (ação irreversível);
+ * em caso de sucesso, só tira a linha da tabela — sem recarregar a página.
+ */
+function deleteDashboardItem(deleteBtn) {
+    var name = deleteBtn.dataset.name || '';
+    if (!window.confirm('Remover "' + name + '"? Essa ação não pode ser desfeita.')) {
+        return;
+    }
+
+    var id = deleteBtn.dataset.id;
+    var csrfInput = deleteBtn.closest('form')
+        ? deleteBtn.closest('form').querySelector('input[name="_glpi_csrf_token"]')
+        : document.querySelector('input[name="_glpi_csrf_token"]');
+
+    var body = new URLSearchParams();
+    body.set('id', id);
+    body.set('_glpi_csrf_token', csrfInput ? csrfInput.value : '');
+
+    deleteBtn.disabled = true;
+    fetch('../ajax/deletedashboarditem.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+        credentials: 'same-origin',
+    })
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+            if (data.success) {
+                var row = deleteBtn.closest('tr');
+                if (row) {
+                    row.remove();
+                }
+                return;
+            }
+            window.alert(data.message || 'Falha ao remover.');
+            deleteBtn.disabled = false;
+        })
+        .catch(function () {
+            window.alert('Erro de rede ao remover.');
+            deleteBtn.disabled = false;
         });
 }
 

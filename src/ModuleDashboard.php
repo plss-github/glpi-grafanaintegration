@@ -4,10 +4,10 @@
  * Analytic Design
  * -----------------------------------------------------------------------------
  * Substitui o Dashboard nativo de um módulo do GLPI (Ativos, Assistência,
- * Gerência, Ferramentas, Administração) pelo embed de BI de um DashboardItem
- * específico — só para os usuários que baterem com a regra de visibilidade
- * daquele item (ver ItemVisibility). "Configurar" fica de fora (não cabe um
- * dashboard ali).
+ * Gerência, Ferramentas) pelo embed de BI de um DashboardItem específico —
+ * só para os usuários que baterem com a regra de visibilidade daquele item
+ * (ver ItemVisibility). "Configurar" fica de fora (não cabe um dashboard
+ * ali); "Administração" também, a pedido.
  *
  * Não existe um hook de "primeira classe" do GLPI pra isso — o mecanismo foi
  * montado a partir de 3 peças confirmadas lendo o código-fonte do GLPI
@@ -26,9 +26,9 @@
  *    `context` dos dashboards auto-provisionados aqui pode ser qualquer
  *    string própria, sem precisar imitar o `context='core'` nativo.
  *
- * 2. **Gerência, Ferramentas e Administração não têm dashboard nativo.** O
+ * 2. **Gerência e Ferramentas não têm dashboard nativo.** O
  *    plugin cria a própria tela (ver front/dashboard_management.php e
- *    irmãos) e injeta o link "Dashboard" no menu desses módulos via
+ *    irmão) e injeta o link "Dashboard" no menu desses módulos via
  *    `Hooks::REDEFINE_MENUS`, usando a MESMA chave `default_dashboard` que o
  *    core usa pra Ativos/Assistência (ver
  *    templates/layout/parts/menu.html.twig: `firstlevel['default_dashboard']`
@@ -62,13 +62,12 @@ use Session;
 
 class ModuleDashboard
 {
-    /** Módulos que podem ser alvo de substituição — todos exceto "Configurar". */
+    /** Módulos que podem ser alvo de substituição — Configurar e Administração ficam de fora (a pedido, para este último). */
     public const MODULES = [
         'assets'     => 'Ativos',
         'helpdesk'   => 'Assistência',
         'management' => 'Gerência',
         'tools'      => 'Ferramentas',
-        'admin'      => 'Administração',
     ];
 
     /**
@@ -83,11 +82,10 @@ class ModuleDashboard
         'helpdesk'   => '/front/dashboard_helpdesk.php',
         'management' => '/plugins/analyticdesign/front/dashboard_management.php',
         'tools'      => '/plugins/analyticdesign/front/dashboard_tools.php',
-        'admin'      => '/plugins/analyticdesign/front/dashboard_admin.php',
     ];
 
     /** Módulos sem dashboard nativo — precisam do link injetado no menu. */
-    private const MODULES_WITHOUT_NATIVE_DASHBOARD = ['management', 'tools', 'admin'];
+    private const MODULES_WITHOUT_NATIVE_DASHBOARD = ['management', 'tools'];
 
     /** Contexto reservado do plugin para os dashboards auto-provisionados. */
     private const DASHBOARD_CONTEXT = 'analyticdesign';
@@ -162,8 +160,13 @@ class ModuleDashboard
      * a substituição de módulo). Limpa também o compartilhamento nativo
      * espelhado (`glpi_dashboards_rights`), mesma tabela zerada em
      * `syncNativeDashboard()` antes de recriar.
+     *
+     * Público (não `private`): também chamado por
+     * `DashboardItem::post_purgeItem()` ao remover um dashboard exposto de
+     * vez — sem isso, apagar o item deixava o dashboard nativo (e seu
+     * compartilhamento espelhado) órfão para sempre.
      */
-    private static function deleteNativeDashboard(int $itemId): void
+    public static function deleteNativeDashboard(int $itemId): void
     {
         $dashboard = new GlpiDashboard();
         if (!$dashboard->getFromDB(self::dashboardKeyFor($itemId))) {
@@ -231,7 +234,7 @@ class ModuleDashboard
 
     /**
      * Hook Glpi\Plugin\Hooks::REDEFINE_MENUS — injeta o link "Dashboard" no
-     * topo do menu de Gerência/Ferramentas/Administração (mesma chave
+     * topo do menu de Gerência/Ferramentas (mesma chave
      * `default_dashboard` que o core já usa para Ativos/Assistência), só
      * quando o usuário atual tem uma substituição ativa para aquele módulo.
      *

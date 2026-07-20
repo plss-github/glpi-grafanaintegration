@@ -63,12 +63,12 @@ administra as fontes, ou um perfil que só deve visualizar):
 
 ## 3. Cadastrar uma fonte Grafana
 
-O cadastro é em dois passos, na **mesma aba "Fonte de dados"**: primeiro o
+O cadastro é em dois passos, na **mesma aba "Fonte de Dados"**: primeiro o
 básico (nome/ferramenta/status), lado a lado numa única linha; depois de
 salvar, a URL e o token do Grafana aparecem logo abaixo, na mesma tela — não
 fazia sentido perguntá-los antes de saber que a fonte é um Grafana.
 
-1. **Administração > Análise de Dados > Fontes de dados > Adicionar novo
+1. **Administração > Análise de Dados > Fontes de Dados > Adicionar novo
    item**.
 2. Preencher (os três campos ficam lado a lado):
    - **Nome**: um nome livre para identificar a fonte (ex.: "Grafana
@@ -76,10 +76,11 @@ fazia sentido perguntá-los antes de saber que a fonte é um Grafana.
    - **Ferramenta**: `Grafana`. O dropdown nasce vazio ("-----") — é
      obrigatório escolher explicitamente antes de salvar.
    - **Status**: `Sim` ou `Não` (nasce em `Não`).
-   - Um campo **Comentários** (opcional, texto livre) fica logo abaixo, para
-     anotações internas — não é interpretado pelo plugin.
+   - Um campo **Comentários** (opcional, texto livre, uma caixa compacta de
+     duas linhas) fica logo abaixo, para anotações internas — não é
+     interpretado pelo plugin.
 3. Salvar — a tela recarrega já na fonte criada, agora com abas, e a aba
-   **"Fonte de dados"** já mostra dois campos novos:
+   **"Fonte de Dados"** já mostra dois campos novos:
    - **URL base**: a URL da instância, ex. `https://grafana.suaempresa.com`
      (sem barra no final).
    - **API Token / Service account token**: um *service account token* do
@@ -88,9 +89,10 @@ fazia sentido perguntá-los antes de saber que a fonte é um Grafana.
      licença do GLPI Network (segurar o ícone de olho mostra o valor em
      texto puro; o de clipe copia); depois de salvo, o campo mostra um
      placeholder de bolinhas (nunca o valor real) para indicar que já existe
-     um token configurado. O botão **"Testar conexão"** aparece quando já
-     existe token salvo, ou assim que algo é digitado no campo — testar sem
-     token não faz sentido.
+     um token configurado. O botão **"Testar conexão"** fica na mesma linha
+     dos botões **Salvar**/**Excluir permanentemente**, ao final do
+     formulário — aparece quando já existe token salvo, ou assim que algo é
+     digitado no campo — testar sem token não faz sentido.
 
 > Se o **Status** for alterado para "Não" (fonte desativada), a seção
 > inteira de URL base/API Token some da tela — volta a aparecer ao reativar.
@@ -149,16 +151,17 @@ Na aba **"Configurações"** do registro salvo (aparece assim que a Connection
    catálogo de widgets do dashboard nativo) e configurar **Visibilidade**
    (seção 8) se necessário.
 3. Clicar em **Importar**.
-4. O item aparece na aba **"Pré-Visualização"**, em "Dashboards importados",
-   onde dá para ajustar módulo/status depois e salvar — e pré-visualizar o
-   card antes de decidir onde posicioná-lo.
+4. O item passa a aparecer na tabela "Dashboards importados", na própria
+   aba **"Configurações"** (onde dá para ajustar módulo/status depois,
+   salvar ou remover — ver abaixo), e na aba **"Pré-Visualização"**, de onde
+   dá para pré-visualizar o card antes de decidir onde posicioná-lo.
 
 Repita para cada dashboard — é sempre um por vez, junto com sua própria
 configuração de módulo/visibilidade.
 
 Se a listagem falhar (fonte fora do ar, token errado), a tela mostra o
 formulário manual (nome + URL de embed colados à mão) em vez do dropdown —
-resolva a conexão na aba "Fonte de dados" (passo 5 acima) e volte aqui.
+resolva a conexão na aba "Fonte de Dados" (passo 5 acima) e volte aqui.
 
 > Só quem tem direito de **Atualizar** nesta fonte (seção 2) vê o formulário
 > de importação por completo — com apenas **Ler**, a seção mostra um aviso
@@ -166,14 +169,26 @@ resolva a conexão na aba "Fonte de dados" (passo 5 acima) e volte aqui.
 > formulário, para não deixar preencher tudo só para levar "Acesso negado"
 > ao clicar em Importar.
 
-> A aba **"Pré-Visualização"** (antiga "Dashboards expostos") é só um
-> pré-visualizador: lista o que já foi importado, com um botão **"Ver"** por
-> linha que abre o card renderizado numa aba nova — essa pré-visualização
-> **ignora deliberadamente** a regra de visibilidade configurada (seção 8):
-> quem chega até essa aba já tem direito de administrar a fonte, então não
-> faz sentido a própria pessoa que configurou o card ficar bloqueada de
-> vê-lo. Escolher o que importar, módulo, visibilidade e substituição de
-> módulo (seções 6, 8 e 9) ficam todos na aba **"Configurações"**.
+A aba **"Configurações"** também mostra, acima do formulário de importação,
+uma **tabela "Dashboards importados"** com todos os itens já cadastrados
+naquela fonte — cada linha tem **Módulo** e **Status** editáveis direto na
+tabela (um botão **Salvar** grava todos de uma vez) e um botão **Remover**
+que apaga o item por completo (pede confirmação; some da tabela sem
+recarregar a página). Remover é definitivo — apaga também qualquer regra de
+visibilidade específica daquele card (seção 8) e, se ele estivesse
+substituindo o dashboard nativo de um módulo (seção 9), desfaz essa
+substituição também.
+
+> A aba **"Pré-Visualização"** (antiga "Dashboards expostos") é hoje **só**
+> um pré-visualizador somente-leitura: colunas Nome, ID externo, Módulo e
+> **Pré-visualizar** (um botão **"Ver"** por linha que abre o card
+> renderizado numa aba nova) — essa pré-visualização **ignora
+> deliberadamente** a regra de visibilidade
+> configurada (seção 8): quem chega até essa aba já tem direito de
+> administrar a fonte, então não faz sentido a própria pessoa que configurou
+> o card ficar bloqueada de vê-lo. Escolher o que importar, ajustar módulo/
+> status, remover, configurar visibilidade e substituição de módulo (seções
+> 8 e 9) ficam todos na aba **"Configurações"**.
 
 ## 5. Cadastrar uma fonte Power BI — modo "Embed seguro"
 
@@ -196,7 +211,7 @@ do workspace para uso em produção.
    service principal é **Membro** (ou Admin) do workspace de destino.
 2. Anotar: **Tenant ID**, **Client ID**, **Client secret**, e o **Workspace
    ID** (GUID do workspace/group — está na URL do workspace no Power BI).
-3. **Administração > Análise de Dados > Fontes de dados > Adicionar**:
+3. **Administração > Análise de Dados > Fontes de Dados > Adicionar**:
    preencher só **Nome**, **Ferramenta** (`Power BI` — o dropdown nasce
    vazio, escolha obrigatória) e **Status** (nasce `Não`), e salvar (o modo de
    embed já nasce como "Embed seguro" por padrão para uma fonte Power BI
@@ -318,9 +333,10 @@ do Setor X, e um Grupo do GLPI que representa esse setor — todo usuário desse
 Grupo passa a ver esse dashboard automaticamente ao abrir **Ativos >
 Dashboard**, no lugar do dashboard nativo padrão.
 
-Módulos suportados: **Ativos**, **Assistência**, **Gerência**,
-**Ferramentas** e **Administração**. O módulo **Configurar** não é oferecido
-— não é um módulo com uma tela de dashboard.
+Módulos suportados: **Ativos**, **Assistência**, **Gerência** e
+**Ferramentas**. **Administração** e **Configurar** não são oferecidos —
+não fazia sentido substituir a tela de administração do próprio GLPI por um
+dashboard externo.
 
 > Não confundir com o campo **"Módulo"** da seção 4 (era "Categoria"): aquele
 > só agrupa o card no catálogo de widgets — cosmético, não exige nada. Este
@@ -329,11 +345,11 @@ Módulos suportados: **Ativos**, **Assistência**, **Gerência**,
 > isso exige "Restrito a..." com pelo menos um alvo.
 
 > **Ativos** e **Assistência** já têm uma tela "Dashboard" nativa no GLPI —
-> a substituição troca o que aparece nela. **Gerência**, **Ferramentas** e
-> **Administração** não têm essa tela por padrão; o plugin cria uma e só
-> adiciona o link **"Dashboard"** no menu desses módulos quando existe, para
-> o usuário atual, uma substituição ativa configurada — sem isso, o menu
-> desses módulos continua exatamente como hoje.
+> a substituição troca o que aparece nela. **Gerência** e **Ferramentas**
+> não têm essa tela por padrão; o plugin cria uma e só adiciona o link
+> **"Dashboard"** no menu desses módulos quando existe, para o usuário
+> atual, uma substituição ativa configurada — sem isso, o menu desses
+> módulos continua exatamente como hoje.
 
 Para configurar:
 
@@ -360,7 +376,63 @@ Para configurar:
 > (regras de visibilidade sobrepostas), vale a primeira cadastrada — não é
 > um erro, mas evite sobreposição intencional para não depender dessa ordem.
 
-## 10. Arquitetura e riscos de integração
+## 10. Restringir visibilidade por regras (aba "Visibilidade")
+
+Além do ajuste direto por card (seção 8 — "Restrito a..." + Perfil/Grupo/
+Usuário/Entidade daquele item específico), a aba **"Visibilidade"** da fonte
+permite cadastrar **regras** que casam **Critérios** (quais dashboards a
+regra alcança) com uma **Ação** (quem ganha acesso) — o mesmo modelo
+conceitual das Regras de negócio nativas do GLPI, mas uma implementação
+própria e simples do plugin (não uma subclasse de `Rule`/`RuleCollection`
+do core). Útil quando a mesma condição de acesso (ex.: "todo dashboard cujo
+nome contenha 'Financeiro' deve ser visto pelo Grupo Financeiro") deve valer
+para vários cards sem configurar cada um manualmente.
+
+1. Abrir a fonte e ir à aba **"Visibilidade"** (existe em toda fonte, mesmo
+   sem nenhuma regra cadastrada ainda).
+2. Clicar em **"Adicionar regra"** — abre uma tela própria com duas colunas:
+   - **Critérios** (até 5 linhas fixas): para cada linha, escolher **Campo**
+     (`Dashboard (nome)` ou `Módulo`), **Condição** (`é` ou `contém`) e um
+     **Valor** livre. Linhas sem Valor preenchido são ignoradas ao salvar.
+   - **Ação**: o mesmo seletor de Perfil/Grupo/Usuário/Entidade da seção 8
+     (pode combinar vários; basta casar com um deles para o critério de
+     acesso da regra ser satisfeito).
+   - No topo: **Nome** (livre, só para identificar a regra na listagem),
+     **Status** (`Sim`/`Não` — regra inativa nunca é avaliada) e
+     **"Combinar critérios com"**: `E` (todos os critérios preenchidos
+     precisam casar) ou `OU` (qualquer um já basta).
+3. Salvar.
+
+Exemplo (o mesmo do pedido original): Critério `Dashboard (nome)` `contém`
+`"Suporte"`, combinando com `E`/`OU` conforme o caso; Ação `Grupo` = "Suporte
+N1", `ou` `Entidade` = "Cliente X", `ou` `Perfil` = "Atendente" — qualquer
+usuário que pertença ao Grupo Suporte N1, **ou** esteja na Entidade Cliente
+X, **ou** tenha o Perfil Atendente, passa a ver qualquer dashboard daquela
+fonte cujo nome contenha "Suporte".
+
+> **Uma regra sem nenhum Critério preenchido nunca casa com nada** (nega por
+> padrão) — não é um bug, é para evitar que uma regra "vazia" acidentalmente
+> libere acesso geral.
+
+> **Regras só são avaliadas quando o card está com Visibilidade "Restrito
+> a..."** (seção 8, `is_private`) — igual ao ajuste direto por card, uma
+> regra nunca abre um card que já está "Todos com acesso ao módulo" (esse já
+> é público por natureza dentro do módulo). Quando o card é restrito, o
+> usuário o vê se **qualquer uma das duas formas** conceder acesso: o ajuste
+> direto (seção 8) **ou** uma regra ativa cujos Critérios casem com aquele
+> dashboard e cuja Ação inclua o usuário — combinadas por OU entre si, nunca
+> é preciso configurar as duas.
+
+> As regras ficam escopadas por fonte — uma regra cadastrada na aba
+> "Visibilidade" de uma Connection só é avaliada para os dashboards
+> **daquela mesma fonte**, nunca de outra.
+
+Para editar ou remover uma regra já cadastrada: clicar em **"Editar"** na
+listagem (mesma tela de cadastro, agora preenchida) — o botão padrão
+**"Excluir permanentemente"**, no rodapé do formulário, remove a regra
+(junto com seus Critérios e Ação) sem afetar os dashboards em si.
+
+## 11. Arquitetura e riscos de integração
 
 Decisões relevantes para quem for manter ou estender o plugin:
 
@@ -390,6 +462,19 @@ Decisões relevantes para quem for manter ou estender o plugin:
   vive) e por que a visibilidade precisa ser explícita (só um conjunto
   enumerável de Perfil/Grupo/Usuário/Entidade pode ser espelhado; "todos com
   acesso ao módulo" não é um conjunto enumerável).
+- **`VisibilityRule` (aba "Visibilidade", seção 10) é uma implementação
+  própria do plugin, não uma subclasse de `Rule`/`RuleCollection` do core.**
+  Decisão deliberada: o motor de Regras nativo do GLPI é poderoso mas pouco
+  documentado/mais arriscado de integrar corretamente numa primeira versão;
+  três tabelas próprias (`..._visibilityrules`, `..._criteria`, `..._actions`)
+  e uma avaliação simples em PHP (`VisibilityRule::matchesItem()`/
+  `grantsCurrentUser()`) bastam para o caso de uso pedido (Critérios de
+  Dashboard/Módulo combinados por E/OU, Ação reaproveitando o mesmo
+  `VisibilityDropdown` de `ItemVisibility`). Se o motor nativo se mostrar
+  necessário no futuro (ex.: mais tipos de critério, ações mais ricas),
+  migrar para `Rule` é um passo isolado — a Ação já usa o mesmo modelo de
+  dados de `ItemVisibility` (itemtype + items_id), então a semântica de
+  "quem ganha acesso" não muda.
 - **Cache de JS/CSS do plugin é por versão, não por conteúdo.** O `?v=` que
   o GLPI anexa a `public/js/analyticdesign.js`/`public/css/analyticdesign.css`
   (`Html::script()`/`Html::css()` → `Plugin::getPluginFilesVersion()`) é
@@ -421,7 +506,7 @@ Decisões relevantes para quem for manter ou estender o plugin:
   CRUD, importação, visibilidade, substituição de módulo e o card
   renderizando de fato num dashboard.
 
-## 11. Segurança
+## 12. Segurança
 
 - **CSRF:** plugin `CSRF_COMPLIANT`. A validação em si **não** é feita
   chamando `Session::checkCSRF()` no código do plugin — no GLPI 11, o kernel
@@ -442,18 +527,22 @@ Decisões relevantes para quem for manter ou estender o plugin:
   através da `Connection` pai. O render do card
   (`DashboardItem::isVisibleForCurrentUser()`) aplica quatro camadas, todas
   obrigatórias: `is_active`, direito de leitura do módulo, escopo de
-  entidade da `Connection` dona e, se privado, `ItemVisibility`. A
+  entidade da `Connection` dona e, se privado, `ItemVisibility` **ou**
+  `VisibilityRule` (qualquer uma das duas já basta — seção 10). A
   pré-visualização (aba "Pré-Visualização", `isPreviewableByCurrentUser()`)
-  usa só as três primeiras — ignora `ItemVisibility` de propósito (ver
-  seção 4) —, então nunca vaza um card fora da entidade/direito do módulo,
-  só relaxa a regra fina de "para quem" o card foi restrito.
+  usa só as três primeiras — ignora `ItemVisibility`/`VisibilityRule` de
+  propósito (ver seção 4) —, então nunca vaza um card fora da entidade/
+  direito do módulo, só relaxa a regra fina de "para quem" o card foi
+  restrito.
 - **Visibilidade restrita por card (`is_private`):** além do direito geral
   do módulo, cada `DashboardItem` pode ser restrito a Perfil/Grupo/Usuário/
   Entidade específicos (seção 8) — mesmo modelo de compartilhamento que o
   GLPI usa nos próprios dashboards nativos
   (`Glpi\Dashboard\Dashboard::checkRights()`). Sem nenhuma regra
   configurada, um card marcado como restrito fica invisível para todo mundo
-  (nega por padrão, não abre por padrão).
+  (nega por padrão, não abre por padrão). Regras de `VisibilityRule` (seção
+  10) são uma segunda forma, adicional (OR), de satisfazer essa restrição —
+  mesma semântica de "nega por padrão" quando não há Critério preenchido.
 - **XSS:** toda saída passa por `htmlspecialchars(..., ENT_QUOTES)`;
   `buildIframe()` só renderiza URLs `http`/`https` (bloqueia `javascript:`/
   `data:` em `embed_url`); iframe usa `sandbox` e
@@ -501,14 +590,17 @@ Decisões relevantes para quem for manter ou estender o plugin:
 |---|---|---|
 | Menu/telas do plugin não aparecem, ou "Acesso negado" | Direito não concedido ao perfil (perfis diferentes do Super-Admin não recebem acesso automático) | Ver passo 2 acima (aba "Análise de Dados" dentro do perfil); sair e entrar de novo depois de salvar |
 | "Testar conexão" falha e os campos de credenciais somem | Comportamento esperado (não é erro) — a falha esconde os campos e mostra só a mensagem | Clicar em "Editar configuração" para reabrir os campos e corrigir; confirmar que o servidor do GLPI (não seu navegador) alcança a URL configurada |
-| Botão "Testar conexão" (Grafana) não aparece na aba "Fonte de dados" | A fonte não tem token salvo ainda, e nada foi digitado no campo | Digitar/colar o token no campo — o botão fica visível permanentemente assim que existe um token salvo, mesmo depois de recarregar a página |
+| Botão "Testar conexão" (Grafana) não aparece na aba "Fonte de Dados" | A fonte não tem token salvo ainda, e nada foi digitado no campo | Digitar/colar o token no campo — o botão fica visível permanentemente assim que existe um token salvo, mesmo depois de recarregar a página |
 | Campo de API Token/credencial aparece vazio mesmo já configurado | Comportamento esperado — o valor real nunca é reenviado ao navegador por segurança | Olhar o placeholder: bolinhas (`••••••••••••`) indicam que já existe um valor salvo; deixar em branco para mantê-lo |
-| Seção de URL/API do Grafana sumiu da aba "Fonte de dados" | Comportamento esperado — some quando o **Status** da fonte é "Não" | Mudar Status para "Sim" para reexibir a seção (os valores continuam salvos) |
-| Um ajuste de JS/CSS do plugin não parece ter efeito para alguns usuários | Cache do navegador — o `?v=` do arquivo é baseado na versão do plugin, não no conteúdo (ver seção 10) | Pedir para a pessoa recarregar a página com cache limpo (Ctrl+F5); confirmar que o plugin está na versão esperada |
+| Seção de URL/API do Grafana sumiu da aba "Fonte de Dados" | Comportamento esperado — some quando o **Status** da fonte é "Não" | Mudar Status para "Sim" para reexibir a seção (os valores continuam salvos) |
+| Um ajuste de JS/CSS do plugin não parece ter efeito para alguns usuários | Cache do navegador — o `?v=` do arquivo é baseado na versão do plugin, não no conteúdo (ver seção 11) | Pedir para a pessoa recarregar a página com cache limpo (Ctrl+F5); confirmar que o plugin está na versão esperada |
 | Ao marcar "Restrito a..." (Visibilidade), o seletor de Perfil/Grupo/Usuário/Entidade não aparece | Quase sempre cache de navegador com uma cópia antiga de `public/js/analyticdesign.js` (ver linha acima) — o mecanismo foi testado e funciona com o JS atualizado | Confirmar que o plugin está na versão mais recente (reinstalar/reativar) e recarregar com Ctrl+F5 antes de reportar como bug |
 | Card aparece vazio/quebrado no dashboard | Política de CSP da instância GLPI, ou `X-Frame-Options`/CSP do Grafana/Power BI bloqueando ser enquadrado por outra origem | Verificar `allow_embedding` no Grafana; checar CSP da instância GLPI (fora do controle do plugin) |
 | Card do Grafana (ou a pré-visualização) pede login em vez de mostrar o dashboard | Comportamento esperado — o service account token só autentica as chamadas de API do backend, não o `<iframe>` do navegador (ver seção 4); a tela de pré-visualização já mostra esse aviso quando a fonte é Grafana | Habilitar `auth.anonymous` no Grafana, converter o dashboard para "Shared/Public dashboard", ou usar um Grafana com SSO/sessão já compartilhada |
-| Dropdown "Dashboard" na aba "Configurações" aparece vazio ou some (cai no formulário manual) | A fonte não respondeu à listagem, ou todos os dashboards já foram importados | Testar a conexão na aba "Fonte de dados"/"Configurações"; se já importou tudo, é o comportamento esperado |
+| Dropdown "Dashboard" na aba "Configurações" aparece vazio ou some (cai no formulário manual) | A fonte não respondeu à listagem, ou todos os dashboards já foram importados | Testar a conexão na aba "Fonte de Dados"/"Configurações"; se já importou tudo, é o comportamento esperado |
+| Botão "Remover" (aba "Configurações") não aparece, ou o item continua na lista depois de confirmar | Sem direito de **Atualizar** no plugin, o botão nem aparece; se aparece mas falha, checar erro de rede no console do navegador | Confirmar direito de Atualizar (seção 2); tentar de novo — a remoção é via `fetch()`, sem recarregar a página |
+| Aba "Visibilidade" da fonte não aparece, ou aparece vazia | Comportamento esperado se nenhuma regra foi cadastrada ainda — a aba sempre existe, só a lista fica vazia | Clicar em "Adicionar regra" para cadastrar a primeira |
+| Regra em "Visibilidade" não parece ter efeito | A regra só é avaliada quando o card está com Visibilidade "Restrito a..." (`is_private`) — regras nunca abrem um card público (seção 8); ou a regra está com Status "Não" | Conferir Status da regra e que o card alvo está marcado "Restrito a..."; conferir se os Critérios realmente casam com o dashboard (nome/módulo) |
 | Seção "Configurações do dashboard" mostra só um aviso de "sem direito" | O perfil atual só tem **Ler**, não **Atualizar**, no direito do plugin (seção 2) | Pedir para um perfil com direito de Atualizar conceder/ajustar o direito, ou logar com um usuário que já tenha |
 | Card não aparece no catálogo de widgets depois de importar | Cache do GLPI (raro — cards de plugin normalmente não são cacheados) | `php bin/console cache:clear` |
 | Card configurado como "Restrito a..." não aparece para ninguém | Nenhum alvo (Perfil/Grupo/Usuário/Entidade) foi adicionado — comportamento esperado, nega por padrão | Editar o card (seção 8) e adicionar ao menos um alvo de visibilidade |

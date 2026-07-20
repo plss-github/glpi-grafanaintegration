@@ -94,9 +94,12 @@ class DashboardItem extends CommonDBTM
      *     — mesma regra de multi-tenant que o resto do GLPI já aplica a
      *     `Connection::can()`, mas que o caminho de render de card nunca
      *     verificava.
-     *  4. Se `is_private`, casar com pelo menos uma regra de visibilidade
-     *     (ItemVisibility) — a restrição fina pedida (Perfil/Grupo/Usuário/
-     *     Entidade específicos), além de quem já passou pelas de cima.
+     *  4. Se `is_private`, casar com pelo menos uma regra de visibilidade —
+     *     seja diretamente no card (ItemVisibility — Perfil/Grupo/Usuário/
+     *     Entidade específicos), seja por uma regra da aba "Visibilidade" da
+     *     Connection (VisibilityRule — Critérios/Ação, ver docblock da
+     *     classe). Qualquer uma das duas já basta (OR entre elas), além de
+     *     quem já passou pelas camadas de cima.
      */
     public function isVisibleForCurrentUser(): bool
     {
@@ -107,7 +110,8 @@ class DashboardItem extends CommonDBTM
         if (!(bool)((int)($this->fields['is_private'] ?? 0))) {
             return true;
         }
-        return ItemVisibility::isVisibleForCurrentUser((int)$this->fields['id']);
+        return ItemVisibility::isVisibleForCurrentUser((int)$this->fields['id'])
+            || VisibilityRule::isVisibleForCurrentUserViaRules($this);
     }
 
     /**
@@ -283,10 +287,10 @@ class DashboardItem extends CommonDBTM
 
     /**
      * Renderiza a aba "Pré-Visualização" da Connection — EXCLUSIVAMENTE um
-     * pré-visualizador: lista os dashboards já importados, com preview e
-     * edição inline de módulo/ativo. Nenhuma configuração acontece aqui
-     * (nome/módulo/visibilidade/substituição/seleção do que importar ficam
-     * na aba "Configurações" — ver
+     * pré-visualizador, somente leitura: nome, ID externo, módulo e um
+     * botão para ver o card renderizado. Nenhuma configuração/edição
+     * acontece aqui — módulo/status editáveis, remover e importar ficam na
+     * aba "Configurações" (ver
      * ConnectionCharacteristics::displayTabContentForItem() e
      * DashboardItem::showDashboardConfigurationSection()).
      *
@@ -296,9 +300,37 @@ class DashboardItem extends CommonDBTM
      */
     public static function showForConnection(Connection $connection): void
     {
-        $connectionsId = (int)$connection->fields['id'];
-        $imported = self::getForConnection($connectionsId);
-        self::showImportedSection($connectionsId, $imported, self::ajaxRoot());
+        $imported = self::getForConnection((int)$connection->fields['id']);
+
+        if (empty($imported)) {
+            echo "<p class='text-muted'>" . __('Nenhum dashboard importado ainda.', 'analyticdesign') . "</p>";
+            return;
+        }
+
+        global $CFG_GLPI;
+        $previewRoot = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/previewdashboarditem.php';
+
+        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
+        echo "<th>" . __('Nome') . "</th>";
+        echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
+        echo "<th>" . __('Módulo', 'analyticdesign') . "</th>";
+        echo "<th>" . __('Pré-visualizar', 'analyticdesign') . "</th>";
+        echo "</tr>";
+        foreach ($imported as $item) {
+            $id = (int)$item->fields['id'];
+            $moduleLabel = $item->fields['category'] !== ''
+                ? (ModuleDashboard::MODULES[$item->fields['category']] ?? $item->fields['category'])
+                : '';
+            echo "<tr class='tab_bg_1'>";
+            echo "<td>" . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "</td>";
+            echo "<td>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
+            echo "<td>" . htmlspecialchars($moduleLabel, ENT_QUOTES) . "</td>";
+            echo "<td><a class='btn btn-sm btn-outline-secondary' target='_blank' rel='noopener' href='"
+                . htmlspecialchars($previewRoot . '?id=' . $id, ENT_QUOTES) . "'>"
+                . "<i class='ti ti-eye'></i> " . __('Ver', 'analyticdesign') . "</a></td>";
+            echo "</tr>";
+        }
+        echo "</table>";
     }
 
     public static function ajaxRoot(): string
@@ -333,8 +365,17 @@ class DashboardItem extends CommonDBTM
         }
     }
 
-    /** @param DashboardItem[] $imported */
-    private static function showImportedSection(int $connectionsId, array $imported, string $ajaxRoot): void
+    /**
+     * Tabela de gerenciamento dos dashboards já importados — módulo e status
+     * editáveis em lote (mesmo endpoint de sempre, updatedashboarditems.php)
+     * e um botão para remover cada um por completo (ver
+     * ajax/deletedashboarditem.php). Pré-visualizar um item já importado
+     * fica só na aba "Pré-Visualização" (showForConnection()) — esta tabela
+     * é sobre CONFIGURAR, não visualizar.
+     *
+     * @param DashboardItem[] $imported
+     */
+    private static function showImportedManagementSection(int $connectionsId, array $imported, string $ajaxRoot): void
     {
         echo "<div class='analyticdesign-imported'>";
         echo "<h3>" . __('Dashboards importados', 'analyticdesign') . "</h3>";
@@ -348,15 +389,13 @@ class DashboardItem extends CommonDBTM
         echo "<form name='analyticdesign_update_items' method='post' action='"
             . htmlspecialchars($ajaxRoot . '/updatedashboarditems.php', ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
-        global $CFG_GLPI;
-        $previewRoot = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/previewdashboarditem.php';
 
         echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
         echo "<th>" . __('Nome') . "</th>";
         echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Módulo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Status') . "</th>";
-        echo "<th>" . __('Pré-visualizar', 'analyticdesign') . "</th>";
+        echo "<th>" . __('Remover', 'analyticdesign') . "</th>";
         echo "</tr>";
         foreach ($imported as $item) {
             $id = (int)$item->fields['id'];
@@ -369,9 +408,8 @@ class DashboardItem extends CommonDBTM
                 'display'  => false,
             ]) . "</td>";
             echo "<td>" . self::renderCheckbox("items[{$id}][is_active]", (int)$item->fields['is_active'] === 1) . "</td>";
-            echo "<td><a class='btn btn-sm btn-outline-secondary' target='_blank' rel='noopener' href='"
-                . htmlspecialchars($previewRoot . '?id=' . $id, ENT_QUOTES) . "'>"
-                . "<i class='ti ti-eye'></i> " . __('Ver', 'analyticdesign') . "</a></td>";
+            echo "<td><button type='button' class='btn btn-sm btn-outline-danger analyticdesign-delete-item' data-id='{$id}' data-name='"
+                . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "'><i class='ti ti-trash'></i></button></td>";
             echo "</tr>";
         }
         echo "</table>";
@@ -383,11 +421,15 @@ class DashboardItem extends CommonDBTM
     }
 
     /**
-     * "Configurações do dashboard" — chamado a partir da aba "Configurações"
-     * da Connection (ver ConnectionCharacteristics::displayTabContentForItem()),
-     * não mais da aba "Pré-Visualização" (ver DashboardItem::showForConnection()).
+     * Aba "Configurações" (parte de DashboardItem): tabela de gerenciamento
+     * dos dashboards já importados (módulo/status editáveis + remover — ver
+     * showImportedManagementSection()) seguida do formulário de importação
+     * ("Configurações do dashboard"). Chamado a partir de
+     * ConnectionCharacteristics::displayTabContentForItem() — a aba
+     * "Pré-Visualização" (ver showForConnection()) não configura mais nada.
      *
-     * Duas variantes, conforme a fonte suporta listagem ao vivo ou não:
+     * O formulário de importação tem duas variantes, conforme a fonte
+     * suporta listagem ao vivo ou não:
      *  - Suporta (Grafana, Power BI modo secure): dropdown com os dashboards
      *    disponíveis na fonte — escolhido um, nome/URL de embed são
      *    resolvidos no servidor a partir da própria listagem (nunca
@@ -401,15 +443,15 @@ class DashboardItem extends CommonDBTM
     public static function showDashboardConfigurationSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
         echo "<div class='analyticdesign-manual-add mt-4'>";
-        echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
 
-        // Checagem explícita ANTES de montar o formulário — sem isso, um
-        // usuário só com direito de leitura preenchia a tela inteira (Vendo o
-        // dropdown, Módulo, Visibilidade...) só para levar "Acesso negado" ao
-        // clicar em Importar/Adicionar (os ajax/*.php exigem UPDATE, mas a
+        // Checagem explícita ANTES de montar qualquer formulário — sem isso,
+        // um usuário só com direito de leitura via editar módulo/status,
+        // remover ou preencher a tela de importação inteira só para levar
+        // "Acesso negado" ao submeter (os ajax/*.php exigem UPDATE, mas a
         // tela não avisava antes disso — achado ao investigar um relato de
         // AccessDeniedHttpException em ajax/importselecteddashboard.php).
         if (!$connection->can($connectionsId, UPDATE)) {
+            echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
             echo "<p class='alert alert-important alert-warning'>"
                 . htmlspecialchars(__('Você não tem direito de editar esta fonte de dados.', 'analyticdesign'), ENT_QUOTES)
                 . "</p></div>";
@@ -417,6 +459,9 @@ class DashboardItem extends CommonDBTM
         }
 
         $imported = self::getForConnection($connectionsId);
+        self::showImportedManagementSection($connectionsId, $imported, $ajaxRoot);
+
+        echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
         [$available, $listError] = self::resolveAvailableDashboards($connection, $imported);
 
         if ($listError === null) {
@@ -768,6 +813,21 @@ class DashboardItem extends CommonDBTM
     }
 
     /**
+     * Limpa o que fica órfão ao remover um dashboard exposto (ver botão
+     * "Remover" em showImportedManagementSection()/ajax/deletedashboarditem.php):
+     * as regras de ItemVisibility do item e o dashboard nativo
+     * auto-provisionado (se `replaces_module` estivesse configurado) — sem
+     * isso ambos ficariam para sempre no banco, referenciando um item que
+     * não existe mais.
+     */
+    public function post_purgeItem()
+    {
+        parent::post_purgeItem();
+        ItemVisibility::replaceForItem((int)$this->fields['id'], array_fill_keys(ItemVisibility::TARGET_TYPES, []));
+        ModuleDashboard::deleteNativeDashboard((int)$this->fields['id']);
+    }
+
+    /**
      * Sincroniza as regras de ItemVisibility — só quando o formulário
      * realmente incluía o campo `is_private` (presença da própria chave no
      * input, não um marcador à parte: todo formulário que renderiza
@@ -826,6 +886,7 @@ class DashboardItem extends CommonDBTM
         }
 
         ItemVisibility::install();
+        VisibilityRule::install();
     }
 
     public static function uninstall(): void
@@ -859,5 +920,6 @@ class DashboardItem extends CommonDBTM
             $DB->doQuery("DROP TABLE `{$table}`");
         }
         ItemVisibility::uninstall();
+        VisibilityRule::uninstall();
     }
 }
