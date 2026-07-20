@@ -26,3 +26,55 @@
 .analyticdesign-error-message {
     flex: 1;
 }
+
+/* Aba "Visibilidade" — cada regra (ver VisibilityRule::showRuleBlock()). */
+.analyticdesign-visibility-rule .card-header {
+    flex-wrap: wrap;
+    row-gap: .5rem;
+}
+
+/* Painel de Critérios/Ação dentro de uma regra — borda sutil pra separar
+   visualmente as duas colunas sem depender de cor fixa (funciona em claro e
+   escuro, já que usa a mesma variável de borda que o resto do Tabler). */
+.analyticdesign-rule-section {
+    border: 1px solid var(--tblr-border-color);
+    border-radius: var(--tblr-border-radius, 4px);
+    padding: 1rem;
+}
+
+.analyticdesign-rule-section h4 {
+    margin-bottom: .75rem;
+}
+
+.analyticdesign-rule-section table {
+    margin-bottom: 0;
+}
+
+/* Linha de "adicionar" (Critérios/Ação) — separada da tabela acima por uma
+   régua, campos com largura mínima previsível (evita que o dropdown de
+   Valor, ao trocar de tipo, herde uma largura de 0 por ter sido iniciado
+   escondido — ver toggleActionValueWidget()/toggleCriterionValueWidget()
+   em analyticdesign.js). */
+.analyticdesign-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: .75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--tblr-border-color);
+}
+
+.analyticdesign-add-row .analyticdesign-field {
+    flex: 1 1 140px;
+    min-width: 140px;
+}
+
+.analyticdesign-add-row .analyticdesign-field-value {
+    flex: 2 1 220px;
+    min-width: 220px;
+}
+
+.analyticdesign-add-row .btn {
+    flex: 0 0 auto;
+}

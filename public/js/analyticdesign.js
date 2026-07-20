@@ -154,6 +154,12 @@ function toggleCriterionValueWidget(selectEl) {
     if (widgets.dashboard) { widgets.dashboard.style.display = showDashboard ? '' : 'none'; }
     if (widgets.module) { widgets.module.style.display = showModule ? '' : 'none'; }
     if (widgets.text) { widgets.text.style.display = (!showDashboard && !showModule) ? '' : 'none'; }
+
+    // select2 calcula a largura do combo na hora em que é inicializado —
+    // um combo que nasceu escondido (display:none) fica com largura 0 até
+    // algo disparar um recálculo; um 'resize' na window é o gatilho que o
+    // select2 já escuta por padrão, sem precisar destruir/recriar o widget.
+    window.dispatchEvent(new Event('resize'));
 }
 
 /**
@@ -180,6 +186,9 @@ function toggleActionValueWidget(selectEl) {
             widget.style.display = (itemtype === selectEl.value) ? '' : 'none';
         }
     });
+
+    // Ver comentário equivalente em toggleCriterionValueWidget().
+    window.dispatchEvent(new Event('resize'));
 }
 
 function testConnection(testBtn) {

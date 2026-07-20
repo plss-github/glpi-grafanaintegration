@@ -414,21 +414,25 @@ class VisibilityRule extends CommonDBTM
         $ruleId = (int)$rule->fields['id'];
 
         echo "<div class='analyticdesign-visibility-rule card mb-3'>";
-        echo "<div class='card-body'>";
 
-        echo "<div class='d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3'>";
+        echo "<div class='card-header d-flex justify-content-between align-items-center flex-wrap gap-2'>";
+        echo "<span class='card-title mb-0 d-flex align-items-center gap-2'><i class='ti ti-shield-check'></i> "
+            . sprintf(__('Regra #%d', 'analyticdesign'), $ruleId) . "</span>";
+
         if ($canEdit) {
+            echo "<div class='d-flex align-items-center flex-wrap gap-3'>";
+
             echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='d-flex align-items-center gap-2 mb-0'>";
             echo "<input type='hidden' name='action' value='update_match'>";
             echo "<input type='hidden' name='id' value='{$ruleId}'>";
-            echo "<label class='mb-0'>" . __('Combinar critérios com', 'analyticdesign') . "</label>";
+            echo "<label class='mb-0 text-nowrap'>" . __('Combinar critérios com', 'analyticdesign') . "</label>";
             Dropdown::showFromArray('match', [
                 'AND' => __('E (todos)', 'analyticdesign'),
                 'OR'  => __('OU (qualquer um)', 'analyticdesign'),
             ], [
-                'value'    => $rule->fields['match'] ?? 'AND',
-                'rand'     => $ruleId,
-                'width'    => 'auto',
+                'value'     => $rule->fields['match'] ?? 'AND',
+                'rand'      => $ruleId,
+                'width'     => '160px',
                 'on_change' => 'this.form.submit()',
             ]);
             Html::closeForm();
@@ -437,26 +441,35 @@ class VisibilityRule extends CommonDBTM
                 . " onsubmit=\"return confirm('" . htmlspecialchars(__('Remover esta regra? Essa ação não pode ser desfeita.', 'analyticdesign'), ENT_QUOTES) . "');\">";
             echo "<input type='hidden' name='action' value='delete_rule'>";
             echo "<input type='hidden' name='id' value='{$ruleId}'>";
-            echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-trash'></i> " . __('Remover regra', 'analyticdesign') . "</button>";
+            echo "<button type='submit' class='btn btn-sm btn-outline-danger' title='" . htmlspecialchars(__('Remover regra', 'analyticdesign'), ENT_QUOTES) . "'>"
+                . "<i class='ti ti-trash'></i> " . __('Remover regra', 'analyticdesign') . "</button>";
             Html::closeForm();
+
+            echo "</div>";
         } else {
-            echo "<span>" . __('Combinar critérios com', 'analyticdesign') . ": "
+            echo "<span class='badge bg-blue-lt'>" . __('Combinar critérios com', 'analyticdesign') . ": "
                 . (($rule->fields['match'] ?? 'AND') === 'OR' ? __('OU', 'analyticdesign') : __('E', 'analyticdesign')) . "</span>";
         }
-        echo "</div>";
+        echo "</div>"; // .card-header
 
-        echo "<div class='row'>";
+        echo "<div class='card-body'>";
+        echo "<div class='row g-3'>";
+
         echo "<div class='col-12 col-lg-6'>";
-        echo "<h4>" . __('Critérios', 'analyticdesign') . "</h4>";
+        echo "<div class='analyticdesign-rule-section h-100'>";
+        echo "<h4 class='d-flex align-items-center gap-2'><i class='ti ti-filter text-blue'></i> " . __('Critérios', 'analyticdesign') . "</h4>";
         self::showCriteriaSection($rule, $formUrl, $canEdit);
         echo "</div>";
+        echo "</div>";
 
         echo "<div class='col-12 col-lg-6'>";
-        echo "<h4>" . __('Ação', 'analyticdesign') . "</h4>";
+        echo "<div class='analyticdesign-rule-section h-100'>";
+        echo "<h4 class='d-flex align-items-center gap-2'><i class='ti ti-users text-green'></i> " . __('Ação', 'analyticdesign') . "</h4>";
         self::showActionsSection($rule, $formUrl, $canEdit);
         echo "</div>";
         echo "</div>";
 
+        echo "</div>"; // .row
         echo "</div>"; // .card-body
         echo "</div>"; // .analyticdesign-visibility-rule
     }
@@ -472,27 +485,27 @@ class VisibilityRule extends CommonDBTM
         if (empty($criteria)) {
             echo "<p class='text-muted'>" . __('(nenhum critério — nunca casa)', 'analyticdesign') . "</p>";
         } else {
-            echo "<table class='table table-sm'><tr>";
+            echo "<table class='table table-sm table-vcenter mb-0'><tr>";
             echo "<th>" . __('Campo', 'analyticdesign') . "</th>";
             echo "<th>" . __('Condição', 'analyticdesign') . "</th>";
             echo "<th>" . __('Valor', 'analyticdesign') . "</th>";
             if ($canEdit) {
-                echo "<th></th>";
+                echo "<th class='text-end'></th>";
             }
             echo "</tr>";
             foreach ($criteria as $criterion) {
                 echo "<tr>";
                 echo "<td>" . htmlspecialchars($fieldLabels[$criterion['field']] ?? $criterion['field'], ENT_QUOTES) . "</td>";
                 echo "<td>" . htmlspecialchars($conditionLabels[$criterion['condition']] ?? $criterion['condition'], ENT_QUOTES) . "</td>";
-                echo "<td>" . htmlspecialchars($criterion['value'], ENT_QUOTES) . "</td>";
+                echo "<td><strong>" . htmlspecialchars($criterion['value'], ENT_QUOTES) . "</strong></td>";
                 if ($canEdit) {
-                    echo "<td>";
+                    echo "<td class='text-end'>";
                     echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='d-inline'"
                         . " onsubmit=\"return confirm('" . htmlspecialchars(__('Remover este critério?', 'analyticdesign'), ENT_QUOTES) . "');\">";
                     echo "<input type='hidden' name='action' value='delete_criterion'>";
                     echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
                     echo "<input type='hidden' name='criterion_id' value='{$criterion['id']}'>";
-                    echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-x'></i></button>";
+                    echo "<button type='submit' class='btn btn-sm btn-icon btn-ghost-danger' title='" . htmlspecialchars(__('Remover este critério?', 'analyticdesign'), ENT_QUOTES) . "'><i class='ti ti-x'></i></button>";
                     Html::closeForm();
                     echo "</td>";
                 }
@@ -511,47 +524,51 @@ class VisibilityRule extends CommonDBTM
             $dashboardOptions[(int)$item->fields['id']] = $item->fields['name'];
         }
 
-        echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='analyticdesign-add-criterion d-flex gap-2 align-items-end flex-wrap mt-2'>";
+        echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='analyticdesign-add-criterion analyticdesign-add-row'>";
         echo "<input type='hidden' name='action' value='add_criterion'>";
         echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
 
-        echo "<div><label class='form-label mb-0'>" . __('Campo', 'analyticdesign') . "</label>";
+        echo "<div class='analyticdesign-field'><label class='form-label mb-0'>" . __('Campo', 'analyticdesign') . "</label>";
         Dropdown::showFromArray('field', $fieldLabels, [
             'value' => 'name',
             'rand'  => $ruleId,
+            'width' => '100%',
             'class' => 'form-select form-select-sm analyticdesign-criterion-field',
         ]);
         echo "</div>";
 
-        echo "<div><label class='form-label mb-0'>" . __('Condição', 'analyticdesign') . "</label>";
+        echo "<div class='analyticdesign-field'><label class='form-label mb-0'>" . __('Condição', 'analyticdesign') . "</label>";
         Dropdown::showFromArray('condition', $conditionLabels, [
             'value' => 'equals',
             'rand'  => $ruleId,
+            'width' => '100%',
             'class' => 'form-select form-select-sm analyticdesign-criterion-condition',
         ]);
         echo "</div>";
 
-        echo "<div class='analyticdesign-criterion-value-dashboard'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-criterion-value-dashboard'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
         if (empty($dashboardOptions)) {
             echo "<div class='form-text text-muted'>" . __('Nenhum dashboard importado ainda.', 'analyticdesign') . "</div>";
         } else {
             Dropdown::showFromArray('value_dashboard', $dashboardOptions, [
                 'rand'                => $ruleId,
+                'width'               => '100%',
                 'display_emptychoice' => true,
                 'class'               => 'form-select form-select-sm',
             ]);
         }
         echo "</div>";
 
-        echo "<div class='analyticdesign-criterion-value-module' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-criterion-value-module' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
         Dropdown::showFromArray('value_module', ModuleDashboard::MODULES, [
             'rand'                => $ruleId,
+            'width'               => '100%',
             'display_emptychoice' => true,
             'class'               => 'form-select form-select-sm',
         ]);
         echo "</div>";
 
-        echo "<div class='analyticdesign-criterion-value-text' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-criterion-value-text' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
         echo "<input type='text' name='value_text' class='form-control form-control-sm'></div>";
 
         echo "<button type='submit' class='btn btn-sm btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";
@@ -568,11 +585,11 @@ class VisibilityRule extends CommonDBTM
         if (empty($rows)) {
             echo "<p class='text-muted'>" . __('(nenhuma ação)', 'analyticdesign') . "</p>";
         } else {
-            echo "<table class='table table-sm'><tr>";
+            echo "<table class='table table-sm table-vcenter mb-0'><tr>";
             echo "<th>" . __('Conceder acesso a', 'analyticdesign') . "</th>";
             echo "<th>" . __('Valor', 'analyticdesign') . "</th>";
             if ($canEdit) {
-                echo "<th></th>";
+                echo "<th class='text-end'></th>";
             }
             echo "</tr>";
             foreach ($rows as $row) {
@@ -581,15 +598,15 @@ class VisibilityRule extends CommonDBTM
                 $value = $itemtype === self::GRANT_ALL ? '-' : Dropdown::getDropdownName($itemtype::getTable(), $row['items_id']);
                 echo "<tr>";
                 echo "<td>" . htmlspecialchars($label, ENT_QUOTES) . "</td>";
-                echo "<td>" . htmlspecialchars($value, ENT_QUOTES) . "</td>";
+                echo "<td><strong>" . htmlspecialchars($value, ENT_QUOTES) . "</strong></td>";
                 if ($canEdit) {
-                    echo "<td>";
+                    echo "<td class='text-end'>";
                     echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='d-inline'"
                         . " onsubmit=\"return confirm('" . htmlspecialchars(__('Remover esta ação?', 'analyticdesign'), ENT_QUOTES) . "');\">";
                     echo "<input type='hidden' name='action' value='delete_action'>";
                     echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
                     echo "<input type='hidden' name='action_id' value='{$row['id']}'>";
-                    echo "<button type='submit' class='btn btn-sm btn-outline-danger'><i class='ti ti-x'></i></button>";
+                    echo "<button type='submit' class='btn btn-sm btn-icon btn-ghost-danger' title='" . htmlspecialchars(__('Remover esta ação?', 'analyticdesign'), ENT_QUOTES) . "'><i class='ti ti-x'></i></button>";
                     Html::closeForm();
                     echo "</td>";
                 }
@@ -602,32 +619,33 @@ class VisibilityRule extends CommonDBTM
             return;
         }
 
-        echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='analyticdesign-add-action d-flex gap-2 align-items-end flex-wrap mt-2'>";
+        echo "<form method='post' action='" . htmlspecialchars($formUrl, ENT_QUOTES) . "' class='analyticdesign-add-action analyticdesign-add-row'>";
         echo "<input type='hidden' name='action' value='add_action'>";
         echo "<input type='hidden' name='rule_id' value='{$ruleId}'>";
 
-        echo "<div><label class='form-label mb-0'>" . __('Conceder acesso a', 'analyticdesign') . "</label>";
+        echo "<div class='analyticdesign-field'><label class='form-label mb-0'>" . __('Conceder acesso a', 'analyticdesign') . "</label>";
         Dropdown::showFromArray('itemtype', $actionTypeLabels, [
             'value' => Profile::class,
             'rand'  => $ruleId,
+            'width' => '100%',
             'class' => 'form-select form-select-sm analyticdesign-action-itemtype',
         ]);
         echo "</div>";
 
-        echo "<div class='analyticdesign-action-value-profile'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(Profile::class, ['name' => 'value_profile', 'rand' => $ruleId]);
+        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-profile'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(Profile::class, ['name' => 'value_profile', 'rand' => $ruleId, 'width' => '100%']);
         echo "</div>";
 
-        echo "<div class='analyticdesign-action-value-group' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(Group::class, ['name' => 'value_group', 'rand' => $ruleId]);
+        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-group' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(Group::class, ['name' => 'value_group', 'rand' => $ruleId, 'width' => '100%']);
         echo "</div>";
 
-        echo "<div class='analyticdesign-action-value-user' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(User::class, ['name' => 'value_user', 'rand' => $ruleId]);
+        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-user' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(User::class, ['name' => 'value_user', 'rand' => $ruleId, 'width' => '100%']);
         echo "</div>";
 
-        echo "<div class='analyticdesign-action-value-entity' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::show(Entity::class, ['name' => 'value_entity', 'rand' => $ruleId]);
+        echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-action-value-entity' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
+        Dropdown::show(Entity::class, ['name' => 'value_entity', 'rand' => $ruleId, 'width' => '100%']);
         echo "</div>";
 
         echo "<button type='submit' class='btn btn-sm btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";
