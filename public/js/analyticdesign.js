@@ -28,10 +28,31 @@
  * no load da página não veria elementos que só existem depois desse AJAX.
  * Delegar em `document` funciona independente de quando o elemento apareceu.
  *
- * Vanilla JS (sem depender de jQuery) para não presumir o que está carregado
- * na página em toda instalação GLPI 11.
+ * A delegação de 'change' usa `$(document).on('change', ...)` (jQuery), NÃO
+ * `document.addEventListener('change', ...)` — ao contrário de 'click'/'input'
+ * abaixo, que continuam vanilla. Achado em 2026-07-21, depois de DUAS
+ * tentativas de corrigir o dropdown de Valor da aba "Visibilidade" (aba
+ * Ação) não terem funcionado: todo `<select>` deste plugin passa por
+ * select2 (`Dropdown::show()`/`showFromArray()` do core), e o select2
+ * notifica mudança de valor chamando `this.$element.trigger('change')` —
+ * um `.trigger()` do jQuery em um tipo de evento sem método nativo
+ * equivalente (existe `elem.click()`/`elem.submit()`, não existe
+ * `elem.change()`) NÃO dispara um Event nativo de verdade; o jQuery só
+ * percorre a árvore chamando os handlers registrados via `.on()`/`.bind()`
+ * do PRÓPRIO jQuery. Confirmado empiricamente (headless Edge com
+ * `document.addEventListener('change', ..., true)` e
+ * `$(document).on('change', ...)` lado a lado: só o segundo via o evento
+ * depois de um `.select2()` do usuário trocar de opção) — um
+ * `addEventListener('change', ...)` puro no `document` NUNCA reage a uma
+ * troca feita através da UI do select2, só ao valor já vir certo desde o
+ * render inicial do servidor (por isso só o widget PADRÃO — Perfil,
+ * Dashboard como Campo — sempre "funcionava": nunca precisou de um toggle
+ * disparado por evento). O comentário antigo aqui ("Vanilla JS sem depender
+ * de jQuery") partia de uma premissa errada pra um plugin GLPI: o próprio
+ * core já exige jQuery em toda página (select2 depende dele), então não há
+ * ganho nenhum em evitá-lo — só o bug acima.
  */
-document.addEventListener('change', function (event) {
+window.jQuery(document).on('change', function (event) {
     var embedModeSelect = event.target.closest('select[name="embed_mode"]');
     if (embedModeSelect) {
         toggleEmbedModeFields(embedModeSelect);
@@ -211,6 +232,32 @@ function toggleActionValueWidget(selectEl) {
         });
 }
 
+/**
+ * Token CSRF pra chamadas fetch() deste plugin (testConnection/
+ * deleteDashboardItem) — ver docblock delas pra o porquê de usar isto em vez
+ * do `_glpi_csrf_token` de um form específico.
+ *
+ * Manda igual ao hook `$(document).ajaxSend()` do próprio common.js do GLPI
+ * (header `X-Glpi-Csrf-Token`, valor tirado da mesma tag `<meta>` que ele
+ * usa) — só que lendo a tag direto, sem precisar de jQuery pra isso
+ * especificamente. O pulo do gato é o header
+ * `X-Requested-With`: SEM ele, o kernel do GLPI (CheckCsrfListener) não
+ * reconhece a requisição como AJAX e cai no branch que lê
+ * `_glpi_csrf_token` do corpo do POST e *consome* (remove da sessão) o
+ * token depois de validar — e como `Html::closeForm()` reaproveita o MESMO
+ * token pra todo form renderizado num mesmo carregamento de página/aba (ver
+ * `Session::getNewCSRFToken()` no core), consumir o token aqui invalidava
+ * silenciosamente qualquer OUTRO form ainda não recarregado na mesma aba
+ * (ex.: registrar dashboard X, remover X, tentar registrar de novo — o
+ * "remover" consumia o token que o form de "Adicionar" ainda ia usar,
+ * resultando em AccessDeniedHttpException). Com os dois headers, o kernel
+ * usa o branch de AJAX (`preserve_token: true`), que valida sem consumir.
+ */
+function getPluginAjaxCsrfToken() {
+    var meta = document.querySelector('meta[property="glpi:csrf_token"]');
+    return meta !== null ? meta.getAttribute('content') : '';
+}
+
 function testConnection(testBtn) {
     // Também global: no Grafana o botão (linha de Salvar/Excluir) e o
     // resultado/erro (dentro de .analyticdesign-characteristics) não são
@@ -218,9 +265,6 @@ function testConnection(testBtn) {
     var resultEl = document.querySelector('.analyticdesign-test-result');
     var container = document.querySelector('.analyticdesign-characteristics');
     var id = testBtn.dataset.id;
-    var csrfInput = testBtn.closest('form')
-        ? testBtn.closest('form').querySelector('input[name="_glpi_csrf_token"]')
-        : document.querySelector('input[name="_glpi_csrf_token"]');
 
     testBtn.disabled = true;
     if (resultEl) {
@@ -230,11 +274,14 @@ function testConnection(testBtn) {
 
     var body = new URLSearchParams();
     body.set('id', id);
-    body.set('_glpi_csrf_token', csrfInput ? csrfInput.value : '');
 
     fetch('../ajax/testconnection.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Glpi-Csrf-Token': getPluginAjaxCsrfToken(),
+        },
         body: body.toString(),
         credentials: 'same-origin',
     })
@@ -269,18 +316,18 @@ function deleteDashboardItem(deleteBtn) {
     }
 
     var id = deleteBtn.dataset.id;
-    var csrfInput = deleteBtn.closest('form')
-        ? deleteBtn.closest('form').querySelector('input[name="_glpi_csrf_token"]')
-        : document.querySelector('input[name="_glpi_csrf_token"]');
 
     var body = new URLSearchParams();
     body.set('id', id);
-    body.set('_glpi_csrf_token', csrfInput ? csrfInput.value : '');
 
     deleteBtn.disabled = true;
     fetch('../ajax/deletedashboarditem.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Glpi-Csrf-Token': getPluginAjaxCsrfToken(),
+        },
         body: body.toString(),
         credentials: 'same-origin',
     })

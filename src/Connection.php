@@ -209,10 +209,9 @@ class Connection extends CommonDBTM
     }
 
     /**
-     * Nome, Ferramenta e Status lado a lado (3 colunas, `col-sm-4`) — pedido
+     * Nome, Ferramenta e Ativo lado a lado (3 colunas, `col-sm-4`) — pedido
      * explicitamente para ficar mais compacto/organizado do que uma coluna
-     * por linha. "Status" (era "Ativo"): mesmo campo `is_active`, só o
-     * rótulo mudou — renomeado em todo o plugin (ver DashboardItem).
+     * por linha.
      */
     private function showNameToolAndStatusFields(): void
     {
@@ -247,7 +246,7 @@ class Connection extends CommonDBTM
         // valor inicial num item novo, forçando o cadastrante a ativar
         // explicitamente a fonte depois de configurá-la.
         $isActive = !$isNew ? (int)($this->fields['is_active'] ?? 0) : 0;
-        self::openField('is_active', __('Status'), 'dropdown_is_active2', $thirdWidth);
+        self::openField('is_active', __('Ativo', 'analyticdesign'), 'dropdown_is_active2', $thirdWidth);
         Dropdown::showYesNo('is_active', $isActive, -1, ['rand' => 2]);
         self::closeField();
 
@@ -311,6 +310,22 @@ class Connection extends CommonDBTM
         echo "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>";
         self::closeField();
         self::closeFieldsRow();
+
+        // Diferente do Power BI (modo "Seguro"), o Grafana não expõe uma API
+        // de embed-token — o token acima só autentica as chamadas do BACKEND
+        // do plugin (testar conexão, listar dashboards); o <iframe> em si é
+        // uma requisição direta do NAVEGADOR do usuário pro Grafana, sem
+        // nenhum token. Decisão de arquitetura (ver docs/CONFIGURACAO.md,
+        // seção "Arquitetura e riscos de integração"): manter só embed
+        // (iframe) pro Grafana e deixar esse requisito explícito aqui, em vez
+        // de tentar construir um modo "via API" (renderizar uma imagem
+        // estática via /render/ do grafana-image-renderer) — plugin externo
+        // do Grafana nem sempre instalado, perderia interatividade, e
+        // ninguém pediu essa troca.
+        echo "<div class='alert alert-important alert-warning' style='margin-bottom:1rem;'>"
+            . "<i class='ti ti-info-circle'></i> "
+            . __('Cada usuário do GLPI precisa conseguir acessar este Grafana diretamente (login/SSO próprio, acesso anônimo habilitado, ou o dashboard convertido em "Public dashboard") — o token acima só serve para o plugin testar a conexão e listar dashboards, não para autenticar o embed em si.', 'analyticdesign')
+            . "</div>";
 
         foreach ($fieldsForType as $field) {
             $fieldId = 'analyticdesign_grafana_' . $field['name'];

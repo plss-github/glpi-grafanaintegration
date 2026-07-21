@@ -73,7 +73,15 @@ msgid "Ex.: Grafana Produção"
 msgstr ""
 
 #: src/Connection.php
+msgid "Ativo"
+msgstr ""
+
+#: src/Connection.php
 msgid "Selecione uma ferramenta."
+msgstr ""
+
+#: src/Connection.php
+msgid "Cada usuário do GLPI precisa conseguir acessar este Grafana diretamente (login/SSO próprio, acesso anônimo habilitado, ou o dashboard convertido em \"Public dashboard\") — o token acima só serve para o plugin testar a conexão e listar dashboards, não para autenticar o embed em si."
 msgstr ""
 
 #: src/Connection.php src/ConnectionCharacteristics.php

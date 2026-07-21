@@ -489,6 +489,56 @@ Decisões relevantes para quem for manter ou estender o plugin:
   é recalculado (`VisibilityRule::resyncAffectedItems()`) sempre que uma
   regra muda — 1 quando pelo menos uma regra casa com o item, 0 (público)
   quando nenhuma casa.
+- **Embed (iframe/SDK do próprio BI), não "renderizar via API": decisão deliberada, revisitada e mantida em 2026-07-21.**
+  A pergunta natural é: em vez de embutir a UI da ferramenta externa, o
+  plugin não deveria chamar a API do Grafana/Power BI para buscar os dados
+  brutos e desenhar o gráfico com os próprios widgets do GLPI? Decisão: não,
+  para nenhuma das duas fontes, pelos seguintes motivos:
+  - **Reimplementar renderização de gráficos é o tipo de retrabalho que este
+    plugin evita por princípio** (mesma lógica de não subclassear
+    `Rule`/`RuleCollection` na aba "Visibilidade", seção 10): Grafana e Power
+    BI já resolvem consulta a datasource, cache, drill-down, filtros e tema —
+    reconstruir uma fração disso com dados crus da API é um projeto por si só,
+    frágil a cada mudança de painel/relatório na ferramenta de origem, sem
+    pedido concreto do usuário para justificar o custo.
+  - **Power BI já é, na prática, "via API" onde importa**: o modo "Seguro"
+    (`EMBED_MODE_SECURE`) gera um embed token novo a cada render chamando a
+    API do Power BI no backend — o navegador do usuário final nunca fala
+    direto com o Power BI nem precisa de conta própria. É o padrão oficial da
+    Microsoft ("embed for your customers"/app-owns-data) e o motivo de já
+    existir a escolha por conexão entre esse modo e "publish to web"
+    (`EMBED_MODE_PUBLISH_TO_WEB`, iframe público sem autenticação nenhuma,
+    único jeito de expor um relatório quando a API não devolve URL
+    embedável). Ou seja: para Power BI, "embed vs API" **não é um dilema
+    aberto** — já são os dois, e o admin já escolhe por conexão.
+  - **Grafana é só iframe hoje, e continua sendo** — mas com uma limitação
+    real, documentada e agora avisada na UI (ver
+    `Connection::showGrafanaCredentialsSection()`): o token salvo só
+    autentica as chamadas do *backend* do plugin (testar conexão, listar
+    dashboards); o `<iframe>` em si é uma requisição direta
+    navegador-do-usuário→Grafana, sem token nenhum. Sem uma das três saídas
+    verificadas contra a documentação oficial do Grafana — (a)
+    `auth.anonymous` habilitado no `grafana.ini`, (b) o dashboard convertido
+    em "Public dashboard" (≥9.1, só modo kiosk, sem variáveis de template),
+    ou (c) o usuário já ter sessão/SSO próprio no Grafana — o iframe mostra a
+    tela de login do Grafana em vez do gráfico. **O Grafana não tem uma API
+    de embed-token equivalente à do Power BI** (confirmado contra a
+    documentação oficial), então não há como fechar esse gap com "mais
+    backend" da mesma forma. A alternativa real seria trocar de estratégia
+    inteiramente para esse caso — chamar `/render/d/:uid` (plugin
+    `grafana-image-renderer`) e devolver uma **imagem estática** (`<img>`,
+    sem interatividade, sem drill-down, precisa recarregar periodicamente
+    para não ficar desatualizada) — descartada por depender de um plugin
+    externo do Grafana nem sempre instalado, degradar a experiência
+    (perde toda a interatividade que o iframe tem hoje) e não ter sido
+    pedida por ninguém; documentada aqui como opção conhecida e
+    conscientemente não implementada, não como lacuna esquecida.
+  - **Não há seleção "Embed vs API" pelo usuário além do que já existe**: a
+    única escolha exposta ao admin é o `embed_mode` do Power BI (Seguro vs
+    Publish to web), porque é a única onde as duas opções são igualmente
+    viáveis e cada uma resolve um cenário real (capacity Premium disponível
+    vs não). Para o Grafana, adicionar uma segunda opção só faria sentido se
+    o modo "imagem" acima fosse implementado — não é o caso agora.
 - **Cache de JS/CSS do plugin é por versão, não por conteúdo.** O `?v=` que
   o GLPI anexa a `public/js/analyticdesign.js`/`public/css/analyticdesign.css`
   (`Html::script()`/`Html::css()` → `Plugin::getPluginFilesVersion()`) é
@@ -524,11 +574,35 @@ Decisões relevantes para quem for manter ou estender o plugin:
 
 - **CSRF:** plugin `CSRF_COMPLIANT`. A validação em si **não** é feita
   chamando `Session::checkCSRF()` no código do plugin — no GLPI 11, o kernel
-  já valida e **consome** o token `_glpi_csrf_token` automaticamente para
-  toda requisição não-GET, antes do script rodar, seguindo o mesmo padrão do
-  core (nenhum `front/*.php` do core chama `Session::checkCSRF()`). O JS
-  continua enviando `_glpi_csrf_token` no corpo do `fetch()` para satisfazer
-  essa checagem automática.
+  (`Glpi\Kernel\Listener\ControllerListener\CheckCsrfListener`) já valida
+  automaticamente para toda requisição não-GET, antes do script rodar,
+  seguindo o mesmo padrão do core (nenhum `front/*.php` do core chama
+  `Session::checkCSRF()`). Os formulários clássicos (`<form method="post">`,
+  fechados sempre com `Html::closeForm()`, nunca `echo "</form>"` cru — ver
+  histórico de bug corrigido em 2026-07-20) mandam `_glpi_csrf_token` no
+  corpo, validado e **consumido** da sessão (`preserve_token: false`).
+  - **Achado em 2026-07-21, corrigido**: `Session::getNewCSRFToken()` usa uma
+    global (`$CURRENTCSRFTOKEN`) reaproveitada por TODOS os
+    `Html::closeForm()` chamados no mesmo carregamento de página/aba — ou
+    seja, vários formulários renderizados juntos (ex.: aba "Configurações":
+    importar, adicionar manual, tabela de gerenciamento) compartilham o
+    MESMO token. Isso por si só é inofensivo (é assim que o core inteiro
+    funciona) — o problema é quando uma ação em `fetch()` que **não recarrega
+    a página** (`testConnection()`/`deleteDashboardItem()`, em
+    `public/js/analyticdesign.js`) manda esse mesmo token no CORPO do POST:
+    sem o header `X-Requested-With: XMLHttpRequest`, o kernel não reconhece a
+    chamada como AJAX (`Request::isXmlHttpRequest()` checa só esse header) e
+    cai no branch que **consome** o token — invalidando, sem aviso, qualquer
+    OUTRO formulário ainda aberto na mesma aba (ex.: registrar um dashboard,
+    removê-lo, tentar registrar outro — o "remover" consumia o token que o
+    "adicionar" ainda ia usar, resultando em
+    `Glpi\Exception\Http\AccessDeniedHttpException`). Corrigido enviando
+    `X-Requested-With: XMLHttpRequest` + `X-Glpi-Csrf-Token` (lido da mesma
+    tag `<meta property="glpi:csrf_token">` que o `common.js` do core usa)
+    como HEADERS nessas duas chamadas — o kernel passa a validar pelo branch
+    de AJAX (`preserve_token: true`), que não consome o token da sessão. Não
+    precisou mudar nenhum endpoint em `ajax/*.php`: a checagem inteira
+    acontece no kernel, antes do script do plugin rodar.
 - **Credenciais:** criptografadas em repouso via `GLPIKey`, nunca em texto
   plano; nunca retornam ao navegador (campos de senha sempre em branco no
   formulário); update parcial faz merge com as credenciais já salvas, em vez
