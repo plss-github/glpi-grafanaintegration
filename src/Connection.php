@@ -296,6 +296,10 @@ class Connection extends CommonDBTM
         // (ver toggleGrafanaSectionVisibility() em public/js/analyticdesign.js).
         echo "<div class='analyticdesign-characteristics analyticdesign-status-toggle' style='"
             . ($isActive ? '' : 'display:none;') . "'>";
+        echo "<div class='card mb-0'>";
+        echo "<div class='card-header'><span class='card-title mb-0 d-flex align-items-center gap-2'>"
+            . "<i class='ti ti-plug'></i> " . __('Conexão com o Grafana', 'analyticdesign') . "</span></div>";
+        echo "<div class='card-body'>";
         echo "<div class='analyticdesign-error alert alert-important alert-danger' style='display:none;'>";
         echo "<i class='ti ti-plug-x'></i> <span class='analyticdesign-error-message'></span>";
         echo " <button type='button' class='btn btn-sm btn-outline-danger analyticdesign-reopen-fields'>"
@@ -356,6 +360,8 @@ class Connection extends CommonDBTM
         echo "<div class='mt-2'><span class='analyticdesign-test-result'></span></div>";
 
         echo "</div>"; // .analyticdesign-fields-wrapper
+        echo "</div>"; // .card-body
+        echo "</div>"; // .card
         echo "</div>"; // .analyticdesign-characteristics
     }
 

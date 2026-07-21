@@ -81,6 +81,11 @@ class ConnectionCharacteristics extends CommonGLPI
         global $CFG_GLPI;
         $formUrl = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/connection.form.php';
 
+        echo "<div class='card mb-3'>";
+        echo "<div class='card-header'><span class='card-title mb-0 d-flex align-items-center gap-2'>"
+            . "<i class='ti ti-plug'></i> " . __('Conexão com o Power BI', 'analyticdesign') . "</span></div>";
+        echo "<div class='card-body'>";
+
         // Substitui os campos quando "Testar conexão" falha (ver
         // public/js/analyticdesign.js) — a mensagem real vem do JSON do
         // endpoint de teste, não é fixa aqui.
@@ -108,6 +113,9 @@ class ConnectionCharacteristics extends CommonGLPI
         echo "</div>";
         Html::closeForm();
         echo "</div>"; // .analyticdesign-fields-wrapper
+
+        echo "</div>"; // .card-body
+        echo "</div>"; // .card
     }
 
     private static function showBaseUrlField(Connection $item): void

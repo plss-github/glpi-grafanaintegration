@@ -134,6 +134,18 @@ msgstr ""
 msgid "Editar configuração"
 msgstr ""
 
+#: src/ConnectionCharacteristics.php
+msgid "Conexão com o Power BI"
+msgstr ""
+
+#: src/Connection.php
+msgid "Conexão com o Grafana"
+msgstr ""
+
+#: src/DashboardItem.php
+msgid "Adicionar dashboard"
+msgstr ""
+
 #: src/DashboardItem.php
 msgid "Dashboard exposto"
 msgid_plural "Dashboards expostos"

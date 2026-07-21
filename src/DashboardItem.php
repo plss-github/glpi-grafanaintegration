@@ -310,27 +310,31 @@ class DashboardItem extends CommonDBTM
         global $CFG_GLPI;
         $previewRoot = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/previewdashboarditem.php';
 
-        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
+        echo "<div class='card mb-0'>";
+        echo "<div class='table-responsive'>";
+        echo "<table class='table table-sm table-vcenter card-table'><thead><tr>";
         echo "<th>" . __('Nome') . "</th>";
         echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Módulo', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Pré-visualizar', 'analyticdesign') . "</th>";
-        echo "</tr>";
+        echo "<th class='text-end'>" . __('Pré-visualizar', 'analyticdesign') . "</th>";
+        echo "</tr></thead><tbody>";
         foreach ($imported as $item) {
             $id = (int)$item->fields['id'];
             $moduleLabel = $item->fields['category'] !== ''
                 ? (ModuleDashboard::MODULES[$item->fields['category']] ?? $item->fields['category'])
                 : '';
-            echo "<tr class='tab_bg_1'>";
+            echo "<tr>";
             echo "<td>" . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "</td>";
-            echo "<td>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
+            echo "<td class='text-muted'>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
             echo "<td>" . htmlspecialchars($moduleLabel, ENT_QUOTES) . "</td>";
-            echo "<td><a class='btn btn-sm btn-outline-secondary' target='_blank' rel='noopener' href='"
+            echo "<td class='text-end'><a class='btn btn-sm btn-outline-secondary' target='_blank' rel='noopener' href='"
                 . htmlspecialchars($previewRoot . '?id=' . $id, ENT_QUOTES) . "'>"
                 . "<i class='ti ti-eye'></i> " . __('Ver', 'analyticdesign') . "</a></td>";
             echo "</tr>";
         }
-        echo "</table>";
+        echo "</tbody></table>";
+        echo "</div>"; // .table-responsive
+        echo "</div>"; // .card
     }
 
     public static function ajaxRoot(): string
@@ -383,12 +387,14 @@ class DashboardItem extends CommonDBTM
      */
     private static function showImportedManagementSection(int $connectionsId, array $imported, string $ajaxRoot): void
     {
-        echo "<div class='analyticdesign-imported'>";
-        echo "<h3>" . __('Dashboards importados', 'analyticdesign') . "</h3>";
+        echo "<div class='analyticdesign-imported card'>";
+        echo "<div class='card-header'><span class='card-title mb-0 d-flex align-items-center gap-2'>"
+            . "<i class='ti ti-layout-dashboard'></i> " . __('Dashboards importados', 'analyticdesign') . "</span></div>";
+        echo "<div class='card-body'>";
 
         if (empty($imported)) {
-            echo "<p class='text-muted'>" . __('Nenhum dashboard importado ainda.', 'analyticdesign') . "</p>";
-            echo "</div>";
+            echo "<p class='text-muted mb-0'>" . __('Nenhum dashboard importado ainda.', 'analyticdesign') . "</p>";
+            echo "</div></div>";
             return;
         }
 
@@ -396,19 +402,20 @@ class DashboardItem extends CommonDBTM
             . htmlspecialchars($ajaxRoot . '/updatedashboarditems.php', ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
 
-        echo "<table class='tab_cadre_fixe'><tr class='tab_bg_1'>";
+        echo "<div class='table-responsive'>";
+        echo "<table class='table table-sm table-vcenter card-table'><thead><tr>";
         echo "<th>" . __('Nome') . "</th>";
         echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Módulo', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Status') . "</th>";
+        echo "<th>" . __('Ativo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Substituir dashboard do módulo', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Remover', 'analyticdesign') . "</th>";
-        echo "</tr>";
+        echo "<th class='text-end'>" . __('Remover', 'analyticdesign') . "</th>";
+        echo "</tr></thead><tbody>";
         foreach ($imported as $item) {
             $id = (int)$item->fields['id'];
-            echo "<tr class='tab_bg_1'>";
+            echo "<tr>";
             echo "<td>" . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "</td>";
-            echo "<td>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
+            echo "<td class='text-muted'>" . htmlspecialchars($item->fields['external_id'], ENT_QUOTES) . "</td>";
             echo "<td>" . Dropdown::showFromArray("items[{$id}][category]", self::moduleOptions(), [
                 'value'    => $item->fields['category'] !== '' ? $item->fields['category'] : 0,
                 'display_emptychoice' => false,
@@ -428,16 +435,20 @@ class DashboardItem extends CommonDBTM
                     . "'>" . __('Indisponível', 'analyticdesign') . "</span>";
             }
             echo "</td>";
-            echo "<td><button type='button' class='btn btn-sm btn-outline-danger analyticdesign-delete-item' data-id='{$id}' data-name='"
-                . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "'><i class='ti ti-trash'></i></button></td>";
+            echo "<td class='text-end'><button type='button' class='btn btn-icon btn-ghost-danger analyticdesign-delete-item' data-id='{$id}' data-name='"
+                . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "' title='" . htmlspecialchars(__('Remover', 'analyticdesign'), ENT_QUOTES) . "'>"
+                . "<i class='ti ti-trash'></i></button></td>";
             echo "</tr>";
         }
-        echo "</table>";
-        echo "<div class='mt-2'>";
-        echo "<button type='submit' name='update' class='btn btn-primary'>" . __('Salvar') . "</button>";
+        echo "</tbody></table>";
+        echo "</div>"; // .table-responsive
+        echo "<div class='mt-3'>";
+        echo "<button type='submit' name='update' class='btn btn-primary'><i class='ti ti-device-floppy'></i> " . __('Salvar') . "</button>";
         echo "</div>";
         Html::closeForm();
-        echo "</div>";
+
+        echo "</div>"; // .card-body
+        echo "</div>"; // .card
     }
 
     /**
@@ -467,7 +478,7 @@ class DashboardItem extends CommonDBTM
      */
     public static function showDashboardConfigurationSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
-        echo "<div class='analyticdesign-manual-add mt-4'>";
+        echo "<div class='analyticdesign-manual-add d-flex flex-column gap-3'>";
 
         // Checagem explícita ANTES de montar qualquer formulário — sem isso,
         // um usuário só com direito de leitura via editar módulo/status,
@@ -476,7 +487,6 @@ class DashboardItem extends CommonDBTM
         // tela não avisava antes disso — achado ao investigar um relato de
         // AccessDeniedHttpException em ajax/importselecteddashboard.php).
         if (!$connection->can($connectionsId, UPDATE)) {
-            echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
             echo "<p class='alert alert-important alert-warning'>"
                 . htmlspecialchars(__('Você não tem direito de editar esta fonte de dados.', 'analyticdesign'), ENT_QUOTES)
                 . "</p></div>";
@@ -484,10 +494,12 @@ class DashboardItem extends CommonDBTM
         }
 
         $imported = self::getForConnection($connectionsId);
-
-        echo "<h3>" . __('Configurações do dashboard', 'analyticdesign') . "</h3>";
         [$available, $listError] = self::resolveAvailableDashboards($connection, $imported);
 
+        echo "<div class='card mb-0'>";
+        echo "<div class='card-header'><span class='card-title mb-0 d-flex align-items-center gap-2'>"
+            . "<i class='ti ti-plus'></i> " . __('Adicionar dashboard', 'analyticdesign') . "</span></div>";
+        echo "<div class='card-body'>";
         if ($listError === null) {
             echo "<p class='text-muted'>" . __('Escolha um dashboard disponível na fonte para importar e configurar o módulo.', 'analyticdesign') . "</p>";
             self::showDropdownImportForm($connectionsId, $available, $ajaxRoot);
@@ -495,8 +507,8 @@ class DashboardItem extends CommonDBTM
             echo "<p class='text-muted'>" . __('Cadastre aqui um dashboard manualmente — necessário quando a fonte não permite listar automaticamente (ex.: Power BI em modo "publish to web").', 'analyticdesign') . "</p>";
             self::showManualAddForm($connection, $connectionsId, $ajaxRoot);
         }
-
-        echo "<hr class='my-4'>";
+        echo "</div>"; // .card-body
+        echo "</div>"; // .card
 
         self::showImportedManagementSection($connectionsId, $imported, $ajaxRoot);
 
@@ -507,7 +519,7 @@ class DashboardItem extends CommonDBTM
     private static function showDropdownImportForm(int $connectionsId, array $available, string $ajaxRoot): void
     {
         if (empty($available)) {
-            echo "<p class='text-muted'>" . __('Nada novo para importar — todos os dashboards já foram importados, ou a fonte não retornou nenhum.', 'analyticdesign') . "</p>";
+            echo "<p class='text-muted mb-0'>" . __('Nada novo para importar — todos os dashboards já foram importados, ou a fonte não retornou nenhum.', 'analyticdesign') . "</p>";
             return;
         }
 
@@ -531,7 +543,7 @@ class DashboardItem extends CommonDBTM
         self::closeFieldsRow();
 
         echo "<div class='mt-2'>";
-        echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Importar', 'analyticdesign') . "</button>";
+        echo "<button type='submit' name='add' class='btn btn-primary'><i class='ti ti-download'></i> " . __('Importar', 'analyticdesign') . "</button>";
         echo "</div>";
         Html::closeForm();
     }
@@ -568,7 +580,7 @@ class DashboardItem extends CommonDBTM
         self::closeFieldsRow();
 
         echo "<div class='mt-2'>";
-        echo "<button type='submit' name='add' class='btn btn-primary'>" . __('Adicionar', 'analyticdesign') . "</button>";
+        echo "<button type='submit' name='add' class='btn btn-primary'><i class='ti ti-plus'></i> " . __('Adicionar', 'analyticdesign') . "</button>";
         echo "</div>";
         Html::closeForm();
     }
