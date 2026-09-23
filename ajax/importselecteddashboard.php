@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Recebe o dashboard escolhido no dropdown da aba "Configurações" (ver
  * DashboardItem::showDashboardConfigurationSection()/showDropdownImportForm())
@@ -18,8 +18,8 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
 
 // Sem Session::checkCSRF() explícito — ver comentário em front/connection.form.php
 // (o kernel do GLPI 11 já valida e consome o token antes deste script rodar).

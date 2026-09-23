@@ -1,4 +1,4 @@
-# Analytic Design — translation template.
+# Pellissari Grafana Integration — translation template.
 # Copyright (C) 2026 Pellissari
 # This file is distributed under the same license as the analyticdesign plugin.
 #
@@ -24,11 +24,11 @@ msgid "Análise de Dados: fontes e dashboards"
 msgstr ""
 
 #: src/Dashboard.php
-msgid "Analytic Design (BI externo)"
+msgid "Pellissari Grafana Integration (BI externo)"
 msgstr ""
 
 #: src/Dashboard.php
-msgid "Analytic Design"
+msgid "Pellissari Grafana Integration"
 msgstr ""
 
 #: src/Dashboard.php
@@ -105,24 +105,6 @@ msgid "Data de criação"
 msgstr ""
 
 #: src/ConnectionCharacteristics.php
-msgid "Publish to web — URL pública (Power BI)"
-msgstr ""
-
-#: src/ConnectionCharacteristics.php
-msgid "Embed seguro — Entra ID / Premium (Power BI)"
-msgstr ""
-
-#: src/ConnectionCharacteristics.php
-msgid "Deixe os campos de credenciais em branco para manter os valores já salvos."
-msgstr ""
-
-#: src/ConnectionCharacteristics.php
-msgid ""
-"Atenção: \"Publish to web\" deixa o conteúdo acessível a qualquer pessoa "
-"com o link, sem autenticação. Não use para dados confidenciais."
-msgstr ""
-
-#: src/ConnectionCharacteristics.php
 msgid "Configurações"
 msgstr ""
 
@@ -134,12 +116,12 @@ msgstr ""
 msgid "Editar configuração"
 msgstr ""
 
-#: src/ConnectionCharacteristics.php
-msgid "Conexão com o Power BI"
+#: src/Connection.php
+msgid "Conexão com o Grafana"
 msgstr ""
 
 #: src/Connection.php
-msgid "Conexão com o Grafana"
+msgid "Deixe os campos de credenciais em branco para manter os valores já salvos."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -211,9 +193,6 @@ msgid "Ex.: Indicadores de chamados"
 msgstr ""
 
 #: src/DashboardItem.php
-msgid "Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz..."
-msgstr ""
-
 #: src/DashboardItem.php
 msgid "Ex.: https://seu-grafana.suaempresa.com/d/ab12cd34/meu-dashboard?kiosk=tv&theme=light"
 msgstr ""
@@ -269,10 +248,7 @@ msgid "Importar"
 msgstr ""
 
 #: src/DashboardItem.php
-msgid ""
-"Cadastre aqui um dashboard manualmente — necessário quando a fonte não "
-"permite listar automaticamente (ex.: Power BI em modo \"publish to "
-"web\")."
+msgid "Cadastre aqui um dashboard manualmente — necessário quando a fonte não permite listar automaticamente."
 msgstr ""
 
 #: src/DashboardItem.php
@@ -317,46 +293,6 @@ msgstr ""
 msgid "URL de embed inválida (esperado http/https)."
 msgstr ""
 
-#: src/Source/PowerBiSource.php
-msgid "Falha ao gerar o embed token do Power BI."
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid "Tenant ID (Entra ID)"
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid "GUID do tenant do Azure AD / Entra ID. Ex.: 3fa85f64-5717-4562-b3fc-2c963f66afa6"
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid "Client ID (aplicativo registrado)"
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid "ID do aplicativo (service principal) registrado no Entra ID. Ex.: 8f2c1e4a-9b3d-4a6e-8c1f-5d7e2b9a4c6f"
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid "Client secret"
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid ""
-"Segredo do aplicativo registrado no Entra ID. Ex.: valor gerado em Entra "
-"ID > Registros de aplicativo > Certificados e segredos (copie assim que "
-"criar; não é possível visualizar depois)."
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid "Workspace ID (group)"
-msgstr ""
-
-#: src/Source/PowerBiSource.php
-msgid ""
-"GUID do workspace do Power BI onde os relatórios estão publicados. Ex.: "
-"6d4e8a2c-1f3b-4c9d-a7e5-2b8f6c1d9a3e"
-msgstr ""
 
 #: src/Source/GrafanaSource.php
 msgid "API Token / Service account token"
@@ -498,5 +434,5 @@ msgid "Adicionar regra"
 msgstr ""
 
 #: setup.php
-msgid "Analytic Design: dependências do GLPI não encontradas ou incompatíveis:"
+msgid "Pellissari Grafana Integration: dependências do GLPI não encontradas ou incompatíveis:"
 msgstr ""

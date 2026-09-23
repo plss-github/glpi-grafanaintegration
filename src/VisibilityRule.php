@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Regra de visibilidade baseada em critério/ação: de um lado **Critérios**
  * (quais dashboards a regra alcança, combinados por E/OU), do outro **Ação**
@@ -36,7 +36,7 @@
  * Critérios sem restringir quem vê").
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
 use CommonDBTM;
 use Dropdown;
@@ -125,17 +125,17 @@ class VisibilityRule extends CommonDBTM
 
     public static function getTable($classname = null)
     {
-        return 'glpi_plugin_analyticdesign_visibilityrules';
+        return 'glpi_plugin_plugingrafanaintegration_visibilityrules';
     }
 
     public static function criteriaTable(): string
     {
-        return 'glpi_plugin_analyticdesign_visibilityrules_criteria';
+        return 'glpi_plugin_plugingrafanaintegration_visibilityrules_criteria';
     }
 
     public static function actionsTable(): string
     {
-        return 'glpi_plugin_analyticdesign_visibilityrules_actions';
+        return 'glpi_plugin_plugingrafanaintegration_visibilityrules_actions';
     }
 
     /** @return self[] todas as regras de uma Connection. */
@@ -163,7 +163,7 @@ class VisibilityRule extends CommonDBTM
         $rows = [];
         $it = $DB->request([
             'FROM'  => self::criteriaTable(),
-            'WHERE' => ['plugin_analyticdesign_visibilityrules_id' => $ruleId],
+            'WHERE' => ['plugin_plugingrafanaintegration_visibilityrules_id' => $ruleId],
             'ORDER' => ['id'],
         ]);
         foreach ($it as $row) {
@@ -188,7 +188,7 @@ class VisibilityRule extends CommonDBTM
 
         global $DB;
         $DB->insert(self::criteriaTable(), [
-            'plugin_analyticdesign_visibilityrules_id' => $ruleId,
+            'plugin_plugingrafanaintegration_visibilityrules_id' => $ruleId,
             'field'     => $field,
             'condition' => $condition,
             'value'     => $value,
@@ -198,7 +198,7 @@ class VisibilityRule extends CommonDBTM
     public static function deleteCriterion(int $criterionId, int $ruleId): void
     {
         global $DB;
-        $DB->delete(self::criteriaTable(), ['id' => $criterionId, 'plugin_analyticdesign_visibilityrules_id' => $ruleId]);
+        $DB->delete(self::criteriaTable(), ['id' => $criterionId, 'plugin_plugingrafanaintegration_visibilityrules_id' => $ruleId]);
     }
 
     /** @return array<int, array{id:int, itemtype:string, items_id:int}> linhas cruas — usado pra renderizar a tabela de Ações. */
@@ -208,7 +208,7 @@ class VisibilityRule extends CommonDBTM
         $rows = [];
         $it = $DB->request([
             'FROM'  => self::actionsTable(),
-            'WHERE' => ['plugin_analyticdesign_visibilityrules_id' => $ruleId],
+            'WHERE' => ['plugin_plugingrafanaintegration_visibilityrules_id' => $ruleId],
             'ORDER' => ['id'],
         ]);
         foreach ($it as $row) {
@@ -244,7 +244,7 @@ class VisibilityRule extends CommonDBTM
 
         global $DB;
         $DB->insert(self::actionsTable(), [
-            'plugin_analyticdesign_visibilityrules_id' => $ruleId,
+            'plugin_plugingrafanaintegration_visibilityrules_id' => $ruleId,
             'itemtype' => $itemtype,
             'items_id' => $itemsId,
         ]);
@@ -253,7 +253,7 @@ class VisibilityRule extends CommonDBTM
     public static function deleteAction(int $actionId, int $ruleId): void
     {
         global $DB;
-        $DB->delete(self::actionsTable(), ['id' => $actionId, 'plugin_analyticdesign_visibilityrules_id' => $ruleId]);
+        $DB->delete(self::actionsTable(), ['id' => $actionId, 'plugin_plugingrafanaintegration_visibilityrules_id' => $ruleId]);
     }
 
     /**
@@ -706,8 +706,8 @@ class VisibilityRule extends CommonDBTM
     {
         parent::post_purgeItem();
         global $DB;
-        $DB->delete(self::criteriaTable(), ['plugin_analyticdesign_visibilityrules_id' => (int)$this->fields['id']]);
-        $DB->delete(self::actionsTable(), ['plugin_analyticdesign_visibilityrules_id' => (int)$this->fields['id']]);
+        $DB->delete(self::criteriaTable(), ['plugin_plugingrafanaintegration_visibilityrules_id' => (int)$this->fields['id']]);
+        $DB->delete(self::actionsTable(), ['plugin_plugingrafanaintegration_visibilityrules_id' => (int)$this->fields['id']]);
     }
 
     public static function install(): void
@@ -743,12 +743,12 @@ class VisibilityRule extends CommonDBTM
             $DB->doQuery("
                 CREATE TABLE `{$criteriaTable}` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `plugin_analyticdesign_visibilityrules_id` INT UNSIGNED NOT NULL,
+                    `plugin_plugingrafanaintegration_visibilityrules_id` INT UNSIGNED NOT NULL,
                     `field` VARCHAR(50) NOT NULL,
                     `condition` VARCHAR(20) NOT NULL DEFAULT 'equals',
                     `value` VARCHAR(255) NOT NULL DEFAULT '',
                     PRIMARY KEY (`id`),
-                    KEY `plugin_analyticdesign_visibilityrules_id` (`plugin_analyticdesign_visibilityrules_id`)
+                    KEY `plugin_plugingrafanaintegration_visibilityrules_id` (`plugin_plugingrafanaintegration_visibilityrules_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
         }
@@ -758,11 +758,11 @@ class VisibilityRule extends CommonDBTM
             $DB->doQuery("
                 CREATE TABLE `{$actionsTable}` (
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `plugin_analyticdesign_visibilityrules_id` INT UNSIGNED NOT NULL,
+                    `plugin_plugingrafanaintegration_visibilityrules_id` INT UNSIGNED NOT NULL,
                     `itemtype` VARCHAR(100) NOT NULL,
                     `items_id` INT UNSIGNED NOT NULL,
                     PRIMARY KEY (`id`),
-                    KEY `plugin_analyticdesign_visibilityrules_id` (`plugin_analyticdesign_visibilityrules_id`),
+                    KEY `plugin_plugingrafanaintegration_visibilityrules_id` (`plugin_plugingrafanaintegration_visibilityrules_id`),
                     KEY `item` (`itemtype`, `items_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");

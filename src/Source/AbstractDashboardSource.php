@@ -1,15 +1,15 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Base compartilhada pelas implementações de fonte. Guarda a Connection e
  * oferece utilidades comuns (decode de credenciais, montagem de iframe seguro).
  */
 
-namespace GlpiPlugin\Analyticdesign\Source;
+namespace GlpiPlugin\Plugingrafanaintegration\Source;
 
-use GlpiPlugin\Analyticdesign\Connection;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
 
 abstract class AbstractDashboardSource implements DashboardSourceInterface
 {
@@ -25,8 +25,8 @@ abstract class AbstractDashboardSource implements DashboardSourceInterface
     }
 
     /**
-     * Monta um iframe padronizado (usado por Grafana e pelo modo
-     * publish-to-web do Power BI). Centraliza atributos de sandbox/tamanho.
+     * Monta um iframe padronizado (usado pelo Grafana). Centraliza atributos
+     * de sandbox/tamanho.
      *
      * Só embeda URLs http(s): mesmo sendo um campo preenchido apenas por um
      * admin do plugin, um valor `javascript:`/`data:` em `src` ainda executa

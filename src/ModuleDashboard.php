@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Substitui o Dashboard nativo de um módulo do GLPI (Ativos, Assistência,
  * Gerência, Ferramentas) pelo embed de BI de um DashboardItem específico —
@@ -51,12 +51,12 @@
  *    enumerável como linhas de compartilhamento.
  *
  * O dashboard nativo em si nunca aparece em nenhum seletor/catálogo do
- * GLPI: usa um `context` só do plugin (`analyticdesign`), que nenhuma tela
+ * GLPI: usa um `context` só do plugin (`plugingrafanaintegration`), que nenhuma tela
  * nativa filtra ao montar sua lista de dashboards disponíveis — só é
  * alcançado pela chave direta, via a sobreposição de sessão acima.
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
 use Glpi\Dashboard\Dashboard as GlpiDashboard;
 use Glpi\Dashboard\Right as GlpiDashboardRight;
@@ -82,15 +82,15 @@ class ModuleDashboard
     private const TARGET_PATHS = [
         'assets'     => '/front/dashboard_assets.php',
         'helpdesk'   => '/front/dashboard_helpdesk.php',
-        'management' => '/plugins/analyticdesign/front/dashboard_management.php',
-        'tools'      => '/plugins/analyticdesign/front/dashboard_tools.php',
+        'management' => '/plugins/plugingrafanaintegration/front/dashboard_management.php',
+        'tools'      => '/plugins/plugingrafanaintegration/front/dashboard_tools.php',
     ];
 
     /** Módulos sem dashboard nativo — precisam do link injetado no menu. */
     private const MODULES_WITHOUT_NATIVE_DASHBOARD = ['management', 'tools'];
 
     /** Contexto reservado do plugin para os dashboards auto-provisionados. */
-    private const DASHBOARD_CONTEXT = 'analyticdesign';
+    private const DASHBOARD_CONTEXT = 'plugingrafanaintegration';
 
     private static function dashboardKeyFor(int $itemId): string
     {
@@ -133,7 +133,7 @@ class ModuleDashboard
             ]
         );
         $dashboard->getFromDB($key);
-        $dashboard->saveTitle(__('Analytic Design', 'analyticdesign') . ' — ' . $item->fields['name']);
+        $dashboard->saveTitle(__('Pellissari Grafana Integration', 'analyticdesign') . ' — ' . $item->fields['name']);
 
         // Espelha os alvos enumeráveis das regras de VisibilityRule que casam
         // com este item como compartilhamento nativo do dashboard — ver
@@ -225,10 +225,10 @@ class ModuleDashboard
      */
     public static function applySessionOverrides(): void
     {
-        if (!Session::getLoginUserID() || !empty($_SESSION['analyticdesign_module_dashboards_applied'])) {
+        if (!Session::getLoginUserID() || !empty($_SESSION['plugingrafanaintegration_module_dashboards_applied'])) {
             return;
         }
-        $_SESSION['analyticdesign_module_dashboards_applied'] = true;
+        $_SESSION['plugingrafanaintegration_module_dashboards_applied'] = true;
 
         foreach (self::getActiveReplacementsForCurrentUser() as $module => $item) {
             $_SESSION['last_dashboards'][self::TARGET_PATHS[$module]] = self::dashboardKeyFor((int)$item->fields['id']);

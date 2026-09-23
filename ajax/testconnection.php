@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Endpoint AJAX: testa a conexão de uma fonte já salva e devolve JSON.
  * Chamado pelo botão "Testar conexão" (public/js/analyticdesign.js).
@@ -9,7 +9,7 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\Connection;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
 
 header('Content-Type: application/json; charset=UTF-8');
 

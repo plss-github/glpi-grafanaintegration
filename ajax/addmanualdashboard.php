@@ -1,11 +1,10 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Adiciona um DashboardItem manualmente (nome + URL de embed + módulo),
- * usado quando a fonte não permite listar dashboards automaticamente — caso
- * do Power BI em modo publish_to_web (ver
+ * usado quando a fonte não permite listar dashboards automaticamente (ver
  * DashboardItem::showDashboardConfigurationSection()/showManualAddForm()).
  * Quando a fonte suporta listagem, o fluxo é o dropdown — ver
  * ajax/importselecteddashboard.php.
@@ -13,8 +12,8 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
 
 // Sem Session::checkCSRF() explícito — ver comentário em front/connection.form.php
 // (o kernel do GLPI 11 já valida e consome o token antes deste script rodar).

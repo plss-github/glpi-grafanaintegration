@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Tela de "Dashboard" do módulo Gerência — só existe pra quem tem uma
  * substituição de módulo ativa e visível (ver ModuleDashboard); do
@@ -12,6 +12,6 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\ModuleDashboard;
+use GlpiPlugin\Plugingrafanaintegration\ModuleDashboard;
 
 ModuleDashboard::showOwnDashboardPage('management');

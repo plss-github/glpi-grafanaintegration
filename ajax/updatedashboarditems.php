@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Salva em lote a edição inline (módulo/status/substituição de módulo) dos
  * dashboards já importados, feita na aba "Configurações" da Connection —
@@ -12,8 +12,8 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
 
 // Sem Session::checkCSRF() explícito — ver comentário em front/connection.form.php
 // (o kernel do GLPI 11 já valida e consome o token antes deste script rodar).

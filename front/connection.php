@@ -1,9 +1,9 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
- * Listagem das fontes de dados cadastradas (Grafana / Power BI).
+ * Listagem das fontes de dados cadastradas (Grafana).
  *
  * NOTA DE ARQUITETURA: a especificação pede o padrão "Controller" (moderno)
  * em vez de arquivos soltos em front/. Optamos pelo padrão clássico front/+ajax
@@ -15,8 +15,8 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\Menu;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
+use GlpiPlugin\Plugingrafanaintegration\Menu;
 
 Session::checkRight(Connection::$rightname, READ);
 

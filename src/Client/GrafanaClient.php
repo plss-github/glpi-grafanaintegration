@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Client mínimo da API REST do Grafana (listagem de dashboards + ping).
  * Usa Guzzle (já disponível no GLPI 11).
  */
 
-namespace GlpiPlugin\Analyticdesign\Client;
+namespace GlpiPlugin\Plugingrafanaintegration\Client;
 
 use GuzzleHttp\Client;
 

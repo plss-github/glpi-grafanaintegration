@@ -1,22 +1,21 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
- * Fonte de BI cadastrada (uma linha por Grafana/Power BI configurado).
- * Tabela: glpi_plugin_analyticdesign_connections
+ * Fonte de BI cadastrada (uma linha por Grafana configurado).
+ * Tabela: glpi_plugin_plugingrafanaintegration_connections
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
 use CommonDBTM;
 use Dropdown;
 use GLPIKey;
-use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
-use GlpiPlugin\Analyticdesign\Source\GrafanaSource;
-use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
-use GlpiPlugin\Analyticdesign\Source\SourceFactory;
-use GlpiPlugin\Analyticdesign\Traits\HasFormFieldLayout;
+use GlpiPlugin\Plugingrafanaintegration\Source\DashboardSourceInterface;
+use GlpiPlugin\Plugingrafanaintegration\Source\GrafanaSource;
+use GlpiPlugin\Plugingrafanaintegration\Source\SourceFactory;
+use GlpiPlugin\Plugingrafanaintegration\Traits\HasFormFieldLayout;
 use Html;
 use Session;
 
@@ -28,9 +27,9 @@ class Connection extends CommonDBTM
      * Único direito do plugin, compartilhado por Connection e DashboardItem
      * (DashboardItem é sempre filho de uma Connection — não faz sentido um
      * direito separado). Centralizado aqui para não repetir a mesma string
-     * em DashboardItem::$rightname e hook.php::plugin_analyticdesign_getrights().
+     * em DashboardItem::$rightname e hook.php::plugin_plugingrafanaintegration_getrights().
      */
-    public const RIGHTNAME = 'plugin_analyticdesign_connection';
+    public const RIGHTNAME = 'plugin_plugingrafanaintegration_connection';
 
     public static $rightname = self::RIGHTNAME;
 
@@ -132,7 +131,7 @@ class Connection extends CommonDBTM
         return parent::getSpecificValueToDisplay($field, $values, $options);
     }
 
-    /** Instancia a implementação de fonte (Grafana/Power BI) associada. */
+    /** Instancia a implementação de fonte (Grafana) associada. */
     public function getSource(): DashboardSourceInterface
     {
         return SourceFactory::make($this);
@@ -315,8 +314,8 @@ class Connection extends CommonDBTM
         self::closeField();
         self::closeFieldsRow();
 
-        // Diferente do Power BI (modo "Seguro"), o Grafana não expõe uma API
-        // de embed-token — o token acima só autentica as chamadas do BACKEND
+        // O Grafana não expõe uma API de embed-token — o token acima só
+        // autentica as chamadas do BACKEND
         // do plugin (testar conexão, listar dashboards); o <iframe> em si é
         // uma requisição direta do NAVEGADOR do usuário pro Grafana, sem
         // nenhum token. Decisão de arquitetura (ver docs/CONFIGURACAO.md,
@@ -409,13 +408,6 @@ class Connection extends CommonDBTM
             return false;
         }
 
-        // O formulário de criação não pergunta o modo de embed (só a aba
-        // "Características", depois de salvo) — sem isso, uma Connection
-        // Power BI nasceria com o DEFAULT genérico da coluna ('iframe'),
-        // que não é uma opção válida no dropdown de embed_mode do Power BI.
-        if ($input['type'] === PowerBiSource::getType() && empty($input['embed_mode'])) {
-            $input['embed_mode'] = DashboardSourceInterface::EMBED_MODE_SECURE;
-        }
         return $this->handleCredentialInput($input);
     }
 
@@ -431,9 +423,8 @@ class Connection extends CommonDBTM
      *
      * A mesclagem com `getDecryptedCredentials()` é essencial: a UI permite
      * deixar um campo em branco para "manter o valor salvo" (ver
-     * ConnectionCharacteristics). Sem mesclar, atualizar só um campo (ex.:
-     * `client_secret` de uma fonte Power BI) apagaria silenciosamente os
-     * demais (`client_id`, `tenant_id`) já armazenados.
+     * ConnectionCharacteristics). Sem mesclar, atualizar só um campo
+     * apagaria silenciosamente os demais já armazenados.
      */
     private function handleCredentialInput($input)
     {
@@ -446,10 +437,7 @@ class Connection extends CommonDBTM
         // criptografado nesse campo.
         unset($input['credentials']);
 
-        // workspace_id não é secreto por natureza, mas fica no mesmo blob
-        // criptografado por simplicidade (evita migração para uma coluna nova
-        // só para esse campo específico do Power BI).
-        $sensitive = ['api_token', 'client_id', 'client_secret', 'tenant_id', 'workspace_id'];
+        $sensitive = ['api_token'];
         $creds = $this->getDecryptedCredentials();
         $touched = false;
         foreach ($sensitive as $key) {

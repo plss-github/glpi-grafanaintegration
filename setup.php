@@ -1,9 +1,9 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
- * Plugin GLPI 11.0.x — integração de dashboards de BI externos (Grafana / Power BI)
+ * Plugin GLPI 11.0.x — integração de dashboards de BI externos (Grafana)
  * ao sistema nativo de dashboards do GLPI.
  *
  * Licença: AGPL-3.0. O GLPI em si é GPL-3.0-or-later; a GPLv3 §13 permite
@@ -13,18 +13,18 @@
  */
 
 use Glpi\Plugin\Hooks;
-use GlpiPlugin\Analyticdesign\Dashboard;
-use GlpiPlugin\Analyticdesign\Menu;
-use GlpiPlugin\Analyticdesign\ModuleDashboard;
-use GlpiPlugin\Analyticdesign\ProfileRights;
+use GlpiPlugin\Plugingrafanaintegration\Dashboard;
+use GlpiPlugin\Plugingrafanaintegration\Menu;
+use GlpiPlugin\Plugingrafanaintegration\ModuleDashboard;
+use GlpiPlugin\Plugingrafanaintegration\ProfileRights;
 
-define('PLUGIN_ANALYTICDESIGN_VERSION', '0.9.5');
+define('PLUGIN_PLUGINGRAFANAINTEGRATION_VERSION', '0.9.5');
 // Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
 // desta revisão). CommonDBTM::can()/check() nesta versão tipam `int $right`
 // e `?array &$input` — sem impacto no uso feito por este plugin, mas registrado
 // aqui pois é a versão contra a qual as assinaturas foram conferidas.
-define('PLUGIN_ANALYTICDESIGN_MIN_GLPI', '11.0.8');
-define('PLUGIN_ANALYTICDESIGN_MAX_GLPI', '11.9.99');
+define('PLUGIN_PLUGINGRAFANAINTEGRATION_MIN_GLPI', '11.0.8');
+define('PLUGIN_PLUGINGRAFANAINTEGRATION_MAX_GLPI', '11.9.99');
 
 /**
  * Init: registrado a cada carregamento. Declara hooks na API interna do GLPI.
@@ -39,15 +39,15 @@ define('PLUGIN_ANALYTICDESIGN_MAX_GLPI', '11.9.99');
  * integração com o dashboard nativo fica indisponível, em vez de um fatal
  * error na carga do plugin inteiro.
  */
-function plugin_init_analyticdesign(): void
+function plugin_init_plugingrafanaintegration(): void
 {
     global $PLUGIN_HOOKS;
 
     // Plugin em conformidade com CSRF.
-    $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT]['analyticdesign'] = true;
+    $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT]['plugingrafanaintegration'] = true;
 
     // Menu sob Administração.
-    $PLUGIN_HOOKS['menu_toadd']['analyticdesign'] = [
+    $PLUGIN_HOOKS['menu_toadd']['plugingrafanaintegration'] = [
         'admin' => Menu::class,
     ];
 
@@ -67,9 +67,9 @@ function plugin_init_analyticdesign(): void
     // "Classe::metodo" é a forma mais clara de declarar isso.
     if (defined(Hooks::class . '::DASHBOARD_TYPES') && defined(Hooks::class . '::DASHBOARD_CARDS')) {
         // Novo tipo de widget (embed de BI externo).
-        $PLUGIN_HOOKS[Hooks::DASHBOARD_TYPES]['analyticdesign'] = Dashboard::class . '::getTypes';
+        $PLUGIN_HOOKS[Hooks::DASHBOARD_TYPES]['plugingrafanaintegration'] = Dashboard::class . '::getTypes';
         // Novos cards (um por dashboard exposto).
-        $PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['analyticdesign'] = Dashboard::class . '::getCards';
+        $PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['plugingrafanaintegration'] = Dashboard::class . '::getCards';
     }
 
     // --- Substituição do Dashboard nativo de um módulo (ver docblock de
@@ -77,38 +77,35 @@ function plugin_init_analyticdesign(): void
     // POST_INIT: roda uma vez por sessão e força a "última visualização"
     // (ver ModuleDashboard::applySessionOverrides()) pras telas de Ativos/
     // Assistência que o usuário atual deve ver substituídas.
-    $PLUGIN_HOOKS[Hooks::POST_INIT]['analyticdesign'] = ModuleDashboard::class . '::applySessionOverrides';
+    $PLUGIN_HOOKS[Hooks::POST_INIT]['plugingrafanaintegration'] = ModuleDashboard::class . '::applySessionOverrides';
     // REDEFINE_MENUS: injeta o link "Dashboard" no menu de Gerência/
     // Ferramentas/Administração (que não têm um nativo) quando o usuário
     // atual tem uma substituição ativa pra aquele módulo.
-    $PLUGIN_HOOKS[Hooks::REDEFINE_MENUS]['analyticdesign'] = ModuleDashboard::class . '::redefineMenus';
+    $PLUGIN_HOOKS[Hooks::REDEFINE_MENUS]['plugingrafanaintegration'] = ModuleDashboard::class . '::redefineMenus';
 
-    // Assets do plugin: toggle de campos por tipo/modo de fonte, botão "Testar
-    // conexão" e o bootstrap do embed seguro do Power BI (Fase 2) — a lib
-    // powerbi-client vem antes do bootstrap que a usa.
-    $PLUGIN_HOOKS[Hooks::ADD_CSS]['analyticdesign'] = 'public/css/analyticdesign.css';
-    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['analyticdesign'] = [
+    // Assets do plugin: toggle de campos por tipo/modo de fonte e botão
+    // "Testar conexão".
+    $PLUGIN_HOOKS[Hooks::ADD_CSS]['plugingrafanaintegration'] = 'public/css/analyticdesign.css';
+    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['plugingrafanaintegration'] = [
         'public/js/analyticdesign.js',
-        'public/js/vendor/powerbi-client.min.js',
-        'public/js/analyticdesign-powerbi.js',
     ];
 }
 
 /**
  * Metadados do plugin (exibidos na tela de plugins).
  */
-function plugin_version_analyticdesign(): array
+function plugin_version_plugingrafanaintegration(): array
 {
     return [
-        'name'           => 'Analytic Design',
-        'version'        => PLUGIN_ANALYTICDESIGN_VERSION,
+        'name'           => 'Pellissari Grafana Integration',
+        'version'        => PLUGIN_PLUGINGRAFANAINTEGRATION_VERSION,
         'author'         => 'Pellissari',
         'license'        => 'AGPL-3.0',
         'homepage'       => '',
         'requirements'   => [
             'glpi' => [
-                'min' => PLUGIN_ANALYTICDESIGN_MIN_GLPI,
-                'max' => PLUGIN_ANALYTICDESIGN_MAX_GLPI,
+                'min' => PLUGIN_PLUGINGRAFANAINTEGRATION_MIN_GLPI,
+                'max' => PLUGIN_PLUGINGRAFANAINTEGRATION_MAX_GLPI,
             ],
             'php' => [
                 'min' => '8.2',
@@ -120,11 +117,11 @@ function plugin_version_analyticdesign(): array
 /**
  * Pré-requisitos verificados antes de sequer listar o plugin como instalável
  * (dependências de ambiente, não do GLPI em si — essas o próprio GLPI já
- * valida via `requirements` em plugin_version_analyticdesign()).
+ * valida via `requirements` em plugin_version_plugingrafanaintegration()).
  */
-function plugin_analyticdesign_check_prerequisites(): bool
+function plugin_plugingrafanaintegration_check_prerequisites(): bool
 {
-    // Guzzle é usado por GrafanaClient e PowerBiClient. O GLPI já traz Guzzle
+    // Guzzle é usado por GrafanaClient. O GLPI já traz Guzzle
     // como dependência própria, mas checar aqui evita um fatal error tardio
     // (só ao clicar em "Testar conexão") caso uma instalação atípica não o
     // tenha disponível.
@@ -152,7 +149,7 @@ function plugin_analyticdesign_check_prerequisites(): bool
  * identificados na revisão contra o GLPI 11.0.8 (ver README, seção
  * "Notas de arquitetura e riscos"), não cada chamada do plugin.
  */
-function plugin_analyticdesign_check_config($verbose = false): bool
+function plugin_plugingrafanaintegration_check_config($verbose = false): bool
 {
     $checks = [
         '\\GLPIKey (criptografia de credenciais)' => class_exists(\GLPIKey::class),
@@ -171,7 +168,7 @@ function plugin_analyticdesign_check_config($verbose = false): bool
 
     if (!empty($missing)) {
         if ($verbose) {
-            echo __('Analytic Design: dependências do GLPI não encontradas ou incompatíveis:', 'analyticdesign')
+            echo __('Pellissari Grafana Integration: dependências do GLPI não encontradas ou incompatíveis:', 'analyticdesign')
                 . ' ' . implode(', ', $missing);
         }
         return false;

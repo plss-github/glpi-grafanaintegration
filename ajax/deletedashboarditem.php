@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Remove por completo um dashboard exposto (botão "Remover" na aba
  * "Configurações" — DashboardItem::showImportedManagementSection()). Chamado
@@ -15,7 +15,7 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
 
 header('Content-Type: application/json; charset=UTF-8');
 Html::header_nocache();

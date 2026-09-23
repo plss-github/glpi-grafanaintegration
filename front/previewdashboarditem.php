@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Pré-visualização de um dashboard exposto (ver "Pré-visualizar" na aba
  * "Pré-Visualização" da Connection — DashboardItem::showImportedSection()).
@@ -17,9 +17,9 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\DashboardItem;
-use GlpiPlugin\Analyticdesign\Source\GrafanaSource;
-use GlpiPlugin\Analyticdesign\Source\SourceFactory;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Source\GrafanaSource;
+use GlpiPlugin\Plugingrafanaintegration\Source\SourceFactory;
 
 $id = (int)($_GET['id'] ?? 0);
 

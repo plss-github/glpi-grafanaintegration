@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Reproduz em PHP puro o mesmo HTML/CSS que o GLPI 11 gera para campos de
  * formulário via Twig (ver templates/components/form/fields_macros.html.twig,
@@ -25,7 +25,7 @@
  * do plugin já é PHP/HTML puro (ver docblock de Connection::showForm()).
  */
 
-namespace GlpiPlugin\Analyticdesign\Traits;
+namespace GlpiPlugin\Plugingrafanaintegration\Traits;
 
 trait HasFormFieldLayout
 {

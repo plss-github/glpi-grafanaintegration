@@ -1,14 +1,19 @@
 {
-    "name": "pellissari/analyticdesign",
-    "description": "Analytic Design - integra dashboards de BI externos (Grafana/Power BI) ao GLPI 11",
+    "name": "pellissari/plugingrafanaintegration",
+    "description": "Pellissari Grafana Integration - integra dashboards Grafana ao GLPI 11",
     "type": "glpi-plugin",
     "license": "AGPL-3.0",
+    "authors": [
+        {
+            "name": "Pellissari"
+        }
+    ],
     "require": {
         "php": ">=8.2"
     },
     "autoload": {
         "psr-4": {
-            "GlpiPlugin\\Analyticdesign\\": "src/"
+            "GlpiPlugin\\Plugingrafanaintegration\\": "src/"
         }
     }
 }

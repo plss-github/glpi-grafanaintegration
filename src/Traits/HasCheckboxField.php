@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Pequeno helper HTML compartilhado por Connection/DashboardItem, cujos
  * formulários são renderizados em PHP puro (ver decisão documentada em
@@ -9,7 +9,7 @@
  * classe/loop que precisa de um campo booleano ("Ativo" etc.).
  */
 
-namespace GlpiPlugin\Analyticdesign\Traits;
+namespace GlpiPlugin\Plugingrafanaintegration\Traits;
 
 trait HasCheckboxField
 {

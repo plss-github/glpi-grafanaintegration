@@ -1,20 +1,20 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Rotinas de instalação e desinstalação.
  */
 
-use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
 
 /**
  * Instalação: cria tabelas e direitos.
  */
-function plugin_analyticdesign_install(): bool
+function plugin_plugingrafanaintegration_install(): bool
 {
-    $migration = new Migration(PLUGIN_ANALYTICDESIGN_VERSION);
+    $migration = new Migration(PLUGIN_PLUGINGRAFANAINTEGRATION_VERSION);
 
     Connection::install($migration);
     DashboardItem::install($migration);
@@ -48,7 +48,7 @@ function plugin_analyticdesign_install(): bool
 /**
  * Desinstalação: remove tabelas e direitos.
  */
-function plugin_analyticdesign_uninstall(): bool
+function plugin_plugingrafanaintegration_uninstall(): bool
 {
     Connection::uninstall();
     DashboardItem::uninstall();
@@ -61,7 +61,7 @@ function plugin_analyticdesign_uninstall(): bool
 /**
  * Direitos do plugin, exibidos na matriz de perfis.
  */
-function plugin_analyticdesign_getAddSearchOptions($itemtype)
+function plugin_plugingrafanaintegration_getAddSearchOptions($itemtype)
 {
     return [];
 }
@@ -70,7 +70,7 @@ function plugin_analyticdesign_getAddSearchOptions($itemtype)
  * Registro do direito usado pelas classes (Connection / DashboardItem).
  * @return array<string, string>
  */
-function plugin_analyticdesign_getrights(): array
+function plugin_plugingrafanaintegration_getrights(): array
 {
     return [
         Connection::RIGHTNAME => __('Análise de Dados: fontes e dashboards', 'analyticdesign'),

@@ -1,14 +1,15 @@
-# Ambiente de desenvolvimento/teste local: GLPI 11.0.8 (imagem oficial
-# glpi/glpi) + MariaDB, com esta pasta montada como o plugin "analyticdesign"
-# dentro do container. NÃO é uma configuração de produção (senhas fracas por
-# padrão, sem TLS) — apenas para instalar e clicar no plugin localmente.
+# Ambiente de desenvolvimento/teste local: GLPI 11.0.9 (imagem oficial
+# glpi/glpi) + MariaDB, com esta pasta montada como o plugin
+# "plugingrafanaintegration" dentro do container. NÃO é uma configuração de
+# produção (senhas fracas por padrão, sem TLS) — apenas para instalar e
+# clicar no plugin localmente.
 #
 # Uso:
 #   cp .env.example .env      # ajustar senhas se quiser
 #   docker compose up -d
 #   # aguardar a instalação automática do GLPI (alguns minutos na 1a vez)
-#   docker compose exec glpi php bin/console glpi:plugin:install -u glpi analyticdesign
-#   docker compose exec glpi php bin/console glpi:plugin:activate analyticdesign
+#   docker compose exec glpi php bin/console glpi:plugin:install -u glpi plugingrafanaintegration
+#   docker compose exec glpi php bin/console glpi:plugin:activate plugingrafanaintegration
 #   # abrir http://localhost:8080 (login padrão: glpi / glpi)
 
 services:
@@ -29,7 +30,7 @@ services:
       retries: 10
 
   glpi:
-    image: glpi/glpi:11.0.8
+    image: glpi/glpi:11.0.9
     restart: unless-stopped
     depends_on:
       db:
@@ -48,7 +49,9 @@ services:
       - glpi_logs:/var/glpi/logs
       - glpi_marketplace:/var/glpi/marketplace
       # Plugin montado direto do repositório — editar aqui reflete no container.
-      - ./:/var/www/glpi/plugins/analyticdesign:ro
+      - ./:/var/www/glpi/plugins/plugingrafanaintegration:ro
+      # Segundo plugin da equipe, montado do mesmo ambiente.
+      - ../../planner:/var/www/glpi/plugins/planner:ro
 
 volumes:
   glpi_db_data:

@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Entrada de menu "Análise de Dados" sob Administração.
- * Registrada via $PLUGIN_HOOKS['menu_toadd']['analyticdesign']['admin'].
+ * Registrada via $PLUGIN_HOOKS['menu_toadd']['plugingrafanaintegration']['admin'].
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
 use CommonGLPI;
 
@@ -36,7 +36,7 @@ class Menu extends CommonGLPI
     {
         $menu = [];
         $menu['title'] = self::getMenuName();
-        $menu['page']  = '/plugins/analyticdesign/front/connection.php';
+        $menu['page']  = '/plugins/plugingrafanaintegration/front/connection.php';
         $menu['icon']  = self::getIcon();
 
         // 'icon' aqui também alimenta o breadcrumb (ver
@@ -47,19 +47,19 @@ class Menu extends CommonGLPI
         // (Home/Administração/Análise de Dados), que sempre têm ícone.
         $menu['options']['connection'] = [
             'title' => Connection::getTypeName(2),
-            'page'  => '/plugins/analyticdesign/front/connection.php',
+            'page'  => '/plugins/plugingrafanaintegration/front/connection.php',
             'icon'  => Connection::getIcon(),
             'links' => [
-                'search' => '/plugins/analyticdesign/front/connection.php',
-                'add'    => '/plugins/analyticdesign/front/connection.form.php',
+                'search' => '/plugins/plugingrafanaintegration/front/connection.php',
+                'add'    => '/plugins/plugingrafanaintegration/front/connection.form.php',
             ],
         ];
         $menu['options']['item'] = [
             'title' => DashboardItem::getTypeName(2),
-            'page'  => '/plugins/analyticdesign/front/dashboarditem.php',
+            'page'  => '/plugins/plugingrafanaintegration/front/dashboarditem.php',
             'icon'  => DashboardItem::getIcon(),
             'links' => [
-                'search' => '/plugins/analyticdesign/front/dashboarditem.php',
+                'search' => '/plugins/plugingrafanaintegration/front/dashboarditem.php',
             ],
         ];
 

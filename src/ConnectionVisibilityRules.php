@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Aba "Visibilidade" no formulário da Connection: TUDO inline (lista de
  * regras, cada uma com sua tabela de Critérios e de Ação, mais uma linha de
@@ -15,7 +15,7 @@
  * ConnectionCharacteristics.
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
 use CommonGLPI;
 use Html;
@@ -51,7 +51,7 @@ class ConnectionVisibilityRules extends CommonGLPI
         $canEdit = $item->can($connectionsId, UPDATE);
 
         global $CFG_GLPI;
-        $formUrl = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/visibilityrule.form.php';
+        $formUrl = $CFG_GLPI['root_doc'] . '/plugins/plugingrafanaintegration/front/visibilityrule.form.php';
 
         echo "<div class='analyticdesign-visibility-rules'>";
         echo "<p class='text-muted'>"

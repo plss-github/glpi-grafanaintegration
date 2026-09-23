@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Ponte com o sistema nativo de dashboards do GLPI.
  *
@@ -26,9 +26,9 @@
  *    o único jeito confiável de o widget saber qual item renderizar.
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
-use GlpiPlugin\Analyticdesign\Source\SourceFactory;
+use GlpiPlugin\Plugingrafanaintegration\Source\SourceFactory;
 
 class Dashboard
 {
@@ -40,7 +40,7 @@ class Dashboard
     {
         return [
             'analyticdesign_embed' => [
-                'label'    => __('Analytic Design (BI externo)', 'analyticdesign'),
+                'label'    => __('Pellissari Grafana Integration (BI externo)', 'analyticdesign'),
                 'function' => self::class . '::renderEmbedWidget',
                 // Sem 'image': não há ícone de preview específico ainda. Se o
                 // GLPI 11 exigir a chave, adicionar um PNG/SVG em public/img/.
@@ -88,7 +88,7 @@ class Dashboard
             // categoria em texto livre salva.
             $category = $item->fields['category'] !== ''
                 ? (ModuleDashboard::MODULES[$item->fields['category']] ?? $item->fields['category'])
-                : __('Analytic Design', 'analyticdesign');
+                : __('Pellissari Grafana Integration', 'analyticdesign');
 
             $cards["analyticdesign_item_{$id}"] = [
                 'widgettype' => ['analyticdesign_embed'],
@@ -116,8 +116,9 @@ class Dashboard
 
     /**
      * Render do widget: carrega o item, resolve a fonte via factory e delega
-     * o HTML do embed para renderEmbed(). O widget nunca sabe se é Grafana ou
-     * Power BI — essa é a razão da abstração.
+     * o HTML do embed para renderEmbed(). O widget nunca precisa saber qual
+     * fonte de BI está por trás — essa é a razão da abstração (hoje só
+     * Grafana, mas outras fontes podem ser adicionadas via SourceFactory).
      *
      * @param array $params dados devolvidos por provideItem() (inclui item_id)
      */

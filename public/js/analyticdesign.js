@@ -2,9 +2,6 @@
  * Analytic Design
  * -----------------------------------------------------------------------------
  * Comportamento das telas do plugin:
- *  - alterna os campos de credencial do Power BI conforme o modo de embed
- *    selecionado (secure vs publish_to_web), na aba "Características";
- *  - alerta quando o modo de embed "publish to web" é escolhido;
  *  - botão "Testar conexão" via fetch, sem recarregar a página; quando a
  *    conexão falha, esconde os campos e mostra só o erro (com um botão para
  *    reabrir os campos e corrigir a configuração);

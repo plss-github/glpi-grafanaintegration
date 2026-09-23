@@ -1,7 +1,6 @@
-# Analytic Design
+# Pellissari Grafana Integration
 
-Plugin GLPI **11.0.8+** que integra dashboards de ferramentas externas de BI
-(**Grafana** e **Power BI**, nos dois modos de embed) ao sistema nativo de
+Plugin GLPI **11.0.8+** que integra dashboards **Grafana** ao sistema nativo de
 dashboards do GLPI.
 
 Adiciona uma aba **"Análise de Dados"** em **Administração** onde se cadastram as
@@ -18,6 +17,10 @@ e [seção "Segurança"](docs/CONFIGURACAO.md#12-segurança). A aba
 **"Visibilidade"** (regras de Critérios/Ação, alternativa ao ajuste direto
 por card) está documentada na
 [seção 10](docs/CONFIGURACAO.md#10-restringir-visibilidade-por-regras-aba-visibilidade).
+
+## Autor
+
+**Pellissari**
 
 ## Licença
 

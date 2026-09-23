@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Aba dedicada de direitos do plugin em Administração > Perfis.
  *
@@ -16,7 +16,7 @@
  * próprio core (ver `CommonGLPI::registerStandardTab()`).
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
 use CommonGLPI;
 use Profile;

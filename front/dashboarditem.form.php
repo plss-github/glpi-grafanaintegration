@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Edição pontual de um dashboard exposto (acessado a partir da busca geral).
  * O fluxo principal de importação/edição é a aba "Dashboards" da Connection.
@@ -9,8 +9,8 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\DashboardItem;
-use GlpiPlugin\Analyticdesign\Menu;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Menu;
 
 $item = new DashboardItem();
 

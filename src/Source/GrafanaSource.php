@@ -1,16 +1,16 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Fonte Grafana (Fase 1). Primeira implementação concreta do contrato
  * DashboardSourceInterface. Embedding via iframe.
  */
 
-namespace GlpiPlugin\Analyticdesign\Source;
+namespace GlpiPlugin\Plugingrafanaintegration\Source;
 
-use GlpiPlugin\Analyticdesign\Client\GrafanaClient;
-use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Client\GrafanaClient;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
 
 class GrafanaSource extends AbstractDashboardSource
 {

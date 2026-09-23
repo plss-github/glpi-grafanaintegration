@@ -1,22 +1,21 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Resolve uma Connection (com seu 'type') para a implementação de fonte correta.
  * Este é o ÚNICO ponto que precisa mudar ao adicionar uma nova ferramenta de BI.
  */
 
-namespace GlpiPlugin\Analyticdesign\Source;
+namespace GlpiPlugin\Plugingrafanaintegration\Source;
 
-use GlpiPlugin\Analyticdesign\Connection;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
 
 class SourceFactory
 {
     /** @var array<string, class-string<DashboardSourceInterface>> */
     private const SOURCES = [
         'grafana' => GrafanaSource::class,
-        'powerbi' => PowerBiSource::class,
     ];
 
     public static function make(Connection $connection): DashboardSourceInterface

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Listagem geral de dashboards expostos (todas as fontes). A importação e a
  * edição do dia a dia acontecem na aba "Dashboards" da Connection; esta tela
@@ -10,8 +10,8 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\DashboardItem;
-use GlpiPlugin\Analyticdesign\Menu;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Menu;
 
 Session::checkRight(DashboardItem::$rightname, READ);
 

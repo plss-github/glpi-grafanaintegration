@@ -1,35 +1,33 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
- * Contrato comum a todas as fontes de BI (Grafana, Power BI, ...).
+ * Contrato comum a todas as fontes de BI (Grafana, ...).
  *
  * O restante do plugin (hook de card, render de widget) fala APENAS com esta
  * interface. Adicionar uma nova ferramenta = criar uma nova implementação e
  * registrá-la na SourceFactory. Nenhum outro arquivo precisa mudar.
  */
 
-namespace GlpiPlugin\Analyticdesign\Source;
+namespace GlpiPlugin\Plugingrafanaintegration\Source;
 
-use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
 
 interface DashboardSourceInterface
 {
     /**
-     * Valores possíveis de `connections_id.embed_mode`, centralizados aqui
-     * (em vez de string literais espalhadas por Connection/DashboardItem/
-     * PowerBiSource) para evitar erros de digitação e ter um único lugar a
-     * atualizar se um modo for renomeado.
+     * Valor possível de `connections_id.embed_mode`, centralizado aqui (em
+     * vez de string literal espalhada por Connection/DashboardItem) para
+     * evitar erros de digitação e ter um único lugar a atualizar se o modo
+     * for renomeado. Hoje só existe o modo iframe (usado pelo Grafana).
      */
     public const EMBED_MODE_IFRAME = 'iframe';
-    public const EMBED_MODE_PUBLISH_TO_WEB = 'publish_to_web';
-    public const EMBED_MODE_SECURE = 'secure';
 
     /**
-     * Tipo interno da fonte (ex.: 'grafana', 'powerbi').
-     * Deve casar com o valor gravado em glpi_plugin_analyticdesign_connections.type
+     * Tipo interno da fonte (ex.: 'grafana').
+     * Deve casar com o valor gravado em glpi_plugin_plugingrafanaintegration_connections.type
      */
     public static function getType(): string;
 

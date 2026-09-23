@@ -1,24 +1,22 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Dashboard externo exposto como card no GLPI.
- * Tabela: glpi_plugin_analyticdesign_dashboarditems (nome derivado da classe
+ * Tabela: glpi_plugin_plugingrafanaintegration_dashboarditems (nome derivado da classe
  * por CommonDBTM::getTable() — não é `..._items`, apesar do que sugeriria
  * uma leitura rápida do nome da classe).
  */
 
-namespace GlpiPlugin\Analyticdesign;
+namespace GlpiPlugin\Plugingrafanaintegration;
 
 use CommonDBTM;
 use CommonGLPI;
 use Dropdown;
 use Session;
-use GlpiPlugin\Analyticdesign\Source\DashboardSourceInterface;
-use GlpiPlugin\Analyticdesign\Source\PowerBiSource;
-use GlpiPlugin\Analyticdesign\Traits\HasCheckboxField;
-use GlpiPlugin\Analyticdesign\Traits\HasFormFieldLayout;
+use GlpiPlugin\Plugingrafanaintegration\Traits\HasCheckboxField;
+use GlpiPlugin\Plugingrafanaintegration\Traits\HasFormFieldLayout;
 use Html;
 
 class DashboardItem extends CommonDBTM
@@ -39,17 +37,9 @@ class DashboardItem extends CommonDBTM
         return 'ti ti-layout-dashboard';
     }
 
-    /**
-     * Exemplo de URL de embed mostrado abaixo do campo — varia pela
-     * ferramenta da Connection dona, já que o formato é bem diferente entre
-     * Grafana (link direto do dashboard) e Power BI (URL de "publish to
-     * web", que embute um token opaco em `?r=`).
-     */
+    /** Exemplo de URL de embed mostrado abaixo do campo (formato do Grafana). */
     private static function embedUrlExample(?Connection $connection): string
     {
-        if ($connection !== null && $connection->fields['type'] === PowerBiSource::getType()) {
-            return __('Ex.: https://app.powerbi.com/view?r=eyJrIjoiMTIz...', 'analyticdesign');
-        }
         return __('Ex.: https://seu-grafana.suaempresa.com/d/ab12cd34/meu-dashboard?kiosk=tv&theme=light', 'analyticdesign');
     }
 
@@ -308,7 +298,7 @@ class DashboardItem extends CommonDBTM
         }
 
         global $CFG_GLPI;
-        $previewRoot = $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/front/previewdashboarditem.php';
+        $previewRoot = $CFG_GLPI['root_doc'] . '/plugins/plugingrafanaintegration/front/previewdashboarditem.php';
 
         echo "<div class='card mb-0'>";
         echo "<div class='table-responsive'>";
@@ -340,7 +330,7 @@ class DashboardItem extends CommonDBTM
     public static function ajaxRoot(): string
     {
         global $CFG_GLPI;
-        return $CFG_GLPI['root_doc'] . '/plugins/analyticdesign/ajax';
+        return $CFG_GLPI['root_doc'] . '/plugins/plugingrafanaintegration/ajax';
     }
 
     /**
@@ -464,13 +454,13 @@ class DashboardItem extends CommonDBTM
      *
      * O formulário de importação tem duas variantes, conforme a fonte
      * suporta listagem ao vivo ou não:
-     *  - Suporta (Grafana, Power BI modo secure): dropdown com os dashboards
-     *    disponíveis na fonte — escolhido um, nome/URL de embed são
-     *    resolvidos no servidor a partir da própria listagem (nunca
-     *    confiando em nome/URL vindos do POST do navegador).
-     *  - Não suporta (Power BI modo publish_to_web — a API não expõe essas
-     *    URLs): formulário manual (nome + URL de embed colada à mão), único
-     *    jeito possível nesse caso.
+     *  - Suporta (Grafana): dropdown com os dashboards disponíveis na fonte —
+     *    escolhido um, nome/URL de embed são resolvidos no servidor a partir
+     *    da própria listagem (nunca confiando em nome/URL vindos do POST do
+     *    navegador).
+     *  - Não suporta (a listagem falhou — ver resolveAvailableDashboards()):
+     *    formulário manual (nome + URL de embed colada à mão), usado como
+     *    fallback nesse caso.
      * Módulo é configurado junto, na mesma submissão; visibilidade e
      * substituição de módulo ficam para depois (aba "Visibilidade" e a
      * tabela de gerenciamento logo abaixo, respectivamente — um item
@@ -504,7 +494,7 @@ class DashboardItem extends CommonDBTM
             echo "<p class='text-muted'>" . __('Escolha um dashboard disponível na fonte para importar e configurar o módulo.', 'analyticdesign') . "</p>";
             self::showDropdownImportForm($connectionsId, $available, $ajaxRoot);
         } else {
-            echo "<p class='text-muted'>" . __('Cadastre aqui um dashboard manualmente — necessário quando a fonte não permite listar automaticamente (ex.: Power BI em modo "publish to web").', 'analyticdesign') . "</p>";
+            echo "<p class='text-muted'>" . __('Cadastre aqui um dashboard manualmente — necessário quando a fonte não permite listar automaticamente.', 'analyticdesign') . "</p>";
             self::showManualAddForm($connection, $connectionsId, $ajaxRoot);
         }
         echo "</div>"; // .card-body
@@ -550,15 +540,6 @@ class DashboardItem extends CommonDBTM
 
     private static function showManualAddForm(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
-        $isPublishToWeb = $connection->fields['type'] === PowerBiSource::getType()
-            && ($connection->fields['embed_mode'] ?? '') === DashboardSourceInterface::EMBED_MODE_PUBLISH_TO_WEB;
-        if ($isPublishToWeb) {
-            echo "<p class='alert alert-important alert-danger'>"
-                . "<i class='ti ti-alert-triangle'></i> "
-                . __('Atenção: a URL colada abaixo fica acessível a qualquer pessoa com o link, sem autenticação. Não use para dados confidenciais.', 'analyticdesign')
-                . "</p>";
-        }
-
         echo "<form name='analyticdesign_add_manual' method='post' action='"
             . htmlspecialchars($ajaxRoot . '/addmanualdashboard.php', ENT_QUOTES) . "'>";
         echo "<input type='hidden' name='connections_id' value='{$connectionsId}'>";
@@ -878,7 +859,7 @@ class DashboardItem extends CommonDBTM
             $ids = $DB->request([
                 'SELECT' => 'id',
                 'FROM'   => 'glpi_dashboards_dashboards',
-                'WHERE'  => ['context' => 'analyticdesign'],
+                'WHERE'  => ['context' => 'plugingrafanaintegration'],
             ]);
             foreach ($ids as $row) {
                 $DB->delete('glpi_dashboards_rights', ['dashboards_dashboards_id' => (int)$row['id']]);

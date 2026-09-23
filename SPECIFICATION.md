@@ -1,30 +1,30 @@
-# Analytic Design by Pellissari — Especificação de Desenvolvimento
+# Pellissari Grafana Integration — Especificação de Desenvolvimento
 
 > Documento-prompt para desenvolvimento de um plugin GLPI 11.0.x que integra
-> ferramentas externas de BI (Grafana e Power BI) ao sistema nativo de
-> dashboards do GLPI. Pode ser entregue a um desenvolvedor ou usado como
-> prompt para um agente de código.
+> dashboards do Grafana ao sistema nativo de dashboards do GLPI. Pode ser
+> entregue a um desenvolvedor ou usado como prompt para um agente de código.
 
 ---
 
 ## 1. Visão geral
 
-**Nome do projeto:** Analytic Design by Pellissari
-**Chave do plugin (diretório/namespace):** `analyticdesign`
+**Nome do projeto:** Pellissari Grafana Integration
+**Chave do plugin (diretório/namespace):** `plugingrafanaintegration`
 **Alvo:** GLPI 11.0.x
-**Licença:** GPL-2.0 (obrigatório para plugins GLPI)
-**Linguagem principal:** PHP (backend), Twig (templates), JS (embed do Power BI seguro)
+**Licença:** AGPL-3.0
+**Autor:** Pellissari
+**Linguagem principal:** PHP (backend), Twig (templates), JS (interações da UI)
 
 O plugin adiciona uma aba **"Análise de Dados"** em **Administração**, onde o
-administrador cadastra conexões com ferramentas externas de BI. Os dashboards
-dessas ferramentas ficam disponíveis como **cards** no sistema nativo de
-dashboards do GLPI, e o admin escolhe (pelo modo de edição nativo do GLPI) em
-qual grade/aba cada card aparece.
+administrador cadastra conexões com o Grafana. Os dashboards dessa ferramenta
+ficam disponíveis como **cards** no sistema nativo de dashboards do GLPI, e o
+admin escolhe (pelo modo de edição nativo do GLPI) em qual grade/aba cada card
+aparece.
 
 ## 2. Objetivo funcional
 
-1. Cadastrar uma ou mais **fontes** (Grafana e/ou Power BI).
-2. Listar os dashboards disponíveis em cada fonte (via API quando possível).
+1. Cadastrar uma ou mais **fontes** Grafana.
+2. Listar os dashboards disponíveis em cada fonte via API.
 3. Marcar quais dashboards expor e opcionalmente atribuir uma **categoria**
    (ex.: "Ativos", "Assistência", "Indicadores gerais").
 4. Cada dashboard exposto vira um **card** no catálogo de dashboards do GLPI.
@@ -34,7 +34,7 @@ qual grade/aba cada card aparece.
 6. Visibilidade por perfil respeitada.
 
 ### Exemplo de uso alvo
-Num Power BI com vários relatórios, o admin marca os relatórios de ativos com a
+Num Grafana com vários dashboards, o admin marca os dashboards de ativos com a
 categoria "Ativos" e os posiciona na grade de dashboard de Ativos do GLPI; os
 indicadores gerais vão para a grade principal. O usuário final, ao abrir cada
 aba, vê os dashboards externos correspondentes.
@@ -53,8 +53,8 @@ aba, vê os dashboards externos correspondentes.
 
 ## 4. Arquitetura — a decisão-chave
 
-Todo o código que fala com o GLPI **não sabe** qual ferramenta de BI está por
-trás. Ele conversa apenas com um contrato comum:
+Todo o código que fala com o GLPI **não sabe** os detalhes da fonte de BI. Ele
+conversa apenas com um contrato comum:
 
 ```
 interface DashboardSourceInterface
@@ -64,76 +64,56 @@ interface DashboardSourceInterface
     getConfigFields(): array             // campos de config específicos da fonte
 ```
 
-- **GrafanaSource** é a primeira implementação (Fase 1).
-- **PowerBiSource** é a segunda (Fase 2), plugando no mesmo ponto.
-- Uma **SourceFactory** resolve o tipo salvo (`grafana` | `powerbi`) para a
-  implementação correta.
+- **GrafanaSource** é a única implementação hoje.
+- Uma **SourceFactory** resolve o tipo salvo (`grafana`) para a implementação
+  correta — se uma nova fonte de BI precisar ser suportada no futuro, basta
+  criar uma nova implementação e registrá-la ali.
 
-O hook de card do GLPI só chama `renderEmbed()` na fonte dona do card. Assim,
-adicionar Power BI é **aditivo**, não uma reescrita.
+O hook de card do GLPI só chama `renderEmbed()` na fonte dona do card.
 
 ## 5. Modelo de dados
 
-**`glpi_plugin_analyticdesign_connections`** — as fontes cadastradas
+**`glpi_plugin_plugingrafanaintegration_connections`** — as fontes cadastradas
 - `id`
 - `name`
-- `type` (`grafana` | `powerbi`)
+- `type` (`grafana`)
 - `base_url`
-- `credentials` (JSON criptografado — token/API key, ou client_id/secret/tenant)
-- `embed_mode` (`iframe` | `publish_to_web` | `secure`) — relevante ao Power BI
+- `credentials` (JSON criptografado — API token)
+- `embed_mode` (`iframe`)
 - `is_active`
 - entidade / datas padrão do CommonDBTM
 
-**`glpi_plugin_analyticdesign_items`** — dashboards expostos
+**`glpi_plugin_plugingrafanaintegration_dashboarditems`** — dashboards expostos
 - `id`
 - `connections_id` (FK)
-- `external_id` (id do dashboard/relatório na ferramenta)
+- `external_id` (id do dashboard na ferramenta)
 - `name`
-- `category` (texto livre ou dropdown)
-- `embed_url` (quando publish-to-web/iframe direto)
+- `category` (dropdown de módulos do GLPI)
+- `embed_url`
 - `is_active`
 
 ## 6. Integração com o dashboard do GLPI
 
-Registrar no `plugin_init_analyticdesign()`:
+Registrar no `plugin_init_plugingrafanaintegration()`:
 
 ```php
-$PLUGIN_HOOKS[Hooks::DASHBOARD_TYPES]['analyticdesign'] = [Dashboard::class => 'getTypes'];
-$PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['analyticdesign'] = [Dashboard::class => 'getCards'];
+$PLUGIN_HOOKS[Hooks::DASHBOARD_TYPES]['plugingrafanaintegration'] = Dashboard::class . '::getTypes';
+$PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['plugingrafanaintegration'] = Dashboard::class . '::getCards';
 ```
 
-- `getTypes()` registra um widget `analyticdesign_embed` cujo render devolve o
-  HTML do embed.
-- `getCards()` percorre os `items` ativos e devolve um card por dashboard
+- `getTypes()` registra um widget cujo render devolve o HTML do embed.
+- `getCards()` percorre os dashboards ativos e devolve um card por dashboard
   exposto, agrupado pela categoria.
 - O render do widget carrega o item, resolve a fonte via factory e chama
   `renderEmbed()`.
 
-> **A validar contra o código do GLPI 11:** a assinatura exata do array de
-> widget/card e do callback de render. O scaffold traz a modelagem documentada;
-> ajustar após testar numa instância real.
+## 7. Embedding
 
-## 7. Embedding — modos suportados
-
-### Grafana (Fase 1)
-- Embedding por `<iframe>`. Requer `allow_embedding = true` no Grafana e uma
-  estratégia de auth (anônima, proxy reverso, ou similar).
-- API REST para listar dashboards e montar as URLs de embed.
-
-### Power BI (Fase 2) — escolha explícita por fonte/dashboard
-Toggle `embed_mode` na configuração:
-
-1. **Publish to web** — cola-se a URL pública gerada pelo Power BI; o render
-   devolve um iframe simples. Barato, reusa o padrão do Grafana.
-   - ⚠️ **AVISO OBRIGATÓRIO NA UI:** conteúdo publicado assim fica acessível a
-     **qualquer pessoa com o link, sem autenticação**. Não usar para dados
-     confidenciais. Exibir alerta vermelho claro quando o admin selecionar
-     este modo.
-2. **Embed seguro** ("for your organization") — registro no Entra ID, service
-   principal, geração de *embed token* no servidor, lib `powerbi-client` no
-   front. Requer capacity/licença Premium (custo recorrente).
-
-O toggle em si é trivial; o custo é ter as duas trilhas implementadas.
+Embedding por `<iframe>`. Requer `allow_embedding = true` no Grafana e uma
+estratégia de auth do usuário final para acessar o Grafana diretamente
+(login/SSO próprio, acesso anônimo, ou dashboard público) — o token
+configurado na Connection só autentica as chamadas de backend do plugin
+(testar conexão, listar dashboards), não o `<iframe>` em si.
 
 ## 8. Fases e critérios de aceitação
 
@@ -142,27 +122,17 @@ Escopo: scaffold, aba em Administração, CRUD de conexões, interface
 `DashboardSourceInterface`, `GrafanaSource`, `SourceFactory`, integração de card.
 **Aceite:** admin cadastra um Grafana, testa a conexão, marca dashboards, e eles
 aparecem como cards posicionáveis nas grades do GLPI.
-**Estimativa:** ~2,5 a 3,5 semanas de dev.
-
-### Fase 2 — Power BI (publish-to-web + embed seguro)
-Escopo: `PowerBiSource` com os dois modos, toggle, UI de aviso, OAuth Entra ID,
-embed token, powerbi-client.
-**Aceite:** admin escolhe o modo por fonte; publish-to-web funciona com URL
-pública (com aviso); embed seguro autentica via service principal e renderiza
-relatório protegido.
-**Estimativa:** ~2 a 2,5 semanas de dev.
-- Publish to web: ~2-3 dias
-- Embed seguro: ~8-10 dias
-- Toggle + aviso + docs: ~1-2 dias
 
 ## 9. Fora de escopo (v1)
 - Filtragem dinâmica dos dashboards externos pelo contexto do GLPI
   (entidade/usuário atual) — o v1 escolhe *qual* dashboard aparece em cada aba,
   não aplica filtros dinâmicos. Row-level security ficaria para uma fase futura.
 - Sincronização automática/provisionamento de dashboards na ferramenta externa.
+- Suporte a outras ferramentas de BI (a abstração via `DashboardSourceInterface`
+  permite adicioná-las no futuro, mas nenhuma outra fonte é implementada hoje).
 
 ## 10. Riscos / pontos a validar
-- Assinatura exata da API de widgets/cards no GLPI 11 (validar em instância real).
+- Assinatura exata da API de widgets/cards no GLPI 11 (validado contra o
+  GLPI 11.0.8 — ver docs/CONFIGURACAO.md).
 - Política de CSP/iframe do GLPI para permitir framing de origens externas.
 - Grafana: modelo de auth para embedding sem expor a instância.
-- Power BI: disponibilidade de licença Premium/capacity para embed seguro.

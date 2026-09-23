@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Devolve o HTML do dropdown de Valor (Perfil/Grupo/Usuário/Entidade) para a
  * linha de "adicionar ação" da aba "Visibilidade" — chamado via fetch()
@@ -22,7 +22,7 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\Connection;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
 
 Session::checkRight(Connection::RIGHTNAME, READ);
 

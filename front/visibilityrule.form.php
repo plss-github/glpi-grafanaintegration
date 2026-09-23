@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Processa os POSTs da aba "Visibilidade" (adicionar/remover regra, critério
  * ou ação) e SEMPRE redireciona de volta para a mesma aba, na Connection dona
@@ -12,10 +12,10 @@
 
 include('../../../inc/includes.php');
 
-use GlpiPlugin\Analyticdesign\Connection;
-use GlpiPlugin\Analyticdesign\ConnectionVisibilityRules;
-use GlpiPlugin\Analyticdesign\DashboardItem;
-use GlpiPlugin\Analyticdesign\VisibilityRule;
+use GlpiPlugin\Plugingrafanaintegration\Connection;
+use GlpiPlugin\Plugingrafanaintegration\ConnectionVisibilityRules;
+use GlpiPlugin\Plugingrafanaintegration\DashboardItem;
+use GlpiPlugin\Plugingrafanaintegration\VisibilityRule;
 
 // Sem Session::checkCSRF() explícito — ver comentário equivalente em
 // front/connection.form.php (o kernel do GLPI 11 já valida e consome o
