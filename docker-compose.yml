@@ -51,7 +51,7 @@ services:
       # Plugin montado direto do repositório — editar aqui reflete no container.
       - ./:/var/www/glpi/plugins/plugingrafanaintegration:ro
       # Segundo plugin da equipe, montado do mesmo ambiente.
-      - ../../planner:/var/www/glpi/plugins/planner:ro
+      - ../../refactorytools:/var/www/glpi/plugins/refactorytools:ro
 
 volumes:
   glpi_db_data:
