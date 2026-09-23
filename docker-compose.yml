@@ -42,7 +42,7 @@ services:
       GLPI_DB_USER: ${GLPI_DB_USER:-glpi}
       GLPI_DB_PASSWORD: ${GLPI_DB_PASSWORD:-glpi}
     ports:
-      - "8080:80"
+      - "8081:80"
     volumes:
       - glpi_config:/var/glpi/config
       - glpi_files:/var/glpi/files
