@@ -1,5 +1,5 @@
 /**
- * Analytic Design
+ * Pellissari Grafana Integration
  * -----------------------------------------------------------------------------
  * Comportamento das telas do plugin:
  *  - botão "Testar conexão" via fetch, sem recarregar a página; quando a
