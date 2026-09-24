@@ -3,3 +3,4 @@ composer.lock
 .DS_Store
 Thumbs.db
 .env
+docker-compose.yml

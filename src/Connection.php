@@ -16,12 +16,14 @@ use GlpiPlugin\Plugingrafanaintegration\Source\DashboardSourceInterface;
 use GlpiPlugin\Plugingrafanaintegration\Source\GrafanaSource;
 use GlpiPlugin\Plugingrafanaintegration\Source\SourceFactory;
 use GlpiPlugin\Plugingrafanaintegration\Traits\HasFormFieldLayout;
+use GlpiPlugin\Plugingrafanaintegration\Traits\HasTimestampMigration;
 use Html;
 use Session;
 
 class Connection extends CommonDBTM
 {
     use HasFormFieldLayout;
+    use HasTimestampMigration;
 
     /**
      * Único direito do plugin, compartilhado por Connection e DashboardItem
@@ -474,8 +476,8 @@ class Connection extends CommonDBTM
                     `comment` TEXT NULL,
                     `entities_id` INT UNSIGNED NOT NULL DEFAULT 0,
                     `is_recursive` TINYINT NOT NULL DEFAULT 0,
-                    `date_creation` TIMESTAMP NULL DEFAULT NULL,
-                    `date_mod` TIMESTAMP NULL DEFAULT NULL,
+                    `date_creation` DATETIME NULL DEFAULT NULL,
+                    `date_mod` DATETIME NULL DEFAULT NULL,
                     PRIMARY KEY (`id`),
                     KEY `type` (`type`),
                     KEY `entities_id` (`entities_id`)
@@ -487,6 +489,13 @@ class Connection extends CommonDBTM
         if (!$DB->fieldExists($table, 'comment')) {
             $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `comment` TEXT NULL AFTER `is_active`");
         }
+        // `date_creation`/`date_mod` nasceram como TIMESTAMP (padrão antigo do
+        // GLPI, abandonado desde a 9.2 por causa do bug do ano 2038 e de
+        // conversão de fuso horário implícita do tipo TIMESTAMP do MySQL/
+        // MariaDB) — corrige instalações já existentes para DATETIME, mesmo
+        // padrão usado pelo core (ver `glpi_*`.`date_creation`/`date_mod` e
+        // HasTimestampMigration).
+        self::convertTimestampColumnsToDatetime($table);
     }
 
     public static function uninstall(): void

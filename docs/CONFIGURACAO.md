@@ -37,9 +37,9 @@ php bin/console plugin:activate plugingrafanaintegration
 
 ### Ambiente de desenvolvimento via Docker
 
-O repositório inclui um `docker-compose.yml` que sobe GLPI 11.0.8 (imagem
-oficial `glpi/glpi`) + MariaDB, com a pasta do plugin montada — só para
-instalar e testar localmente (não é config de produção):
+Suba localmente um GLPI 11.0.8 (imagem oficial `glpi/glpi`) + MariaDB, com a
+pasta do plugin montada, usando um `docker-compose.yml` próprio (não
+versionado — não é config de produção, e cada dev ajusta ao seu ambiente):
 
 ```
 cp .env.example .env
