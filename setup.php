@@ -13,12 +13,13 @@
  */
 
 use Glpi\Plugin\Hooks;
+use GlpiPlugin\Plugingrafanaintegration\CentralGrafanaTab;
 use GlpiPlugin\Plugingrafanaintegration\Dashboard;
 use GlpiPlugin\Plugingrafanaintegration\Menu;
-use GlpiPlugin\Plugingrafanaintegration\ModuleDashboard;
+use GlpiPlugin\Plugingrafanaintegration\ProfileHomeRights;
 use GlpiPlugin\Plugingrafanaintegration\ProfileRights;
 
-define('PLUGIN_PLUGINGRAFANAINTEGRATION_VERSION', '0.9.6');
+define('PLUGIN_PLUGINGRAFANAINTEGRATION_VERSION', '0.9.8');
 // Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
 // desta revisão). CommonDBTM::can()/check() nesta versão tipam `int $right`
 // e `?array &$input` — sem impacto no uso feito por este plugin, mas registrado
@@ -55,6 +56,23 @@ function plugin_init_plugingrafanaintegration(): void
     // liberar o direito do plugin por perfil (ver docblock de ProfileRights).
     \Plugin::registerClass(ProfileRights::class, ['addtabon' => \Profile::class]);
 
+    // Segunda aba própria em Administração > Perfis, "Grafana" — direito
+    // separado (Connection::HOME_RIGHTNAME) que só libera a aba "Grafana" na
+    // Central (ver docblock de ProfileHomeRights); nada a ver com o CRUD de
+    // fontes/dashboards acima.
+    \Plugin::registerClass(ProfileHomeRights::class, ['addtabon' => \Profile::class]);
+
+    // Aba "Grafana" na Central (Home) — lista os dashboards visíveis ao
+    // usuário atual, mesmo padrão de aba usado em ProfileRights/
+    // ProfileHomeRights, só que sobre \Central em vez de \Profile (ver
+    // docblock de CentralGrafanaTab). Protegido por class_exists() (mesma
+    // filosofia de resiliência do bloco DASHBOARD_TYPES/DASHBOARD_CARDS
+    // acima): se uma versão futura do GLPI renomear/remover \Central, só
+    // essa aba fica indisponível, sem derrubar o resto do plugin.
+    if (class_exists(\Central::class)) {
+        \Plugin::registerClass(CentralGrafanaTab::class, ['addtabon' => \Central::class]);
+    }
+
     // --- Integração com o sistema de dashboards (ver docblock acima) ---
     // IMPORTANTE: `Plugin::doHookFunction()` chama o valor registrado
     // diretamente via `call_user_func($function, ...)` — precisa ser um
@@ -71,17 +89,6 @@ function plugin_init_plugingrafanaintegration(): void
         // Novos cards (um por dashboard exposto).
         $PLUGIN_HOOKS[Hooks::DASHBOARD_CARDS]['plugingrafanaintegration'] = Dashboard::class . '::getCards';
     }
-
-    // --- Substituição do Dashboard nativo de um módulo (ver docblock de
-    // ModuleDashboard) ---
-    // POST_INIT: roda uma vez por sessão e força a "última visualização"
-    // (ver ModuleDashboard::applySessionOverrides()) pras telas de Ativos/
-    // Assistência que o usuário atual deve ver substituídas.
-    $PLUGIN_HOOKS[Hooks::POST_INIT]['plugingrafanaintegration'] = ModuleDashboard::class . '::applySessionOverrides';
-    // REDEFINE_MENUS: injeta o link "Dashboard" no menu de Gerência/
-    // Ferramentas/Administração (que não têm um nativo) quando o usuário
-    // atual tem uma substituição ativa pra aquele módulo.
-    $PLUGIN_HOOKS[Hooks::REDEFINE_MENUS]['plugingrafanaintegration'] = ModuleDashboard::class . '::redefineMenus';
 
     // Assets do plugin: toggle de campos por tipo/modo de fonte e botão
     // "Testar conexão".

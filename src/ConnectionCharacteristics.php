@@ -7,10 +7,9 @@
  * de abas internamente continua "ConnectionCharacteristics" por
  * continuidade de código/histórico).
  *
- * URL base e API token do Grafana ficam na aba "Fonte de dados" (ver
- * Connection::showGrafanaCredentialsSection()) — esta aba mostra só a
- * configuração de dashboards (seleção/importação, módulo, visibilidade,
- * substituição de módulo), delegada a
+ * URL base, token e usuário dedicado do Grafana ficam na aba "Conexão" (ver
+ * ConnectionCredentials) — esta aba mostra só a configuração de dashboards
+ * (seleção/importação, módulo), delegada a
  * DashboardItem::showDashboardConfigurationSection().
  *
  * Não é uma entidade de banco (extends CommonGLPI, sem tabela própria) — só
@@ -51,11 +50,11 @@ class ConnectionCharacteristics extends CommonGLPI
             return false;
         }
 
-        echo "<div class='analyticdesign-characteristics'>";
+        echo "<div class='analyticdesign-dashboard-config'>";
 
         DashboardItem::showDashboardConfigurationSection($item, (int)$item->fields['id'], DashboardItem::ajaxRoot());
 
-        echo "</div>"; // .analyticdesign-characteristics
+        echo "</div>"; // .analyticdesign-dashboard-config
 
         return true;
     }

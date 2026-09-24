@@ -75,9 +75,11 @@ window.jQuery(document).on('change', function (event) {
 });
 
 document.addEventListener('input', function (event) {
-    var apiTokenInput = event.target.closest('input[name="api_token"]');
-    if (apiTokenInput) {
-        toggleTestButtonVisibility(apiTokenInput);
+    var credentialInput = event.target.closest(
+        'input[name="api_token"], input[name="grafana_username"], input[name="grafana_password"]'
+    );
+    if (credentialInput) {
+        toggleTestButtonVisibility(credentialInput);
     }
 });
 
@@ -115,11 +117,12 @@ function toggleEmbedModeFields(embedModeSelect) {
 }
 
 /**
- * Mostra "Testar conexão" quando algo é digitado no token de API, OU quando
- * já existe um token salvo (`data-has-credentials`, setado no servidor) —
- * sem essa segunda condição, o botão sumia de novo a cada reload, já que o
- * campo de senha sempre nasce vazio por segurança (ver
- * Connection::showGrafanaCredentialsSection()).
+ * Mostra "Testar conexão" quando algo é digitado em qualquer campo de
+ * credencial (token, usuário ou senha dedicados), OU quando já existe
+ * alguma credencial salva (`data-has-credentials`, setado no servidor) —
+ * sem essa segunda condição, o botão sumia de novo a cada reload, já que os
+ * campos de credencial sempre nascem vazios por segurança (ver
+ * ConnectionCredentials::showGrafanaCredentialsSection()).
  */
 function toggleTestButtonVisibility(apiTokenInput) {
     // Busca global (não escopada por closest()): o botão agora fica na

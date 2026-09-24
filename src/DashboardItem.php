@@ -29,6 +29,21 @@ class DashboardItem extends CommonDBTM
     /** Compartilha o direito de Connection — ver Connection::RIGHTNAME. */
     public static $rightname = Connection::RIGHTNAME;
 
+    /**
+     * Módulos do GLPI usados só para agrupar o card no catálogo de widgets
+     * do dashboard nativo (`Dashboard::getCards()` usa o valor salvo em
+     * `category` como `group`) — Configurar/Administração ficam de fora (não
+     * fazia sentido agrupar um card de BI ali). Era `ModuleDashboard::MODULES`
+     * até a remoção da mecânica de "Substituir dashboard do módulo" — hoje é
+     * puramente cosmético/categorização, sem nenhum efeito de substituição.
+     */
+    public const MODULE_LABELS = [
+        'assets'     => 'Ativos',
+        'helpdesk'   => 'Assistência',
+        'management' => 'Gerência',
+        'tools'      => 'Ferramentas',
+    ];
+
     public static function getTypeName($nb = 0)
     {
         return _n('Dashboard exposto', 'Dashboards expostos', $nb, 'analyticdesign');
@@ -223,26 +238,18 @@ class DashboardItem extends CommonDBTM
             'name'     => __('Visibilidade restrita', 'analyticdesign'),
             'datatype' => 'bool',
         ];
-        $tab[] = [
-            'id'       => '16',
-            'table'    => self::getTable(),
-            'field'    => 'replaces_module',
-            'name'     => __('Substitui dashboard do módulo', 'analyticdesign'),
-            'datatype' => 'specific',
-        ];
-
         return $tab;
     }
 
-    /** Traduz a chave de módulo ('assets', 'helpdesk'...) salva em `category`/`replaces_module` para o rótulo legível. */
+    /** Traduz a chave de módulo ('assets', 'helpdesk'...) salva em `category` para o rótulo legível. */
     public static function getSpecificValueToDisplay($field, $values, array $options = [])
     {
         if (!is_array($values)) {
             $values = [$field => $values];
         }
-        if ($field === 'category' || $field === 'replaces_module') {
+        if ($field === 'category') {
             $value = $values[$field];
-            return $value !== '' ? (ModuleDashboard::MODULES[$value] ?? $value) : '';
+            return $value !== '' ? (self::MODULE_LABELS[$value] ?? $value) : '';
         }
         return parent::getSpecificValueToDisplay($field, $values, $options);
     }
@@ -313,7 +320,7 @@ class DashboardItem extends CommonDBTM
         foreach ($imported as $item) {
             $id = (int)$item->fields['id'];
             $moduleLabel = $item->fields['category'] !== ''
-                ? (ModuleDashboard::MODULES[$item->fields['category']] ?? $item->fields['category'])
+                ? (self::MODULE_LABELS[$item->fields['category']] ?? $item->fields['category'])
                 : '';
             echo "<tr>";
             echo "<td>" . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "</td>";
@@ -362,18 +369,12 @@ class DashboardItem extends CommonDBTM
     }
 
     /**
-     * Tabela de gerenciamento dos dashboards já importados — módulo, status e
-     * substituição de módulo editáveis em lote (mesmo endpoint de sempre,
-     * updatedashboarditems.php) e um botão para remover cada um por completo
-     * (ver ajax/deletedashboarditem.php). Pré-visualizar um item já importado
+     * Tabela de gerenciamento dos dashboards já importados — módulo e status
+     * editáveis em lote (mesmo endpoint de sempre, updatedashboarditems.php)
+     * e um botão para remover cada um por completo (ver
+     * ajax/deletedashboarditem.php). Pré-visualizar um item já importado
      * fica só na aba "Pré-Visualização" (showForConnection()) — esta tabela
      * é sobre CONFIGURAR, não visualizar.
-     *
-     * "Substituir dashboard do módulo" só fica editável quando o item já tem
-     * uma regra de visibilidade (aba "Visibilidade") com pelo menos um alvo
-     * enumerável (Perfil/Grupo/Usuário/Entidade — não "Todos") — ver
-     * VisibilityRule::hasConcreteGrantForItem() e docblock de ModuleDashboard
-     * sobre por que.
      *
      * @param DashboardItem[] $imported
      */
@@ -400,7 +401,6 @@ class DashboardItem extends CommonDBTM
         echo "<th>" . __('ID externo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Módulo', 'analyticdesign') . "</th>";
         echo "<th>" . __('Ativo', 'analyticdesign') . "</th>";
-        echo "<th>" . __('Substituir dashboard do módulo', 'analyticdesign') . "</th>";
         echo "<th class='text-end'>" . __('Remover', 'analyticdesign') . "</th>";
         echo "</tr></thead><tbody>";
         foreach ($imported as $item) {
@@ -414,19 +414,6 @@ class DashboardItem extends CommonDBTM
                 'display'  => false,
             ]) . "</td>";
             echo "<td>" . self::renderCheckbox("items[{$id}][is_active]", (int)$item->fields['is_active'] === 1) . "</td>";
-            echo "<td>";
-            if (VisibilityRule::hasConcreteGrantForItem($item)) {
-                echo Dropdown::showFromArray("items[{$id}][replaces_module]", [0 => __('Não substituir', 'analyticdesign')] + ModuleDashboard::MODULES, [
-                    'value'               => $item->fields['replaces_module'] !== '' ? $item->fields['replaces_module'] : 0,
-                    'display_emptychoice' => false,
-                    'display'             => false,
-                ]);
-            } else {
-                echo "<span class='text-muted' title='"
-                    . htmlspecialchars(__('Configure uma regra na aba "Visibilidade" com pelo menos um perfil/grupo/usuário/entidade para habilitar.', 'analyticdesign'), ENT_QUOTES)
-                    . "'>" . __('Indisponível', 'analyticdesign') . "</span>";
-            }
-            echo "</td>";
             echo "<td class='text-end'><button type='button' class='btn btn-icon btn-ghost-danger analyticdesign-delete-item' data-id='{$id}' data-name='"
                 . htmlspecialchars($item->fields['name'], ENT_QUOTES) . "' title='" . htmlspecialchars(__('Remover', 'analyticdesign'), ENT_QUOTES) . "'>"
                 . "<i class='ti ti-trash'></i></button></td>";
@@ -445,14 +432,13 @@ class DashboardItem extends CommonDBTM
 
     /**
      * Aba "Configurações" (parte de DashboardItem): tabela de gerenciamento
-     * dos dashboards já importados (módulo/status/substituição de módulo
-     * editáveis + remover — ver showImportedManagementSection()), NESSA
-     * ORDEM — pedido explicitamente para importar vir primeiro, já que é o
-     * passo mais comum ao abrir a aba. Chamado a partir de
-     * ConnectionCharacteristics::displayTabContentForItem() — a aba
-     * "Pré-Visualização" (ver showForConnection()) não configura mais nada,
-     * e a aba "Visibilidade" (ver ConnectionVisibilityRules) cuida de quem
-     * vê cada dashboard.
+     * dos dashboards já importados (módulo/status editáveis + remover — ver
+     * showImportedManagementSection()), NESSA ORDEM — pedido explicitamente
+     * para importar vir primeiro, já que é o passo mais comum ao abrir a
+     * aba. Chamado a partir de ConnectionCharacteristics::displayTabContentForItem() —
+     * a aba "Pré-Visualização" (ver showForConnection()) não configura mais
+     * nada, e a aba "Visibilidade" (ver ConnectionVisibilityRules) cuida de
+     * quem vê cada dashboard.
      *
      * O formulário de importação tem duas variantes, conforme a fonte
      * suporta listagem ao vivo ou não:
@@ -463,10 +449,9 @@ class DashboardItem extends CommonDBTM
      *  - Não suporta (a listagem falhou — ver resolveAvailableDashboards()):
      *    formulário manual (nome + URL de embed colada à mão), usado como
      *    fallback nesse caso.
-     * Módulo é configurado junto, na mesma submissão; visibilidade e
-     * substituição de módulo ficam para depois (aba "Visibilidade" e a
-     * tabela de gerenciamento logo abaixo, respectivamente — um item
-     * recém-importado ainda não tem regra nenhuma apontando pra ele).
+     * Módulo é configurado junto, na mesma submissão; visibilidade fica para
+     * depois (aba "Visibilidade" — um item recém-importado ainda não tem
+     * regra nenhuma apontando pra ele).
      */
     public static function showDashboardConfigurationSection(Connection $connection, int $connectionsId, string $ajaxRoot): void
     {
@@ -571,18 +556,15 @@ class DashboardItem extends CommonDBTM
     /** @return array<int|string, string> opções do dropdown de módulo: "Nenhum" + módulos (exceto Configurar). */
     private static function moduleOptions(): array
     {
-        return [0 => __('Nenhum', 'analyticdesign')] + ModuleDashboard::MODULES;
+        return [0 => __('Nenhum', 'analyticdesign')] + self::MODULE_LABELS;
     }
 
     /**
      * Campo "Módulo" (era "Categoria" — texto livre; agora uma lista fixa
-     * dos módulos do GLPI, exceto Configurar). Continua sendo só o
-     * agrupamento do card no catálogo de widgets do dashboard nativo
-     * (`Dashboard::getCards()` usa o valor salvo aqui como `group`) — não
-     * tem relação com "Substituir dashboard do módulo" (ModuleDashboard),
-     * configurado na tabela de gerenciamento (ver
-     * showImportedManagementSection()), nem com a aba "Visibilidade" (ver
-     * ConnectionVisibilityRules).
+     * dos módulos do GLPI, exceto Configurar). É só o agrupamento do card no
+     * catálogo de widgets do dashboard nativo (`Dashboard::getCards()` usa o
+     * valor salvo aqui como `group`) — não tem relação com a aba
+     * "Visibilidade" (ver ConnectionVisibilityRules).
      *
      * NÃO gerencia a própria linha (sem openFieldsRow()/closeFieldsRow()) —
      * pedido para ficar lado a lado com o campo anterior (Dashboard/Nome),
@@ -713,20 +695,19 @@ class DashboardItem extends CommonDBTM
 
     public function prepareInputForAdd($input)
     {
-        return $this->normalizeCategoryInput($this->validateModuleReplacement($input));
+        return $this->normalizeCategoryInput($input);
     }
 
     public function prepareInputForUpdate($input)
     {
-        return $this->normalizeCategoryInput($this->validateModuleReplacement($input));
+        return $this->normalizeCategoryInput($input);
     }
 
     /**
      * O dropdown "Módulo" (showModuleField()) usa `0` como valor do
-     * placeholder "Nenhum" (mesmo padrão de `replaces_module`/"Não
-     * substituir") — normaliza pra string vazia antes de gravar, mantendo a
-     * coluna `category` limpa (usada como `group` do card no catálogo de
-     * widgets — ver Dashboard::getCards()).
+     * placeholder "Nenhum" — normaliza pra string vazia antes de gravar,
+     * mantendo a coluna `category` limpa (usada como `group` do card no
+     * catálogo de widgets — ver Dashboard::getCards()).
      */
     private function normalizeCategoryInput(array $input): array
     {
@@ -734,66 +715,6 @@ class DashboardItem extends CommonDBTM
             $input['category'] = '';
         }
         return $input;
-    }
-
-    /**
-     * Substituir o dashboard nativo de um módulo só é permitido pra um item
-     * que já tem uma regra de visibilidade (aba "Visibilidade") concedendo um
-     * público explícito e enumerável — ver docblock de ModuleDashboard sobre
-     * por que ("Todos com acesso ao módulo", seja por não ter regra nenhuma
-     * seja por uma regra com Ação "Todos", não é uma lista enumerável de
-     * Perfil/Grupo/Usuário/Entidade, e o dashboard nativo auto-provisionado
-     * precisa de uma lista concreta pra conceder acesso). `replaces_module`
-     * só é postado pela tabela de gerenciamento (showImportedManagementSection()),
-     * numa edição de item já existente — nunca na criação. Não rejeita a
-     * submissão inteira — só limpa `replaces_module` com um aviso, mantendo o
-     * resto das alterações.
-     */
-    private function validateModuleReplacement(array $input): array
-    {
-        $module = trim((string)($input['replaces_module'] ?? ''));
-        if ($module === '' || $module === '0' || !isset(ModuleDashboard::MODULES[$module])) {
-            $input['replaces_module'] = '';
-            return $input;
-        }
-
-        if (!VisibilityRule::hasConcreteGrantForItem($this)) {
-            Session::addMessageAfterRedirect(
-                __('Para substituir o dashboard de um módulo, configure uma regra na aba "Visibilidade" com pelo menos um perfil/grupo/usuário/entidade.', 'analyticdesign'),
-                false,
-                ERROR
-            );
-            $input['replaces_module'] = '';
-        }
-
-        return $input;
-    }
-
-    public function post_addItem()
-    {
-        parent::post_addItem();
-        ModuleDashboard::syncNativeDashboard($this);
-    }
-
-    public function post_updateItem($history = true)
-    {
-        parent::post_updateItem($history);
-        ModuleDashboard::syncNativeDashboard($this);
-    }
-
-    /**
-     * Limpa o que fica órfão ao remover um dashboard exposto (ver botão
-     * "Remover" em showImportedManagementSection()/ajax/deletedashboarditem.php):
-     * o dashboard nativo auto-provisionado (se `replaces_module` estivesse
-     * configurado) — sem isso ficaria para sempre no banco, referenciando um
-     * item que não existe mais. Nenhuma regra de visibilidade (aba
-     * "Visibilidade") referencia o item diretamente por ID (elas casam por
-     * Critérios, ex.: nome do dashboard) — nada a limpar nesse lado.
-     */
-    public function post_purgeItem()
-    {
-        parent::post_purgeItem();
-        ModuleDashboard::deleteNativeDashboard((int)$this->fields['id']);
     }
 
     public static function install(\Migration $migration): void
@@ -811,7 +732,6 @@ class DashboardItem extends CommonDBTM
                     `embed_url` TEXT NULL,
                     `is_active` TINYINT NOT NULL DEFAULT 1,
                     `is_private` TINYINT NOT NULL DEFAULT 0,
-                    `replaces_module` VARCHAR(20) NOT NULL DEFAULT '',
                     `date_creation` DATETIME NULL DEFAULT NULL,
                     `date_mod` DATETIME NULL DEFAULT NULL,
                     PRIMARY KEY (`id`),
@@ -827,8 +747,12 @@ class DashboardItem extends CommonDBTM
         if (!$DB->fieldExists($table, 'is_private')) {
             $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `is_private` TINYINT NOT NULL DEFAULT 0 AFTER `is_active`");
         }
-        if (!$DB->fieldExists($table, 'replaces_module')) {
-            $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `replaces_module` VARCHAR(20) NOT NULL DEFAULT '' AFTER `is_private`");
+        // `replaces_module` existia para a mecânica de "Substituir dashboard
+        // do módulo" (ModuleDashboard) — removida por completo: a aba
+        // "Grafana" na Central assumiu esse papel. Dropa a coluna em quem já
+        // tinha instalado com ela.
+        if ($DB->fieldExists($table, 'replaces_module')) {
+            $DB->doQuery("ALTER TABLE `{$table}` DROP COLUMN `replaces_module`");
         }
         // `date_creation`/`date_mod` nasceram como TIMESTAMP — ver
         // HasTimestampMigration e Connection::install() para o motivo.
@@ -849,28 +773,6 @@ class DashboardItem extends CommonDBTM
     public static function uninstall(): void
     {
         global $DB;
-
-        // Limpa os dashboards nativos auto-provisionados (ver
-        // ModuleDashboard::syncNativeDashboard()) antes de derrubar a
-        // própria tabela — depois de dropada não haveria mais como calcular
-        // as chaves a partir dos ids dos itens. `glpi_dashboards_dashboards`
-        // é tabela do core, não é limpa junto com o resto do plugin.
-        if ($DB->tableExists('glpi_dashboards_dashboards')) {
-            // Apaga direto via query builder, não `CommonDBTM::delete()`: esse
-            // método refaz um `getFromDB($id)` internamente, e
-            // `Glpi\Dashboard\Dashboard::getFromDB()` busca pela coluna `key`
-            // (string), não pelo `id` numérico — nunca acharia a linha (ver
-            // ModuleDashboard::deleteNativeDashboard(), mesmo bug corrigido lá).
-            $ids = $DB->request([
-                'SELECT' => 'id',
-                'FROM'   => 'glpi_dashboards_dashboards',
-                'WHERE'  => ['context' => 'plugingrafanaintegration'],
-            ]);
-            foreach ($ids as $row) {
-                $DB->delete('glpi_dashboards_rights', ['dashboards_dashboards_id' => (int)$row['id']]);
-                $DB->delete('glpi_dashboards_dashboards', ['id' => (int)$row['id']]);
-            }
-        }
 
         $table = self::getTable();
         if ($DB->tableExists($table)) {

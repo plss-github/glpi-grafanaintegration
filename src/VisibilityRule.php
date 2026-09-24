@@ -340,69 +340,20 @@ class VisibilityRule extends CommonDBTM
     }
 
     /**
-     * Alguma regra que casa com este item concede um alvo ENUMERÁVEL
-     * (Perfil/Grupo/Usuário/Entidade — não "Todos")? Pré-requisito de
-     * "Substituir dashboard do módulo" (ver DashboardItem::
-     * validateModuleReplacement()): "todos com acesso ao módulo" (seja por
-     * não ter regra nenhuma, seja por uma regra com Ação "Todos") não é um
-     * conjunto enumerável de compartilhamento nativo do GLPI.
-     */
-    public static function hasConcreteGrantForItem(DashboardItem $item): bool
-    {
-        foreach (self::matchingRulesForItem($item) as $rule) {
-            $rights = self::getActions((int)$rule->fields['id']);
-            foreach (self::TARGET_TYPES as $itemtype) {
-                if (!empty($rights[$itemtype])) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /** @return array<class-string, int[]> união dos alvos enumeráveis de todas as regras que casam com o item — usado por ModuleDashboard::syncNativeDashboard(). */
-    public static function getConcreteGrantsForItem(DashboardItem $item): array
-    {
-        $result = array_fill_keys(self::TARGET_TYPES, []);
-        foreach (self::matchingRulesForItem($item) as $rule) {
-            $rights = self::getActions((int)$rule->fields['id']);
-            foreach (self::TARGET_TYPES as $itemtype) {
-                $result[$itemtype] = array_values(array_unique(array_merge($result[$itemtype], $rights[$itemtype])));
-            }
-        }
-        return $result;
-    }
-
-    /**
      * Recalcula `is_private` de TODOS os itens da Connection (1 = pelo menos
-     * uma regra casa com o item) e re-sincroniza o dashboard nativo
-     * espelhado de quem usa "Substituir dashboard do módulo" — chamado
-     * sempre que uma regra (ou seus Critérios/Ações) muda. Escrita direta via
-     * query builder (não `CommonDBTM::update()`): evita disparar hooks
-     * não relacionados (ex.: `post_updateItem()` de DashboardItem) para uma
-     * atualização que é puramente derivada, não uma edição de verdade feita
-     * pelo usuário.
+     * uma regra casa com o item) — chamado sempre que uma regra (ou seus
+     * Critérios/Ações) muda. Escrita direta via query builder (não
+     * `CommonDBTM::update()`): evita disparar hooks não relacionados
+     * (`post_updateItem()` de DashboardItem, histórico) para uma atualização
+     * que é puramente derivada, não uma edição de verdade feita pelo usuário.
      */
     public static function resyncAffectedItems(int $connectionsId): void
     {
         global $DB;
         foreach (DashboardItem::getForConnection($connectionsId) as $item) {
-            $hasConcreteGrant = self::hasConcreteGrantForItem($item);
             $isPrivate = !empty(self::matchingRulesForItem($item)) ? 1 : 0;
-
-            $update = ['is_private' => $isPrivate];
-            if ((string)$item->fields['replaces_module'] !== '' && !$hasConcreteGrant) {
-                $update['replaces_module'] = '';
-            }
-            $DB->update(DashboardItem::getTable(), $update, ['id' => (int)$item->fields['id']]);
-
+            $DB->update(DashboardItem::getTable(), ['is_private' => $isPrivate], ['id' => (int)$item->fields['id']]);
             $item->fields['is_private'] = $isPrivate;
-            $item->fields['replaces_module'] = $update['replaces_module'] ?? $item->fields['replaces_module'];
-            if ($item->fields['replaces_module'] !== '') {
-                ModuleDashboard::syncNativeDashboard($item);
-            } else {
-                ModuleDashboard::deleteNativeDashboard((int)$item->fields['id']);
-            }
         }
     }
 
@@ -563,7 +514,7 @@ class VisibilityRule extends CommonDBTM
         echo "</div>";
 
         echo "<div class='analyticdesign-field analyticdesign-field-value analyticdesign-criterion-value-module' style='display:none'><label class='form-label mb-0'>" . __('Valor', 'analyticdesign') . "</label>";
-        Dropdown::showFromArray('value_module', ModuleDashboard::MODULES, [
+        Dropdown::showFromArray('value_module', DashboardItem::MODULE_LABELS, [
             'rand'                => $ruleId,
             'width'               => '100%',
             'display_emptychoice' => true,

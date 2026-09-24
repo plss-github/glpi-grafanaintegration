@@ -41,6 +41,15 @@ function plugin_plugingrafanaintegration_install(): bool
             \ProfileRight::updateProfileRights($profilesId, [Connection::RIGHTNAME => ALLSTANDARDRIGHT]);
         }
     }
+    // Mesmo guard/mesmo grant automático ao Super-Admin, para o direito
+    // separado da aba "Grafana" na Central (ver Connection::HOME_RIGHTNAME e
+    // docblock de ProfileHomeRights).
+    if (countElementsInTable('glpi_profilerights', ['name' => Connection::HOME_RIGHTNAME]) === 0) {
+        \ProfileRight::addProfileRights([Connection::HOME_RIGHTNAME]);
+        foreach (\Profile::getSuperAdminProfilesId() as $profilesId) {
+            \ProfileRight::updateProfileRights($profilesId, [Connection::HOME_RIGHTNAME => ALLSTANDARDRIGHT]);
+        }
+    }
 
     return true;
 }
@@ -53,7 +62,7 @@ function plugin_plugingrafanaintegration_uninstall(): bool
     Connection::uninstall();
     DashboardItem::uninstall();
 
-    \ProfileRight::deleteProfileRights([Connection::RIGHTNAME]);
+    \ProfileRight::deleteProfileRights([Connection::RIGHTNAME, Connection::HOME_RIGHTNAME]);
 
     return true;
 }
@@ -74,5 +83,6 @@ function plugin_plugingrafanaintegration_getrights(): array
 {
     return [
         Connection::RIGHTNAME => __('Análise de Dados: fontes e dashboards', 'analyticdesign'),
+        Connection::HOME_RIGHTNAME => __('Análise de Dados: aba Grafana na Central', 'analyticdesign'),
     ];
 }

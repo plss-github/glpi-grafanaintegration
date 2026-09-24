@@ -87,7 +87,7 @@ class Dashboard
             // antigos, cadastrados antes dessa mudança, que ainda tenham uma
             // categoria em texto livre salva.
             $category = $item->fields['category'] !== ''
-                ? (ModuleDashboard::MODULES[$item->fields['category']] ?? $item->fields['category'])
+                ? (DashboardItem::MODULE_LABELS[$item->fields['category']] ?? $item->fields['category'])
                 : __('Pellissari Grafana Integration', 'analyticdesign');
 
             $cards["analyticdesign_item_{$id}"] = [

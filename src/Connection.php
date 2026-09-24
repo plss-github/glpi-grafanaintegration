@@ -13,7 +13,6 @@ use CommonDBTM;
 use Dropdown;
 use GLPIKey;
 use GlpiPlugin\Plugingrafanaintegration\Source\DashboardSourceInterface;
-use GlpiPlugin\Plugingrafanaintegration\Source\GrafanaSource;
 use GlpiPlugin\Plugingrafanaintegration\Source\SourceFactory;
 use GlpiPlugin\Plugingrafanaintegration\Traits\HasFormFieldLayout;
 use GlpiPlugin\Plugingrafanaintegration\Traits\HasTimestampMigration;
@@ -33,6 +32,14 @@ class Connection extends CommonDBTM
      */
     public const RIGHTNAME = 'plugin_plugingrafanaintegration_connection';
 
+    /**
+     * Direito separado (ver ProfileHomeRights) que só libera a aba "Grafana"
+     * na Central (Home) — não tem nada a ver com CRUD de fontes/dashboards
+     * (isso continua em RIGHTNAME). Um perfil pode ter um sem o outro: um
+     * atendente comum só precisa deste, nunca de RIGHTNAME.
+     */
+    public const HOME_RIGHTNAME = 'plugin_plugingrafanaintegration_home';
+
     public static $rightname = self::RIGHTNAME;
 
     /** Histórico de alterações na aba "Histórico" do item. */
@@ -49,18 +56,20 @@ class Connection extends CommonDBTM
     }
 
     /**
-     * Abas "Configurações" (URL/credenciais específicas do tipo já escolhido
-     * + importação de dashboards), "Visibilidade" (regras de Critérios/Ação)
-     * e "Pré-Visualização" (dashboards já importados, somente leitura),
-     * exibidas no formulário da conexão. Só aparecem para uma Connection já
-     * salva — CommonGLPI só chama addStandardTab() para itens não-novos (ver
-     * CommonGLPI::defineAllTabs()), então nenhuma lógica extra é necessária
-     * aqui para escondê-las na tela de criação.
+     * Abas "Conexão" (URL base, token de backend e usuário dedicado do
+     * Grafana), "Configurações" (importação de dashboards), "Visibilidade"
+     * (regras de Critérios/Ação) e "Pré-Visualização" (dashboards já
+     * importados, somente leitura), exibidas no formulário da conexão. Só
+     * aparecem para uma Connection já salva — CommonGLPI só chama
+     * addStandardTab() para itens não-novos (ver CommonGLPI::defineAllTabs()),
+     * então nenhuma lógica extra é necessária aqui para escondê-las na tela
+     * de criação.
      */
     public function defineTabs($options = [])
     {
         $tabs = [];
         $this->addDefaultFormTab($tabs);
+        $this->addStandardTab(ConnectionCredentials::class, $tabs, $options);
         $this->addStandardTab(ConnectionCharacteristics::class, $tabs, $options);
         $this->addStandardTab(ConnectionVisibilityRules::class, $tabs, $options);
         $this->addStandardTab(DashboardItem::class, $tabs, $options);
@@ -158,17 +167,15 @@ class Connection extends CommonDBTM
 
     /**
      * Formulário de cadastro/edição da fonte. Só o essencial para criar o
-     * registro (Nome, Ferramenta, Status) + Comentários — URL base, modo de
-     * embed e
-     * credenciais específicas do tipo ficam na aba "Características"
-     * (ConnectionCharacteristics), que só existe depois que a Connection já
-     * tem um tipo salvo. Renderizado em PHP/HTML puro, mas reproduzindo o
-     * mesmo layout em grid (Bootstrap `row`/`col-*`, rótulo em
-     * `col-form-label`) que o GLPI 11 usa nos seus próprios formulários
-     * baseados em Twig (ver HasFormFieldLayout) — showFormHeader()/
-     * showFormButtons() continuam sendo usados (título, CSRF, botões), só a
-     * <table> que eles abrem é fechada imediatamente e substituída por uma
-     * única célula larga contendo nosso grid de campos.
+     * registro (Nome, Ferramenta, Status) + Comentários — URL base, token e
+     * usuário dedicado do Grafana ficam na aba "Conexão" (ConnectionCredentials),
+     * que só existe depois que a Connection já tem um tipo salvo. Renderizado
+     * em PHP/HTML puro, mas reproduzindo o mesmo layout em grid (Bootstrap
+     * `row`/`col-*`, rótulo em `col-form-label`) que o GLPI 11 usa nos seus
+     * próprios formulários baseados em Twig (ver HasFormFieldLayout) —
+     * showFormHeader()/showFormButtons() continuam sendo usados (título,
+     * CSRF, botões), só a <table> que eles abrem é fechada imediatamente e
+     * substituída por uma única célula larga contendo nosso grid de campos.
      */
     public function showForm($ID, array $options = [])
     {
@@ -179,31 +186,7 @@ class Connection extends CommonDBTM
         $this->showNameToolAndStatusFields();
         $this->showCommentField();
 
-        $isGrafana = (int)$this->fields['id'] > 0 && $this->fields['type'] === GrafanaSource::getType();
-        if ($isGrafana) {
-            $this->showGrafanaCredentialsSection();
-        }
-
         echo "</td></tr>";
-
-        // "Testar conexão" pedido na MESMA linha dos botões padrão
-        // (Salvar/Excluir) — usa o mecanismo nativo `addbuttons` de
-        // showFormButtons() (components/form/buttons.html.twig) em vez de um
-        // botão solto dentro da seção de credenciais.
-        if ($isGrafana) {
-            $hasToken = !empty($this->getDecryptedCredentials()['api_token'] ?? '');
-            $options['addbuttons']['analyticdesign_test_connection'] = [
-                'type'        => 'button',
-                'text'        => __('Testar conexão', 'analyticdesign'),
-                'icon'        => 'ti ti-plug',
-                'add_class'   => 'analyticdesign-test-connection',
-                'add_attribs' => [
-                    'data-id'              => (int)$this->fields['id'],
-                    'data-has-credentials' => $hasToken ? '1' : '0',
-                    'style'                => $hasToken ? '' : 'display:none;',
-                ],
-            ];
-        }
         $this->showFormButtons($options);
 
         return true;
@@ -266,107 +249,6 @@ class Connection extends CommonDBTM
     }
 
     /**
-     * URL base + API token do Grafana, direto na aba "Fonte de dados" (não
-     * mais na aba "Configurações") — só depois que a fonte já existe e o
-     * tipo é Grafana. Reaproveita as mesmas classes/JS de
-     * `ConnectionCharacteristics` (`.analyticdesign-characteristics` +
-     * `.analyticdesign-error`/`.analyticdesign-fields-wrapper`) para o
-     * "Testar conexão" e o tratamento de falha funcionarem sem duplicar JS.
-     *
-     * O campo de API token usa o mesmo padrão "revelável" que o GLPI usa
-     * para a chave de licença do GLPI Network (ver
-     * HasFormFieldLayout::showDisclosablePasswordInput()) — pedido
-     * explicitamente para ficar visualmente igual. Quando já existe um
-     * valor salvo, o campo nasce com um placeholder de bolinhas (nunca o
-     * valor de fato — mesma convenção de "deixe em branco para manter o
-     * valor salvo") para indicar visualmente que algo está configurado.
-     *
-     * O bloco inteiro fica escondido quando a fonte está com Status "Não" —
-     * volta ao reativar (ver toggleGrafanaSectionVisibility() em
-     * public/js/analyticdesign.js). O botão "Testar conexão" nasce visível
-     * se já existe um token salvo; senão só aparece depois que algo é
-     * digitado no campo (ver toggleTestButtonVisibility() no mesmo arquivo).
-     */
-    private function showGrafanaCredentialsSection(): void
-    {
-        $fieldsForType = SourceFactory::getConfigFieldsFor(GrafanaSource::getType());
-        $credentials = $this->getDecryptedCredentials();
-        $isActive = (int)($this->fields['is_active'] ?? 0) === 1;
-
-        // Escondida quando a fonte está desativada — volta ao ativar de novo
-        // (ver toggleGrafanaSectionVisibility() em public/js/analyticdesign.js).
-        echo "<div class='analyticdesign-characteristics analyticdesign-status-toggle' style='"
-            . ($isActive ? '' : 'display:none;') . "'>";
-        echo "<div class='card mb-0'>";
-        echo "<div class='card-header'><span class='card-title mb-0 d-flex align-items-center gap-2'>"
-            . "<i class='ti ti-plug'></i> " . __('Conexão com o Grafana', 'analyticdesign') . "</span></div>";
-        echo "<div class='card-body'>";
-        echo "<div class='analyticdesign-error alert alert-important alert-danger' style='display:none;'>";
-        echo "<i class='ti ti-plug-x'></i> <span class='analyticdesign-error-message'></span>";
-        echo " <button type='button' class='btn btn-sm btn-outline-danger analyticdesign-reopen-fields'>"
-            . __('Editar configuração', 'analyticdesign') . "</button>";
-        echo "</div>";
-
-        echo "<div class='analyticdesign-fields-wrapper'>";
-
-        self::openFieldsRow();
-        self::openField('base_url', __('URL base', 'analyticdesign'), 'analyticdesign_grafana_base_url', true);
-        echo Html::input('base_url', ['id' => 'analyticdesign_grafana_base_url', 'value' => $this->fields['base_url']]);
-        echo "<div class='form-text text-muted'>" . __('Ex.: https://grafana.suaempresa.com', 'analyticdesign') . "</div>";
-        self::closeField();
-        self::closeFieldsRow();
-
-        // O Grafana não expõe uma API de embed-token — o token acima só
-        // autentica as chamadas do BACKEND
-        // do plugin (testar conexão, listar dashboards); o <iframe> em si é
-        // uma requisição direta do NAVEGADOR do usuário pro Grafana, sem
-        // nenhum token. Decisão de arquitetura (ver docs/CONFIGURACAO.md,
-        // seção "Arquitetura e riscos de integração"): manter só embed
-        // (iframe) pro Grafana e deixar esse requisito explícito aqui, em vez
-        // de tentar construir um modo "via API" (renderizar uma imagem
-        // estática via /render/ do grafana-image-renderer) — plugin externo
-        // do Grafana nem sempre instalado, perderia interatividade, e
-        // ninguém pediu essa troca.
-        echo "<div class='alert alert-important alert-warning' style='margin-bottom:1rem;'>"
-            . "<i class='ti ti-info-circle'></i> "
-            . __('Cada usuário do GLPI precisa conseguir acessar este Grafana diretamente (login/SSO próprio, acesso anônimo habilitado, ou o dashboard convertido em "Public dashboard") — o token acima só serve para o plugin testar a conexão e listar dashboards, não para autenticar o embed em si.', 'analyticdesign')
-            . "</div>";
-
-        foreach ($fieldsForType as $field) {
-            $fieldId = 'analyticdesign_grafana_' . $field['name'];
-            $isConfigured = !empty($credentials[$field['name']] ?? '');
-            $placeholder = $isConfigured ? self::configuredPlaceholder() : '';
-            self::openFieldsRow();
-            self::openField($field['name'], htmlspecialchars($field['label'], ENT_QUOTES), $fieldId, true);
-            if (($field['type'] ?? '') === 'password') {
-                self::showDisclosablePasswordInput($field['name'], $fieldId, '', $placeholder);
-            } else {
-                echo Html::input($field['name'], ['id' => $fieldId, 'value' => '', 'placeholder' => $placeholder]);
-            }
-            if (!empty($field['help'])) {
-                echo "<div class='form-text text-muted'>" . htmlspecialchars($field['help'], ENT_QUOTES) . "</div>";
-            }
-            self::closeField();
-            self::closeFieldsRow();
-        }
-        if (!empty($fieldsForType)) {
-            echo "<p class='text-muted fst-italic'>"
-                . __('Deixe os campos de credenciais em branco para manter os valores já salvos.', 'analyticdesign')
-                . "</p>";
-        }
-
-        // O botão "Testar conexão" em si fica na linha dos botões padrão
-        // (Salvar/Excluir) — ver showForm(), opção `addbuttons`. Só o
-        // resultado do teste (sucesso/erro) continua aqui.
-        echo "<div class='mt-2'><span class='analyticdesign-test-result'></span></div>";
-
-        echo "</div>"; // .analyticdesign-fields-wrapper
-        echo "</div>"; // .card-body
-        echo "</div>"; // .card
-        echo "</div>"; // .analyticdesign-characteristics
-    }
-
-    /**
      * Devolve as credenciais descriptografadas como array.
      * O campo `credentials` é gravado como JSON criptografado via GLPIKey.
      */
@@ -425,7 +307,7 @@ class Connection extends CommonDBTM
      *
      * A mesclagem com `getDecryptedCredentials()` é essencial: a UI permite
      * deixar um campo em branco para "manter o valor salvo" (ver
-     * ConnectionCharacteristics). Sem mesclar, atualizar só um campo
+     * ConnectionCredentials). Sem mesclar, atualizar só um campo
      * apagaria silenciosamente os demais já armazenados.
      */
     private function handleCredentialInput($input)
@@ -439,7 +321,10 @@ class Connection extends CommonDBTM
         // criptografado nesse campo.
         unset($input['credentials']);
 
-        $sensitive = ['api_token'];
+        // `grafana_username` entra aqui também (não é secreto por si só, mas
+        // não existe coluna própria pra ele na tabela — igual ao token e à
+        // senha, só é persistido dentro do blob `credentials`).
+        $sensitive = ['api_token', 'grafana_username', 'grafana_password'];
         $creds = $this->getDecryptedCredentials();
         $touched = false;
         foreach ($sensitive as $key) {
@@ -471,6 +356,8 @@ class Connection extends CommonDBTM
                     `type` VARCHAR(50) NOT NULL DEFAULT 'grafana',
                     `base_url` VARCHAR(255) NOT NULL DEFAULT '',
                     `credentials` TEXT NULL,
+                    `proxy_session_cookie` TEXT NULL,
+                    `proxy_session_expires` DATETIME NULL DEFAULT NULL,
                     `embed_mode` VARCHAR(50) NOT NULL DEFAULT 'iframe',
                     `is_active` TINYINT NOT NULL DEFAULT 1,
                     `comment` TEXT NULL,
@@ -488,6 +375,15 @@ class Connection extends CommonDBTM
         // install() em hook.php (roda de novo a cada atualização de versão).
         if (!$DB->fieldExists($table, 'comment')) {
             $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `comment` TEXT NULL AFTER `is_active`");
+        }
+        // Cache da sessão do usuário dedicado do Grafana (ver
+        // GrafanaSource::proxySession()) — nunca exposta a ninguém fora do
+        // backend do plugin, só usada por front/grafana_proxy.php.
+        if (!$DB->fieldExists($table, 'proxy_session_cookie')) {
+            $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `proxy_session_cookie` TEXT NULL AFTER `credentials`");
+        }
+        if (!$DB->fieldExists($table, 'proxy_session_expires')) {
+            $DB->doQuery("ALTER TABLE `{$table}` ADD COLUMN `proxy_session_expires` DATETIME NULL DEFAULT NULL AFTER `proxy_session_cookie`");
         }
         // `date_creation`/`date_mod` nasceram como TIMESTAMP (padrão antigo do
         // GLPI, abandonado desde a 9.2 por causa do bug do ano 2038 e de

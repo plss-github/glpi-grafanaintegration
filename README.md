@@ -5,18 +5,21 @@ dashboards do GLPI.
 
 Adiciona uma aba **"Análise de Dados"** em **Administração** onde se cadastram as
 fontes; cada dashboard exposto vira um **card** que o admin posiciona em qualquer
-grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo —
-ou, opcionalmente, **substitui** a tela "Dashboard" nativa de um módulo inteiro
-para um público restrito (Perfil/Grupo/Usuário/Entidade).
+grade do GLPI (principal, ativos, assistência...) pelo modo de edição nativo, e
+também aparece automaticamente numa aba própria **"Grafana"** na tela inicial
+(Central) do GLPI — no estilo do plugin Metabase — para quem o perfil libera.
+O embed é autenticado por um **proxy reverso** (o navegador do usuário final
+fala só com o GLPI, nunca direto com o Grafana), usando a sessão de um
+usuário dedicado (Viewer) configurado na aba "Conexão" da fonte.
 
 📘 **Guia de configuração passo a passo:** [docs/CONFIGURACAO.md](docs/CONFIGURACAO.md).
 A arquitetura, a estrutura de arquivos, os riscos de integração com o GLPI e
 o modelo de segurança completo (antes descritos aqui) foram movidos para lá —
-ver [seção "Arquitetura e riscos de integração"](docs/CONFIGURACAO.md#11-arquitetura-e-riscos-de-integração)
-e [seção "Segurança"](docs/CONFIGURACAO.md#12-segurança). A aba
+ver [seção "Arquitetura e riscos de integração"](docs/CONFIGURACAO.md#9-arquitetura-e-riscos-de-integração)
+e [seção "Segurança"](docs/CONFIGURACAO.md#10-segurança). A aba
 **"Visibilidade"** (regras de Critérios/Ação, alternativa ao ajuste direto
 por card) está documentada na
-[seção 10](docs/CONFIGURACAO.md#10-restringir-visibilidade-por-regras-aba-visibilidade).
+[seção 8](docs/CONFIGURACAO.md#8-restringir-visibilidade-por-regras-aba-visibilidade).
 
 ## Autor
 

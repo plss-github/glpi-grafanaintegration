@@ -3,6 +3,32 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 versionamento semântico.
 
+## [0.9.8] - 2026-09-24
+
+### Adicionado
+
+- **Aba "Conexão"**: URL base, token de backend e um novo **usuário dedicado
+  do Grafana** (Viewer, acesso a todos os dashboards a expor) ficam numa aba
+  própria da fonte, separada da aba "Fonte de Dados" (nome/ferramenta/status).
+- **Proxy reverso do embed**: o `<iframe>` de cada dashboard não fala mais
+  direto com o Grafana — passa por `front/grafana_proxy.php`, autenticado com
+  a sessão do usuário dedicado. Resolve o problema de login sem precisar de
+  `auth.anonymous`/Public dashboard/SSO no Grafana. Limitação aceita:
+  WebSocket (Grafana Live) não é proxeado; painéis com polling normal (a
+  maioria) não são afetados.
+- **Aba "Grafana" na Central (Home)**: lista os dashboards visíveis ao
+  usuário atual direto na tela inicial do GLPI, no estilo do plugin Metabase
+  — sem precisar entrar num módulo específico nem posicionar cards.
+- **Direito de perfil separado ("Grafana")**: nova aba em Administração >
+  Perfis, independente de "Análise de Dados", só para liberar a aba "Grafana"
+  na Central por perfil.
+
+### Removido
+
+- **Substituição do dashboard nativo de um módulo** (`ModuleDashboard`) —
+  ficou obsoleta com a aba "Grafana" na Central, que resolve o mesmo caso de
+  uso de forma mais direta. Coluna `replaces_module` removida via migração.
+
 ## [0.9.6] - 2026-09-24
 
 ### Corrigido
