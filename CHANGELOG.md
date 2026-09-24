@@ -29,6 +29,16 @@ versionamento semântico.
   ficou obsoleta com a aba "Grafana" na Central, que resolve o mesmo caso de
   uso de forma mais direta. Coluna `replaces_module` removida via migração.
 
+## [0.9.7] - 2026-09-24
+
+### Corrigido
+
+- **`date_creation`/`date_mod` voltam para `TIMESTAMP`** nas tabelas de
+  `Connection`, `DashboardItem` e `VisibilityRule`. A 0.9.6 converteu essas
+  colunas para `DATETIME` por engano — o core do GLPI atual usa `TIMESTAMP`
+  (ver `php bin/console migration:timestamps`). Instalações já na 0.9.6 são
+  migradas automaticamente (`ALTER TABLE ... MODIFY`) na atualização.
+
 ## [0.9.6] - 2026-09-24
 
 ### Corrigido

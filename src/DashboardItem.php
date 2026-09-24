@@ -732,8 +732,8 @@ class DashboardItem extends CommonDBTM
                     `embed_url` TEXT NULL,
                     `is_active` TINYINT NOT NULL DEFAULT 1,
                     `is_private` TINYINT NOT NULL DEFAULT 0,
-                    `date_creation` DATETIME NULL DEFAULT NULL,
-                    `date_mod` DATETIME NULL DEFAULT NULL,
+                    `date_creation` TIMESTAMP NULL DEFAULT NULL,
+                    `date_mod` TIMESTAMP NULL DEFAULT NULL,
                     PRIMARY KEY (`id`),
                     KEY `connections_id` (`connections_id`),
                     KEY `category` (`category`)
@@ -754,9 +754,9 @@ class DashboardItem extends CommonDBTM
         if ($DB->fieldExists($table, 'replaces_module')) {
             $DB->doQuery("ALTER TABLE `{$table}` DROP COLUMN `replaces_module`");
         }
-        // `date_creation`/`date_mod` nasceram como TIMESTAMP — ver
+        // `date_creation`/`date_mod` viraram DATETIME na 0.9.6 — ver
         // HasTimestampMigration e Connection::install() para o motivo.
-        self::convertTimestampColumnsToDatetime($table);
+        self::convertDatetimeColumnsToTimestamp($table);
 
         // `glpi_plugin_analyticdesign_dashboarditems_visibility` (ItemVisibility)
         // existia até a 0.8.0 — retirada quando a visibilidade por card foi
