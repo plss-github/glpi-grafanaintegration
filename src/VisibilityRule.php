@@ -724,8 +724,8 @@ class VisibilityRule extends CommonDBTM
                     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                     `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
                     `match` VARCHAR(10) NOT NULL DEFAULT 'AND',
-                    `date_creation` DATETIME NULL DEFAULT NULL,
-                    `date_mod` DATETIME NULL DEFAULT NULL,
+                    `date_creation` TIMESTAMP NULL DEFAULT NULL,
+                    `date_mod` TIMESTAMP NULL DEFAULT NULL,
                     PRIMARY KEY (`id`),
                     KEY `connections_id` (`connections_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -740,9 +740,9 @@ class VisibilityRule extends CommonDBTM
         if ($DB->fieldExists($table, 'is_active')) {
             $DB->doQuery("ALTER TABLE `{$table}` DROP COLUMN `is_active`");
         }
-        // `date_creation`/`date_mod` nasceram como TIMESTAMP — ver
+        // `date_creation`/`date_mod` viraram DATETIME na 0.9.6 — ver
         // HasTimestampMigration e Connection::install() para o motivo.
-        self::convertTimestampColumnsToDatetime($table);
+        self::convertDatetimeColumnsToTimestamp($table);
 
         $criteriaTable = self::criteriaTable();
         if (!$DB->tableExists($criteriaTable)) {

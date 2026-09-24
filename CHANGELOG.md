@@ -3,6 +3,16 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 versionamento semântico.
 
+## [0.9.7] - 2026-09-24
+
+### Corrigido
+
+- **`date_creation`/`date_mod` voltam para `TIMESTAMP`** nas tabelas de
+  `Connection`, `DashboardItem` e `VisibilityRule`. A 0.9.6 converteu essas
+  colunas para `DATETIME` por engano — o core do GLPI atual usa `TIMESTAMP`
+  (ver `php bin/console migration:timestamps`). Instalações já na 0.9.6 são
+  migradas automaticamente (`ALTER TABLE ... MODIFY`) na atualização.
+
 ## [0.9.6] - 2026-09-24
 
 ### Corrigido

@@ -18,7 +18,7 @@ use GlpiPlugin\Plugingrafanaintegration\Menu;
 use GlpiPlugin\Plugingrafanaintegration\ModuleDashboard;
 use GlpiPlugin\Plugingrafanaintegration\ProfileRights;
 
-define('PLUGIN_PLUGINGRAFANAINTEGRATION_VERSION', '0.9.6');
+define('PLUGIN_PLUGINGRAFANAINTEGRATION_VERSION', '0.9.7');
 // Alvo: GLPI 11.0.8 em diante (última patch release da série 11.0.x na data
 // desta revisão). CommonDBTM::can()/check() nesta versão tipam `int $right`
 // e `?array &$input` — sem impacto no uso feito por este plugin, mas registrado
